@@ -2,8 +2,8 @@
 Software maintenance and service
 
 EFM32_Boot is a boot software for the EFM32 architecture. Its main
-purpose is to verify and start the application software. Before doing this,
-it checks whether there exists an update file on the SD-Card. If so, the
+purpose is to verify and start the application software, and to update the software in the field via D-card. Before starting the application,
+the booter checks whether an update file exists on the SD-Card. If so, the
 application software in FLASH will be updated.
 
 - APRDL, the name of the update file is APRDL.UPD
