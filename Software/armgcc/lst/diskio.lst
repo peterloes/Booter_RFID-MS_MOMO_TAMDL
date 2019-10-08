@@ -1,0 +1,1304 @@
+ARM GAS  /tmp/ccQzY2SP.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"diskio.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.disk_initialize,"ax",%progbits
+  19              		.align	1
+  20              		.global	disk_initialize
+  21              		.thumb
+  22              		.thumb_func
+  24              	disk_initialize:
+  25              	.LFB84:
+  26              		.file 1 "../fatfs/src/diskio.c"
+   1:../fatfs/src/diskio.c **** /*------------------------------------------------------------------------/
+   2:../fatfs/src/diskio.c **** /  MMCv3/SDv1/SDv2 (in SPI mode) control module
+   3:../fatfs/src/diskio.c **** /-------------------------------------------------------------------------/
+   4:../fatfs/src/diskio.c **** /
+   5:../fatfs/src/diskio.c **** /  Copyright (C) 2010, ChaN, all right reserved.
+   6:../fatfs/src/diskio.c **** /
+   7:../fatfs/src/diskio.c **** / * This software is a free software and there is NO WARRANTY.
+   8:../fatfs/src/diskio.c **** / * No restriction on use. You can use, modify and redistribute it for
+   9:../fatfs/src/diskio.c **** /   personal, non-profit or commercial products UNDER YOUR RESPONSIBILITY.
+  10:../fatfs/src/diskio.c **** / * Redistributions of source code must retain the above copyright notice.
+  11:../fatfs/src/diskio.c **** /
+  12:../fatfs/src/diskio.c **** /-------------------------------------------------------------------------*/
+  13:../fatfs/src/diskio.c **** 
+  14:../fatfs/src/diskio.c **** #include "diskio.h"
+  15:../fatfs/src/diskio.c **** #include "microsd.h"
+  16:../fatfs/src/diskio.c **** 
+  17:../fatfs/src/diskio.c **** static DSTATUS stat = STA_NOINIT;  /* Disk status */
+  18:../fatfs/src/diskio.c **** static UINT CardType;
+  19:../fatfs/src/diskio.c **** 
+  20:../fatfs/src/diskio.c **** /*--------------------------------------------------------------------------
+  21:../fatfs/src/diskio.c **** 
+  22:../fatfs/src/diskio.c ****    Public Functions
+  23:../fatfs/src/diskio.c **** 
+  24:../fatfs/src/diskio.c **** ---------------------------------------------------------------------------*/
+  25:../fatfs/src/diskio.c **** 
+  26:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+  27:../fatfs/src/diskio.c **** /* Initialize Disk Drive                                                 */
+  28:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+  29:../fatfs/src/diskio.c **** 
+  30:../fatfs/src/diskio.c **** DSTATUS disk_initialize (
+  31:../fatfs/src/diskio.c ****   BYTE drv  /* Physical drive nmuber (0) */
+  32:../fatfs/src/diskio.c **** )
+ARM GAS  /tmp/ccQzY2SP.s 			page 2
+
+
+  33:../fatfs/src/diskio.c **** {
+  27              		.loc 1 33 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 8
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              	.LVL0:
+  32 0000 F7B5     		push	{r0, r1, r2, r4, r5, r6, r7, lr}
+  33              		.cfi_def_cfa_offset 32
+  34              		.cfi_offset 0, -32
+  35              		.cfi_offset 1, -28
+  36              		.cfi_offset 2, -24
+  37              		.cfi_offset 4, -20
+  38              		.cfi_offset 5, -16
+  39              		.cfi_offset 6, -12
+  40              		.cfi_offset 7, -8
+  41              		.cfi_offset 14, -4
+  34:../fatfs/src/diskio.c ****   BYTE n, cmd, ty, ocr[4];
+  35:../fatfs/src/diskio.c **** 
+  36:../fatfs/src/diskio.c ****   if (drv) return STA_NOINIT;                   /* Supports only single drive */
+  42              		.loc 1 36 0
+  43 0002 0028     		cmp	r0, #0
+  44 0004 40F08F80 		bne	.L24
+  37:../fatfs/src/diskio.c ****   if (stat & STA_NODISK) return stat;           /* No card in the socket */
+  45              		.loc 1 37 0
+  46 0008 484E     		ldr	r6, .L39
+  47 000a 3078     		ldrb	r0, [r6]	@ zero_extendqisi2
+  48              	.LVL1:
+  49 000c 8307     		lsls	r3, r0, #30
+  50 000e 00F18B80 		bmi	.L2
+  38:../fatfs/src/diskio.c **** 
+  39:../fatfs/src/diskio.c ****   MICROSD_PowerOn();                            /* Force socket power on */
+  51              		.loc 1 39 0
+  52 0012 FFF7FEFF 		bl	MICROSD_PowerOn
+  53              	.LVL2:
+  40:../fatfs/src/diskio.c ****   MICROSD_SpiClkSlow();                         /* Start with low SPI clock. */
+  54              		.loc 1 40 0
+  55 0016 FFF7FEFF 		bl	MICROSD_SpiClkSlow
+  56              	.LVL3:
+  57 001a 0A25     		movs	r5, #10
+  58              	.LVL4:
+  59              	.L4:
+  41:../fatfs/src/diskio.c ****   for (n = 10; n; n--) MICROSD_XferSpi(0xff);   /* 80 dummy clocks */
+  60              		.loc 1 41 0 discriminator 2
+  61 001c FF20     		movs	r0, #255
+  62 001e 013D     		subs	r5, r5, #1
+  63              	.LVL5:
+  64 0020 FFF7FEFF 		bl	MICROSD_XferSpi
+  65              	.LVL6:
+  66 0024 15F0FF05 		ands	r5, r5, #255
+  67 0028 F8D1     		bne	.L4
+  68              	.LVL7:
+  42:../fatfs/src/diskio.c **** 
+  43:../fatfs/src/diskio.c ****   ty = 0;
+  44:../fatfs/src/diskio.c ****   if (MICROSD_SendCmd(CMD0, 0) == 1) {          /* Enter Idle state */
+  69              		.loc 1 44 0
+  70 002a 2846     		mov	r0, r5
+  71 002c 2946     		mov	r1, r5
+ARM GAS  /tmp/ccQzY2SP.s 			page 3
+
+
+  72 002e FFF7FEFF 		bl	MICROSD_SendCmd
+  73              	.LVL8:
+  74 0032 0128     		cmp	r0, #1
+  75 0034 0446     		mov	r4, r0
+  76 0036 01D0     		beq	.L5
+  77              	.LVL9:
+  78              	.L10:
+  43:../fatfs/src/diskio.c ****   ty = 0;
+  79              		.loc 1 43 0
+  80 0038 0024     		movs	r4, #0
+  81 003a 60E0     		b	.L6
+  82              	.LVL10:
+  83              	.L5:
+  45:../fatfs/src/diskio.c ****     MICROSD_TimeOutSet(1000);                   /* Initialization timeout of 1000 msec */
+  84              		.loc 1 45 0
+  85 003c 4FF47A70 		mov	r0, #1000
+  86 0040 FFF7FEFF 		bl	MICROSD_TimeOutSet
+  87              	.LVL11:
+  46:../fatfs/src/diskio.c ****     if (MICROSD_SendCmd(CMD8, 0x1AA) == 1) {    /* SDv2? */
+  88              		.loc 1 46 0
+  89 0044 0820     		movs	r0, #8
+  90 0046 4FF4D571 		mov	r1, #426
+  91 004a FFF7FEFF 		bl	MICROSD_SendCmd
+  92              	.LVL12:
+  93 004e 0128     		cmp	r0, #1
+  94 0050 35D1     		bne	.L7
+  95              	.L9:
+  96              	.LVL13:
+  47:../fatfs/src/diskio.c ****       for (n = 0; n < 4; n++) ocr[n] = MICROSD_XferSpi(0xff); /* Get trailing return value of R7 re
+  97              		.loc 1 47 0 discriminator 2
+  98 0052 FF20     		movs	r0, #255
+  99 0054 FFF7FEFF 		bl	MICROSD_XferSpi
+ 100              	.LVL14:
+ 101 0058 01AF     		add	r7, sp, #4
+ 102 005a 7855     		strb	r0, [r7, r5]
+ 103              	.LVL15:
+ 104 005c 0135     		adds	r5, r5, #1
+ 105              	.LVL16:
+ 106 005e 042D     		cmp	r5, #4
+ 107 0060 F7D1     		bne	.L9
+  48:../fatfs/src/diskio.c ****       if (ocr[2] == 0x01 && ocr[3] == 0xAA) {   /* The card can work at vdd range of 2.7-3.6V */
+ 108              		.loc 1 48 0
+ 109 0062 9DF80630 		ldrb	r3, [sp, #6]	@ zero_extendqisi2
+ 110 0066 012B     		cmp	r3, #1
+ 111 0068 E6D1     		bne	.L10
+ 112              		.loc 1 48 0 is_stmt 0 discriminator 1
+ 113 006a 9DF80730 		ldrb	r3, [sp, #7]	@ zero_extendqisi2
+ 114 006e AA2B     		cmp	r3, #170
+ 115 0070 E2D1     		bne	.L10
+ 116              	.L14:
+  49:../fatfs/src/diskio.c ****         while (!MICROSD_TimeOutElapsed() && MICROSD_SendCmd(ACMD41, 0x40000000)); /* Wait for leavi
+ 117              		.loc 1 49 0 is_stmt 1
+ 118 0072 FFF7FEFF 		bl	MICROSD_TimeOutElapsed
+ 119              	.LVL17:
+ 120 0076 28B1     		cbz	r0, .L11
+ 121              	.L13:
+  50:../fatfs/src/diskio.c ****         if (!MICROSD_TimeOutElapsed() && MICROSD_SendCmd(CMD58, 0) == 0) {        /* Check CCS bit 
+ARM GAS  /tmp/ccQzY2SP.s 			page 4
+
+
+ 122              		.loc 1 50 0
+ 123 0078 FFF7FEFF 		bl	MICROSD_TimeOutElapsed
+ 124              	.LVL18:
+ 125 007c 0146     		mov	r1, r0
+ 126 007e 0028     		cmp	r0, #0
+ 127 0080 DAD1     		bne	.L10
+ 128 0082 07E0     		b	.L38
+ 129              	.L11:
+  49:../fatfs/src/diskio.c ****         while (!MICROSD_TimeOutElapsed() && MICROSD_SendCmd(ACMD41, 0x40000000)); /* Wait for leavi
+ 130              		.loc 1 49 0 discriminator 2
+ 131 0084 A920     		movs	r0, #169
+ 132 0086 4FF08041 		mov	r1, #1073741824
+ 133 008a FFF7FEFF 		bl	MICROSD_SendCmd
+ 134              	.LVL19:
+ 135 008e 0028     		cmp	r0, #0
+ 136 0090 EFD1     		bne	.L14
+ 137 0092 F1E7     		b	.L13
+ 138              	.L38:
+ 139              		.loc 1 50 0 discriminator 1
+ 140 0094 3A20     		movs	r0, #58
+ 141 0096 FFF7FEFF 		bl	MICROSD_SendCmd
+ 142              	.LVL20:
+ 143 009a 0028     		cmp	r0, #0
+ 144 009c CCD1     		bne	.L10
+ 145              		.loc 1 50 0 is_stmt 0
+ 146 009e 0446     		mov	r4, r0
+ 147              	.LVL21:
+ 148              	.L16:
+  51:../fatfs/src/diskio.c ****           for (n = 0; n < 4; n++) ocr[n] = MICROSD_XferSpi(0xff);
+ 149              		.loc 1 51 0 is_stmt 1 discriminator 2
+ 150 00a0 FF20     		movs	r0, #255
+ 151 00a2 FFF7FEFF 		bl	MICROSD_XferSpi
+ 152              	.LVL22:
+ 153 00a6 3855     		strb	r0, [r7, r4]
+ 154              	.LVL23:
+ 155 00a8 0134     		adds	r4, r4, #1
+ 156              	.LVL24:
+ 157 00aa 042C     		cmp	r4, #4
+ 158 00ac F8D1     		bne	.L16
+  52:../fatfs/src/diskio.c ****           ty = (ocr[0] & 0x40) ? CT_SD2|CT_BLOCK : CT_SD2; /* SDv2 */
+ 159              		.loc 1 52 0
+ 160 00ae 9DF80430 		ldrb	r3, [sp, #4]	@ zero_extendqisi2
+ 161 00b2 13F0400F 		tst	r3, #64
+ 162 00b6 0CBF     		ite	eq
+ 163 00b8 0424     		moveq	r4, #4
+ 164 00ba 0C24     		movne	r4, #12
+ 165              	.LVL25:
+ 166 00bc 1FE0     		b	.L6
+ 167              	.L7:
+  53:../fatfs/src/diskio.c ****         }
+  54:../fatfs/src/diskio.c ****       }
+  55:../fatfs/src/diskio.c ****     } else {                                    /* SDv1 or MMCv3 */
+  56:../fatfs/src/diskio.c ****       if (MICROSD_SendCmd(ACMD41, 0) <= 1) {
+ 168              		.loc 1 56 0
+ 169 00be 2946     		mov	r1, r5
+ 170 00c0 A920     		movs	r0, #169
+ 171 00c2 FFF7FEFF 		bl	MICROSD_SendCmd
+ARM GAS  /tmp/ccQzY2SP.s 			page 5
+
+
+ 172              	.LVL26:
+ 173 00c6 0128     		cmp	r0, #1
+  57:../fatfs/src/diskio.c ****         ty = CT_SD1; cmd = ACMD41;              /* SDv1 */
+ 174              		.loc 1 57 0
+ 175 00c8 9ABF     		itte	ls
+ 176 00ca 0224     		movls	r4, #2
+ 177 00cc A925     		movls	r5, #169
+  58:../fatfs/src/diskio.c ****       } else {
+  59:../fatfs/src/diskio.c ****         ty = CT_MMC; cmd = CMD1;                /* MMCv3 */
+ 178              		.loc 1 59 0
+ 179 00ce 2546     		movhi	r5, r4
+ 180              	.LVL27:
+ 181              	.L21:
+  60:../fatfs/src/diskio.c ****       }
+  61:../fatfs/src/diskio.c ****       while (!MICROSD_TimeOutElapsed() && MICROSD_SendCmd(cmd, 0));     /* Wait for leaving idle st
+ 182              		.loc 1 61 0 discriminator 1
+ 183 00d0 FFF7FEFF 		bl	MICROSD_TimeOutElapsed
+ 184              	.LVL28:
+ 185 00d4 0146     		mov	r1, r0
+ 186 00d6 60B1     		cbz	r0, .L18
+ 187              	.L20:
+  62:../fatfs/src/diskio.c ****       if (MICROSD_TimeOutElapsed() || MICROSD_SendCmd(CMD16, 512) != 0) /* Set read/write block len
+ 188              		.loc 1 62 0
+ 189 00d8 FFF7FEFF 		bl	MICROSD_TimeOutElapsed
+ 190              	.LVL29:
+ 191 00dc 0028     		cmp	r0, #0
+ 192 00de ABD1     		bne	.L10
+ 193              		.loc 1 62 0 is_stmt 0 discriminator 1
+ 194 00e0 1020     		movs	r0, #16
+ 195 00e2 4FF40071 		mov	r1, #512
+ 196 00e6 FFF7FEFF 		bl	MICROSD_SendCmd
+ 197              	.LVL30:
+  63:../fatfs/src/diskio.c ****         ty = 0;
+ 198              		.loc 1 63 0 is_stmt 1 discriminator 1
+ 199 00ea 0028     		cmp	r0, #0
+ 200 00ec 18BF     		it	ne
+ 201 00ee 0024     		movne	r4, #0
+ 202 00f0 05E0     		b	.L6
+ 203              	.L18:
+  61:../fatfs/src/diskio.c ****       while (!MICROSD_TimeOutElapsed() && MICROSD_SendCmd(cmd, 0));     /* Wait for leaving idle st
+ 204              		.loc 1 61 0 discriminator 2
+ 205 00f2 2846     		mov	r0, r5
+ 206 00f4 FFF7FEFF 		bl	MICROSD_SendCmd
+ 207              	.LVL31:
+ 208 00f8 0028     		cmp	r0, #0
+ 209 00fa E9D1     		bne	.L21
+ 210 00fc ECE7     		b	.L20
+ 211              	.LVL32:
+ 212              	.L6:
+  64:../fatfs/src/diskio.c ****     }
+  65:../fatfs/src/diskio.c ****   }
+  66:../fatfs/src/diskio.c ****   CardType = ty;
+ 213              		.loc 1 66 0
+ 214 00fe 0C4B     		ldr	r3, .L39+4
+ 215 0100 1C80     		strh	r4, [r3]	@ movhi
+  67:../fatfs/src/diskio.c ****   MICROSD_Deselect();
+ 216              		.loc 1 67 0
+ARM GAS  /tmp/ccQzY2SP.s 			page 6
+
+
+ 217 0102 FFF7FEFF 		bl	MICROSD_Deselect
+ 218              	.LVL33:
+  68:../fatfs/src/diskio.c **** 
+  69:../fatfs/src/diskio.c ****   if (ty) {                                     /* Initialization succeded */
+ 219              		.loc 1 69 0
+ 220 0106 34B1     		cbz	r4, .L22
+  70:../fatfs/src/diskio.c ****     stat &= ~STA_NOINIT;                        /* Clear STA_NOINIT */
+ 221              		.loc 1 70 0
+ 222 0108 3378     		ldrb	r3, [r6]	@ zero_extendqisi2
+ 223 010a 23F00103 		bic	r3, r3, #1
+ 224 010e 3370     		strb	r3, [r6]
+  71:../fatfs/src/diskio.c ****     MICROSD_SpiClkFast();                       /* Speed up SPI clock. */
+ 225              		.loc 1 71 0
+ 226 0110 FFF7FEFF 		bl	MICROSD_SpiClkFast
+ 227              	.LVL34:
+ 228 0114 05E0     		b	.L23
+ 229              	.L22:
+ 230              	.LVL35:
+  72:../fatfs/src/diskio.c ****   } else {                                      /* Initialization failed */
+  73:../fatfs/src/diskio.c ****     MICROSD_PowerOff();
+ 231              		.loc 1 73 0
+ 232 0116 FFF7FEFF 		bl	MICROSD_PowerOff
+ 233              	.LVL36:
+  74:../fatfs/src/diskio.c ****     stat |= STA_NOINIT;                         /* Set STA_NOINIT */
+ 234              		.loc 1 74 0
+ 235 011a 3378     		ldrb	r3, [r6]	@ zero_extendqisi2
+ 236 011c 43F00103 		orr	r3, r3, #1
+ 237 0120 3370     		strb	r3, [r6]
+ 238              	.LVL37:
+ 239              	.L23:
+  75:../fatfs/src/diskio.c ****   }
+  76:../fatfs/src/diskio.c **** 
+  77:../fatfs/src/diskio.c ****   return stat;
+ 240              		.loc 1 77 0
+ 241 0122 3078     		ldrb	r0, [r6]	@ zero_extendqisi2
+ 242 0124 00E0     		b	.L2
+ 243              	.LVL38:
+ 244              	.L24:
+  36:../fatfs/src/diskio.c ****   if (drv) return STA_NOINIT;                   /* Supports only single drive */
+ 245              		.loc 1 36 0
+ 246 0126 0120     		movs	r0, #1
+ 247              	.LVL39:
+ 248              	.L2:
+  78:../fatfs/src/diskio.c **** }
+ 249              		.loc 1 78 0
+ 250 0128 03B0     		add	sp, sp, #12
+ 251              		@ sp needed
+ 252 012a F0BD     		pop	{r4, r5, r6, r7, pc}
+ 253              	.L40:
+ 254              		.align	2
+ 255              	.L39:
+ 256 012c 00000000 		.word	.LANCHOR0
+ 257 0130 00000000 		.word	.LANCHOR1
+ 258              		.cfi_endproc
+ 259              	.LFE84:
+ 261              		.section	.text.disk_status,"ax",%progbits
+ 262              		.align	1
+ARM GAS  /tmp/ccQzY2SP.s 			page 7
+
+
+ 263              		.global	disk_status
+ 264              		.thumb
+ 265              		.thumb_func
+ 267              	disk_status:
+ 268              	.LFB85:
+  79:../fatfs/src/diskio.c **** 
+  80:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+  81:../fatfs/src/diskio.c **** /* Get Disk Status                                                       */
+  82:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+  83:../fatfs/src/diskio.c **** 
+  84:../fatfs/src/diskio.c **** DSTATUS disk_status (
+  85:../fatfs/src/diskio.c ****   BYTE drv                        /* Physical drive nmuber (0) */
+  86:../fatfs/src/diskio.c **** )
+  87:../fatfs/src/diskio.c **** {
+ 269              		.loc 1 87 0
+ 270              		.cfi_startproc
+ 271              		@ args = 0, pretend = 0, frame = 0
+ 272              		@ frame_needed = 0, uses_anonymous_args = 0
+ 273              		@ link register save eliminated.
+ 274              	.LVL40:
+  88:../fatfs/src/diskio.c ****   if (drv) return STA_NOINIT;     /* Supports only single drive */
+ 275              		.loc 1 88 0
+ 276 0000 10B9     		cbnz	r0, .L43
+  89:../fatfs/src/diskio.c ****   return stat;
+ 277              		.loc 1 89 0
+ 278 0002 024B     		ldr	r3, .L44
+ 279 0004 1878     		ldrb	r0, [r3]	@ zero_extendqisi2
+ 280              	.LVL41:
+ 281 0006 7047     		bx	lr
+ 282              	.LVL42:
+ 283              	.L43:
+  88:../fatfs/src/diskio.c ****   if (drv) return STA_NOINIT;     /* Supports only single drive */
+ 284              		.loc 1 88 0
+ 285 0008 0120     		movs	r0, #1
+ 286              	.LVL43:
+  90:../fatfs/src/diskio.c **** }
+ 287              		.loc 1 90 0
+ 288 000a 7047     		bx	lr
+ 289              	.L45:
+ 290              		.align	2
+ 291              	.L44:
+ 292 000c 00000000 		.word	.LANCHOR0
+ 293              		.cfi_endproc
+ 294              	.LFE85:
+ 296              		.section	.text.disk_read,"ax",%progbits
+ 297              		.align	1
+ 298              		.global	disk_read
+ 299              		.thumb
+ 300              		.thumb_func
+ 302              	disk_read:
+ 303              	.LFB86:
+  91:../fatfs/src/diskio.c **** 
+  92:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+  93:../fatfs/src/diskio.c **** /* Read Sector(s)                                                        */
+  94:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+  95:../fatfs/src/diskio.c **** 
+  96:../fatfs/src/diskio.c **** DRESULT disk_read (
+ARM GAS  /tmp/ccQzY2SP.s 			page 8
+
+
+  97:../fatfs/src/diskio.c ****   BYTE drv,       /* Physical drive nmuber (0) */
+  98:../fatfs/src/diskio.c ****   BYTE *buff,     /* Pointer to the data buffer to store read data */
+  99:../fatfs/src/diskio.c ****   DWORD sector,   /* Start sector number (LBA) */
+ 100:../fatfs/src/diskio.c ****   BYTE count      /* Sector count (1..255) */
+ 101:../fatfs/src/diskio.c **** )
+ 102:../fatfs/src/diskio.c **** {
+ 304              		.loc 1 102 0
+ 305              		.cfi_startproc
+ 306              		@ args = 0, pretend = 0, frame = 0
+ 307              		@ frame_needed = 0, uses_anonymous_args = 0
+ 308              	.LVL44:
+ 309 0000 38B5     		push	{r3, r4, r5, lr}
+ 310              		.cfi_def_cfa_offset 16
+ 311              		.cfi_offset 3, -16
+ 312              		.cfi_offset 4, -12
+ 313              		.cfi_offset 5, -8
+ 314              		.cfi_offset 14, -4
+ 315              		.loc 1 102 0
+ 316 0002 0D46     		mov	r5, r1
+ 317 0004 1C46     		mov	r4, r3
+ 318 0006 1146     		mov	r1, r2
+ 319              	.LVL45:
+ 103:../fatfs/src/diskio.c ****   if (drv || !count) return RES_PARERR;
+ 320              		.loc 1 103 0
+ 321 0008 0028     		cmp	r0, #0
+ 322 000a 33D1     		bne	.L54
+ 323              		.loc 1 103 0 is_stmt 0 discriminator 2
+ 324 000c 93B3     		cbz	r3, .L54
+ 104:../fatfs/src/diskio.c ****   if (stat & STA_NOINIT) return RES_NOTRDY;
+ 325              		.loc 1 104 0 is_stmt 1
+ 326 000e 1B4B     		ldr	r3, .L62
+ 327              	.LVL46:
+ 328 0010 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 329 0012 DA07     		lsls	r2, r3, #31
+ 330              	.LVL47:
+ 331 0014 30D4     		bmi	.L55
+ 105:../fatfs/src/diskio.c **** 
+ 106:../fatfs/src/diskio.c ****   if (!(CardType & CT_BLOCK)) sector *= 512;  /* Convert to byte address if needed */
+ 332              		.loc 1 106 0
+ 333 0016 1A4B     		ldr	r3, .L62+4
+ 334 0018 1B88     		ldrh	r3, [r3]
+ 335 001a 1B07     		lsls	r3, r3, #28
+ 336 001c 58BF     		it	pl
+ 337 001e 4902     		lslpl	r1, r1, #9
+ 338              	.LVL48:
+ 107:../fatfs/src/diskio.c **** 
+ 108:../fatfs/src/diskio.c ****   if (count == 1) {                           /* Single block read */
+ 339              		.loc 1 108 0
+ 340 0020 012C     		cmp	r4, #1
+ 341 0022 0DD1     		bne	.L49
+ 109:../fatfs/src/diskio.c ****     if ((MICROSD_SendCmd(CMD17, sector) == 0) /* READ_SINGLE_BLOCK */
+ 342              		.loc 1 109 0
+ 343 0024 1120     		movs	r0, #17
+ 344              	.LVL49:
+ 345 0026 FFF7FEFF 		bl	MICROSD_SendCmd
+ 346              	.LVL50:
+ 347 002a E8B9     		cbnz	r0, .L50
+ARM GAS  /tmp/ccQzY2SP.s 			page 9
+
+
+ 110:../fatfs/src/diskio.c ****       && MICROSD_BlockRx(buff, 512))
+ 348              		.loc 1 110 0
+ 349 002c 2846     		mov	r0, r5
+ 350 002e 4FF40071 		mov	r1, #512
+ 351 0032 FFF7FEFF 		bl	MICROSD_BlockRx
+ 352              	.LVL51:
+ 353 0036 D0F10104 		rsbs	r4, r0, #1
+ 354 003a 38BF     		it	cc
+ 355 003c 0024     		movcc	r4, #0
+ 356 003e 13E0     		b	.L50
+ 357              	.LVL52:
+ 358              	.L49:
+ 111:../fatfs/src/diskio.c ****       count = 0;
+ 112:../fatfs/src/diskio.c ****   }
+ 113:../fatfs/src/diskio.c ****   else {                                        /* Multiple block read */
+ 114:../fatfs/src/diskio.c ****     if (MICROSD_SendCmd(CMD18, sector) == 0) {  /* READ_MULTIPLE_BLOCK */
+ 359              		.loc 1 114 0
+ 360 0040 1220     		movs	r0, #18
+ 361              	.LVL53:
+ 362 0042 FFF7FEFF 		bl	MICROSD_SendCmd
+ 363              	.LVL54:
+ 364 0046 78B9     		cbnz	r0, .L50
+ 365              	.LVL55:
+ 366              	.L52:
+ 115:../fatfs/src/diskio.c ****       do {
+ 116:../fatfs/src/diskio.c ****         if (!MICROSD_BlockRx(buff, 512)) break;
+ 367              		.loc 1 116 0
+ 368 0048 2846     		mov	r0, r5
+ 369 004a 4FF40071 		mov	r1, #512
+ 370 004e FFF7FEFF 		bl	MICROSD_BlockRx
+ 371              	.LVL56:
+ 372 0052 28B1     		cbz	r0, .L51
+ 117:../fatfs/src/diskio.c ****         buff += 512;
+ 118:../fatfs/src/diskio.c ****       } while (--count);
+ 373              		.loc 1 118 0
+ 374 0054 013C     		subs	r4, r4, #1
+ 375              	.LVL57:
+ 376 0056 14F0FF04 		ands	r4, r4, #255
+ 377              	.LVL58:
+ 117:../fatfs/src/diskio.c ****         buff += 512;
+ 378              		.loc 1 117 0
+ 379 005a 05F50075 		add	r5, r5, #512
+ 380              	.LVL59:
+ 381              		.loc 1 118 0
+ 382 005e F3D1     		bne	.L52
+ 383              	.L51:
+ 384              	.LVL60:
+ 119:../fatfs/src/diskio.c ****       MICROSD_SendCmd(CMD12, 0);                /* STOP_TRANSMISSION */
+ 385              		.loc 1 119 0
+ 386 0060 0C20     		movs	r0, #12
+ 387 0062 0021     		movs	r1, #0
+ 388 0064 FFF7FEFF 		bl	MICROSD_SendCmd
+ 389              	.LVL61:
+ 390              	.L50:
+ 120:../fatfs/src/diskio.c ****     }
+ 121:../fatfs/src/diskio.c ****   }
+ 122:../fatfs/src/diskio.c ****   MICROSD_Deselect();
+ARM GAS  /tmp/ccQzY2SP.s 			page 10
+
+
+ 391              		.loc 1 122 0
+ 392 0068 FFF7FEFF 		bl	MICROSD_Deselect
+ 393              	.LVL62:
+ 123:../fatfs/src/diskio.c **** 
+ 124:../fatfs/src/diskio.c ****   return count ? RES_ERROR : RES_OK;
+ 394              		.loc 1 124 0
+ 395 006c 201C     		adds	r0, r4, #0
+ 396 006e 18BF     		it	ne
+ 397 0070 0120     		movne	r0, #1
+ 398 0072 38BD     		pop	{r3, r4, r5, pc}
+ 399              	.LVL63:
+ 400              	.L54:
+ 103:../fatfs/src/diskio.c ****   if (drv || !count) return RES_PARERR;
+ 401              		.loc 1 103 0
+ 402 0074 0420     		movs	r0, #4
+ 403              	.LVL64:
+ 404 0076 38BD     		pop	{r3, r4, r5, pc}
+ 405              	.LVL65:
+ 406              	.L55:
+ 104:../fatfs/src/diskio.c ****   if (stat & STA_NOINIT) return RES_NOTRDY;
+ 407              		.loc 1 104 0
+ 408 0078 0320     		movs	r0, #3
+ 409              	.LVL66:
+ 125:../fatfs/src/diskio.c **** }
+ 410              		.loc 1 125 0
+ 411 007a 38BD     		pop	{r3, r4, r5, pc}
+ 412              	.LVL67:
+ 413              	.L63:
+ 414              		.align	2
+ 415              	.L62:
+ 416 007c 00000000 		.word	.LANCHOR0
+ 417 0080 00000000 		.word	.LANCHOR1
+ 418              		.cfi_endproc
+ 419              	.LFE86:
+ 421              		.section	.text.disk_write,"ax",%progbits
+ 422              		.align	1
+ 423              		.global	disk_write
+ 424              		.thumb
+ 425              		.thumb_func
+ 427              	disk_write:
+ 428              	.LFB87:
+ 126:../fatfs/src/diskio.c **** 
+ 127:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+ 128:../fatfs/src/diskio.c **** /* Write Sector(s)                                                       */
+ 129:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+ 130:../fatfs/src/diskio.c **** 
+ 131:../fatfs/src/diskio.c **** #if _READONLY == 0
+ 132:../fatfs/src/diskio.c **** DRESULT disk_write (
+ 133:../fatfs/src/diskio.c ****   BYTE drv,           /* Physical drive nmuber (0) */
+ 134:../fatfs/src/diskio.c ****   const BYTE *buff,   /* Pointer to the data to be written */
+ 135:../fatfs/src/diskio.c ****   DWORD sector,       /* Start sector number (LBA) */
+ 136:../fatfs/src/diskio.c ****   BYTE count          /* Sector count (1..255) */
+ 137:../fatfs/src/diskio.c **** )
+ 138:../fatfs/src/diskio.c **** {
+ 429              		.loc 1 138 0
+ 430              		.cfi_startproc
+ 431              		@ args = 0, pretend = 0, frame = 0
+ARM GAS  /tmp/ccQzY2SP.s 			page 11
+
+
+ 432              		@ frame_needed = 0, uses_anonymous_args = 0
+ 433              	.LVL68:
+ 434 0000 70B5     		push	{r4, r5, r6, lr}
+ 435              		.cfi_def_cfa_offset 16
+ 436              		.cfi_offset 4, -16
+ 437              		.cfi_offset 5, -12
+ 438              		.cfi_offset 6, -8
+ 439              		.cfi_offset 14, -4
+ 440              		.loc 1 138 0
+ 441 0002 0D46     		mov	r5, r1
+ 442 0004 1646     		mov	r6, r2
+ 443 0006 1C46     		mov	r4, r3
+ 139:../fatfs/src/diskio.c ****   if (drv || !count) return RES_PARERR;
+ 444              		.loc 1 139 0
+ 445 0008 0028     		cmp	r0, #0
+ 446 000a 40D1     		bne	.L73
+ 447              		.loc 1 139 0 is_stmt 0 discriminator 2
+ 448 000c 002B     		cmp	r3, #0
+ 449 000e 3ED0     		beq	.L73
+ 140:../fatfs/src/diskio.c ****   if (stat & STA_NOINIT) return RES_NOTRDY;
+ 450              		.loc 1 140 0 is_stmt 1
+ 451 0010 224B     		ldr	r3, .L86
+ 452              	.LVL69:
+ 453 0012 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 454 0014 D807     		lsls	r0, r3, #31
+ 455              	.LVL70:
+ 456 0016 3CD4     		bmi	.L74
+ 141:../fatfs/src/diskio.c ****   if (stat & STA_PROTECT) return RES_WRPRT;
+ 457              		.loc 1 141 0
+ 458 0018 5907     		lsls	r1, r3, #29
+ 459              	.LVL71:
+ 460 001a 3CD4     		bmi	.L75
+ 142:../fatfs/src/diskio.c **** 
+ 143:../fatfs/src/diskio.c ****   if (!(CardType & CT_BLOCK)) sector *= 512;  /* Convert to byte address if needed */
+ 461              		.loc 1 143 0
+ 462 001c 204B     		ldr	r3, .L86+4
+ 463 001e 1B88     		ldrh	r3, [r3]
+ 464 0020 1A07     		lsls	r2, r3, #28
+ 465              	.LVL72:
+ 466 0022 58BF     		it	pl
+ 467 0024 7602     		lslpl	r6, r6, #9
+ 468              	.LVL73:
+ 144:../fatfs/src/diskio.c **** 
+ 145:../fatfs/src/diskio.c ****   if (count == 1) {                           /* Single block write */
+ 469              		.loc 1 145 0
+ 470 0026 012C     		cmp	r4, #1
+ 471 0028 0DD1     		bne	.L67
+ 146:../fatfs/src/diskio.c ****     if ((MICROSD_SendCmd(CMD24, sector) == 0) /* WRITE_BLOCK */
+ 472              		.loc 1 146 0
+ 473 002a 1820     		movs	r0, #24
+ 474 002c 3146     		mov	r1, r6
+ 475 002e FFF7FEFF 		bl	MICROSD_SendCmd
+ 476              	.LVL74:
+ 477 0032 30BB     		cbnz	r0, .L68
+ 147:../fatfs/src/diskio.c ****       && MICROSD_BlockTx(buff, 0xFE))
+ 478              		.loc 1 147 0
+ 479 0034 2846     		mov	r0, r5
+ARM GAS  /tmp/ccQzY2SP.s 			page 12
+
+
+ 480 0036 FE21     		movs	r1, #254
+ 481 0038 FFF7FEFF 		bl	MICROSD_BlockTx
+ 482              	.LVL75:
+ 483 003c D0F10104 		rsbs	r4, r0, #1
+ 484 0040 38BF     		it	cc
+ 485 0042 0024     		movcc	r4, #0
+ 486 0044 1DE0     		b	.L68
+ 487              	.L67:
+ 148:../fatfs/src/diskio.c ****       count = 0;
+ 149:../fatfs/src/diskio.c ****   }
+ 150:../fatfs/src/diskio.c ****   else {                                      /* Multiple block write */
+ 151:../fatfs/src/diskio.c ****     if (CardType & CT_SDC) MICROSD_SendCmd(ACMD23, count);
+ 488              		.loc 1 151 0
+ 489 0046 13F0060F 		tst	r3, #6
+ 490 004a 03D0     		beq	.L69
+ 491              		.loc 1 151 0 is_stmt 0 discriminator 1
+ 492 004c 9720     		movs	r0, #151
+ 493 004e 2146     		mov	r1, r4
+ 494 0050 FFF7FEFF 		bl	MICROSD_SendCmd
+ 495              	.LVL76:
+ 496              	.L69:
+ 152:../fatfs/src/diskio.c ****     if (MICROSD_SendCmd(CMD25, sector) == 0) {/* WRITE_MULTIPLE_BLOCK */
+ 497              		.loc 1 152 0 is_stmt 1
+ 498 0054 1920     		movs	r0, #25
+ 499 0056 3146     		mov	r1, r6
+ 500 0058 FFF7FEFF 		bl	MICROSD_SendCmd
+ 501              	.LVL77:
+ 502 005c 88B9     		cbnz	r0, .L68
+ 503              	.LVL78:
+ 504              	.L71:
+ 153:../fatfs/src/diskio.c ****       do {
+ 154:../fatfs/src/diskio.c ****         if (!MICROSD_BlockTx(buff, 0xFC)) break;
+ 505              		.loc 1 154 0
+ 506 005e 2846     		mov	r0, r5
+ 507 0060 FC21     		movs	r1, #252
+ 508 0062 FFF7FEFF 		bl	MICROSD_BlockTx
+ 509              	.LVL79:
+ 510 0066 28B1     		cbz	r0, .L70
+ 155:../fatfs/src/diskio.c ****         buff += 512;
+ 156:../fatfs/src/diskio.c ****       } while (--count);
+ 511              		.loc 1 156 0
+ 512 0068 013C     		subs	r4, r4, #1
+ 513              	.LVL80:
+ 514 006a 14F0FF04 		ands	r4, r4, #255
+ 515              	.LVL81:
+ 155:../fatfs/src/diskio.c ****         buff += 512;
+ 516              		.loc 1 155 0
+ 517 006e 05F50075 		add	r5, r5, #512
+ 518              	.LVL82:
+ 519              		.loc 1 156 0
+ 520 0072 F4D1     		bne	.L71
+ 521              	.L70:
+ 522              	.LVL83:
+ 157:../fatfs/src/diskio.c ****       if (!MICROSD_BlockTx(0, 0xFD))          /* STOP_TRAN token */
+ 523              		.loc 1 157 0
+ 524 0074 0020     		movs	r0, #0
+ 525 0076 FD21     		movs	r1, #253
+ARM GAS  /tmp/ccQzY2SP.s 			page 13
+
+
+ 526 0078 FFF7FEFF 		bl	MICROSD_BlockTx
+ 527              	.LVL84:
+ 158:../fatfs/src/diskio.c ****         count = 1;
+ 528              		.loc 1 158 0
+ 529 007c 0028     		cmp	r0, #0
+ 530 007e 08BF     		it	eq
+ 531 0080 0124     		moveq	r4, #1
+ 532              	.LVL85:
+ 533              	.L68:
+ 159:../fatfs/src/diskio.c ****     }
+ 160:../fatfs/src/diskio.c ****   }
+ 161:../fatfs/src/diskio.c ****   MICROSD_Deselect();
+ 534              		.loc 1 161 0
+ 535 0082 FFF7FEFF 		bl	MICROSD_Deselect
+ 536              	.LVL86:
+ 162:../fatfs/src/diskio.c **** 
+ 163:../fatfs/src/diskio.c ****   return count ? RES_ERROR : RES_OK;
+ 537              		.loc 1 163 0
+ 538 0086 201C     		adds	r0, r4, #0
+ 539 0088 18BF     		it	ne
+ 540 008a 0120     		movne	r0, #1
+ 541 008c 70BD     		pop	{r4, r5, r6, pc}
+ 542              	.LVL87:
+ 543              	.L73:
+ 139:../fatfs/src/diskio.c ****   if (drv || !count) return RES_PARERR;
+ 544              		.loc 1 139 0
+ 545 008e 0420     		movs	r0, #4
+ 546              	.LVL88:
+ 547 0090 70BD     		pop	{r4, r5, r6, pc}
+ 548              	.LVL89:
+ 549              	.L74:
+ 140:../fatfs/src/diskio.c ****   if (stat & STA_NOINIT) return RES_NOTRDY;
+ 550              		.loc 1 140 0
+ 551 0092 0320     		movs	r0, #3
+ 552 0094 70BD     		pop	{r4, r5, r6, pc}
+ 553              	.LVL90:
+ 554              	.L75:
+ 141:../fatfs/src/diskio.c ****   if (stat & STA_PROTECT) return RES_WRPRT;
+ 555              		.loc 1 141 0
+ 556 0096 0220     		movs	r0, #2
+ 164:../fatfs/src/diskio.c **** }
+ 557              		.loc 1 164 0
+ 558 0098 70BD     		pop	{r4, r5, r6, pc}
+ 559              	.LVL91:
+ 560              	.L87:
+ 561 009a 00BF     		.align	2
+ 562              	.L86:
+ 563 009c 00000000 		.word	.LANCHOR0
+ 564 00a0 00000000 		.word	.LANCHOR1
+ 565              		.cfi_endproc
+ 566              	.LFE87:
+ 568              		.section	.text.disk_ioctl,"ax",%progbits
+ 569              		.align	1
+ 570              		.global	disk_ioctl
+ 571              		.thumb
+ 572              		.thumb_func
+ 574              	disk_ioctl:
+ARM GAS  /tmp/ccQzY2SP.s 			page 14
+
+
+ 575              	.LFB88:
+ 165:../fatfs/src/diskio.c **** #endif /* _READONLY */
+ 166:../fatfs/src/diskio.c **** 
+ 167:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+ 168:../fatfs/src/diskio.c **** /* Miscellaneous Functions                                               */
+ 169:../fatfs/src/diskio.c **** /*-----------------------------------------------------------------------*/
+ 170:../fatfs/src/diskio.c **** 
+ 171:../fatfs/src/diskio.c **** DRESULT disk_ioctl (
+ 172:../fatfs/src/diskio.c ****   BYTE drv,     /* Physical drive nmuber (0) */
+ 173:../fatfs/src/diskio.c ****   BYTE ctrl,    /* Control code */
+ 174:../fatfs/src/diskio.c ****   void *buff    /* Buffer to send/receive data block */
+ 175:../fatfs/src/diskio.c **** )
+ 176:../fatfs/src/diskio.c **** {
+ 576              		.loc 1 176 0
+ 577              		.cfi_startproc
+ 578              		@ args = 0, pretend = 0, frame = 16
+ 579              		@ frame_needed = 0, uses_anonymous_args = 0
+ 580              	.LVL92:
+ 581 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 582              		.cfi_def_cfa_offset 20
+ 583              		.cfi_offset 4, -20
+ 584              		.cfi_offset 5, -16
+ 585              		.cfi_offset 6, -12
+ 586              		.cfi_offset 7, -8
+ 587              		.cfi_offset 14, -4
+ 588 0002 1546     		mov	r5, r2
+ 589              	.LVL93:
+ 590 0004 85B0     		sub	sp, sp, #20
+ 591              		.cfi_def_cfa_offset 40
+ 177:../fatfs/src/diskio.c ****   DRESULT res;
+ 178:../fatfs/src/diskio.c ****   BYTE n, csd[16], *ptr = buff;
+ 179:../fatfs/src/diskio.c ****   DWORD csize;
+ 180:../fatfs/src/diskio.c **** 
+ 181:../fatfs/src/diskio.c **** 
+ 182:../fatfs/src/diskio.c ****   if (drv) return RES_PARERR;
+ 592              		.loc 1 182 0
+ 593 0006 0028     		cmp	r0, #0
+ 594 0008 40F0E380 		bne	.L110
+ 183:../fatfs/src/diskio.c ****   if (stat & STA_NOINIT) return RES_NOTRDY;
+ 595              		.loc 1 183 0
+ 596 000c 734B     		ldr	r3, .L131
+ 597 000e 1A78     		ldrb	r2, [r3]	@ zero_extendqisi2
+ 598              	.LVL94:
+ 599 0010 D207     		lsls	r2, r2, #31
+ 600 0012 00F1E080 		bmi	.L111
+ 601              	.LVL95:
+ 184:../fatfs/src/diskio.c **** 
+ 185:../fatfs/src/diskio.c ****   res = RES_ERROR;
+ 186:../fatfs/src/diskio.c ****   switch (ctrl) {
+ 602              		.loc 1 186 0
+ 603 0016 0E29     		cmp	r1, #14
+ 604 0018 00F2D480 		bhi	.L112
+ 605 001c DFE801F0 		tbb	[pc, r1]
+ 606              	.L92:
+ 607 0020 08       		.byte	(.L91-.L92)/2
+ 608 0021 13       		.byte	(.L93-.L92)/2
+ 609 0022 4B       		.byte	(.L94-.L92)/2
+ARM GAS  /tmp/ccQzY2SP.s 			page 15
+
+
+ 610 0023 4F       		.byte	(.L95-.L92)/2
+ 611 0024 D2       		.byte	(.L112-.L92)/2
+ 612 0025 D2       		.byte	(.L112-.L92)/2
+ 613 0026 D2       		.byte	(.L112-.L92)/2
+ 614 0027 D2       		.byte	(.L112-.L92)/2
+ 615 0028 10       		.byte	(.L96-.L92)/2
+ 616 0029 D2       		.byte	(.L112-.L92)/2
+ 617 002a 9D       		.byte	(.L97-.L92)/2
+ 618 002b A1       		.byte	(.L98-.L92)/2
+ 619 002c A3       		.byte	(.L99-.L92)/2
+ 620 002d AF       		.byte	(.L100-.L92)/2
+ 621 002e BF       		.byte	(.L101-.L92)/2
+ 622 002f 00       		.p2align 1
+ 623              	.L91:
+ 187:../fatfs/src/diskio.c ****     case CTRL_SYNC :                /* Flush dirty buffer if present */
+ 188:../fatfs/src/diskio.c ****       if (MICROSD_Select()) {
+ 624              		.loc 1 188 0
+ 625 0030 FFF7FEFF 		bl	MICROSD_Select
+ 626              	.LVL96:
+ 627 0034 08B9     		cbnz	r0, .L102
+ 628              	.L103:
+ 185:../fatfs/src/diskio.c ****   res = RES_ERROR;
+ 629              		.loc 1 185 0
+ 630 0036 0124     		movs	r4, #1
+ 631 0038 C7E0     		b	.L90
+ 632              	.L102:
+ 189:../fatfs/src/diskio.c ****         MICROSD_Deselect();
+ 633              		.loc 1 189 0
+ 634 003a FFF7FEFF 		bl	MICROSD_Deselect
+ 635              	.LVL97:
+ 636 003e C3E0     		b	.L113
+ 637              	.LVL98:
+ 638              	.L96:
+ 190:../fatfs/src/diskio.c ****         res = RES_OK;
+ 191:../fatfs/src/diskio.c ****       }
+ 192:../fatfs/src/diskio.c ****       break;
+ 193:../fatfs/src/diskio.c **** 
+ 194:../fatfs/src/diskio.c ****     case CTRL_INVALIDATE :          /* Used when unmounting */
+ 195:../fatfs/src/diskio.c ****       stat = STA_NOINIT;            /* Set disk status */
+ 639              		.loc 1 195 0
+ 640 0040 0122     		movs	r2, #1
+ 641 0042 1A70     		strb	r2, [r3]
+ 642              	.LVL99:
+ 643 0044 C0E0     		b	.L113
+ 644              	.LVL100:
+ 645              	.L93:
+ 196:../fatfs/src/diskio.c ****       res = RES_OK;
+ 197:../fatfs/src/diskio.c ****       break;
+ 198:../fatfs/src/diskio.c **** 
+ 199:../fatfs/src/diskio.c ****     case GET_SECTOR_COUNT :         /* Get number of sectors on the disk (WORD) */
+ 200:../fatfs/src/diskio.c ****       if ((MICROSD_SendCmd(CMD9, 0) == 0) && MICROSD_BlockRx(csd, 16)) {
+ 646              		.loc 1 200 0
+ 647 0046 0920     		movs	r0, #9
+ 648              	.LVL101:
+ 649 0048 0021     		movs	r1, #0
+ 650              	.LVL102:
+ 651 004a FFF7FEFF 		bl	MICROSD_SendCmd
+ARM GAS  /tmp/ccQzY2SP.s 			page 16
+
+
+ 652              	.LVL103:
+ 653 004e 0446     		mov	r4, r0
+ 654 0050 0028     		cmp	r0, #0
+ 655 0052 F0D1     		bne	.L103
+ 656              		.loc 1 200 0 is_stmt 0 discriminator 1
+ 657 0054 6846     		mov	r0, sp
+ 658 0056 1021     		movs	r1, #16
+ 659 0058 FFF7FEFF 		bl	MICROSD_BlockRx
+ 660              	.LVL104:
+ 661 005c 0028     		cmp	r0, #0
+ 662 005e EAD0     		beq	.L103
+ 201:../fatfs/src/diskio.c ****         if ((csd[0] >> 6) == 1) {                     /* SDv2? */
+ 663              		.loc 1 201 0 is_stmt 1
+ 664 0060 9DF80030 		ldrb	r3, [sp]	@ zero_extendqisi2
+ 665 0064 9DF80820 		ldrb	r2, [sp, #8]	@ zero_extendqisi2
+ 666 0068 9B09     		lsrs	r3, r3, #6
+ 667 006a 012B     		cmp	r3, #1
+ 668 006c 9DF80930 		ldrb	r3, [sp, #9]	@ zero_extendqisi2
+ 669 0070 04D1     		bne	.L104
+ 670              	.LVL105:
+ 202:../fatfs/src/diskio.c ****           csize = csd[9] + ((WORD)csd[8] << 8) + 1;
+ 671              		.loc 1 202 0
+ 672 0072 03EB0223 		add	r3, r3, r2, lsl #8
+ 673 0076 0133     		adds	r3, r3, #1
+ 203:../fatfs/src/diskio.c ****           *(DWORD*)buff = (DWORD)csize << 10;
+ 674              		.loc 1 203 0
+ 675 0078 9B02     		lsls	r3, r3, #10
+ 676 007a 1AE0     		b	.L124
+ 677              	.LVL106:
+ 678              	.L104:
+ 204:../fatfs/src/diskio.c ****         } else {                                      /* SDv1 or MMCv2 */
+ 205:../fatfs/src/diskio.c ****           n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
+ 206:../fatfs/src/diskio.c ****           csize = (csd[8] >> 6) + ((WORD)csd[7] << 2) + ((WORD)(csd[6] & 3) << 10) + 1;
+ 679              		.loc 1 206 0
+ 680 007c 9DF80710 		ldrb	r1, [sp, #7]	@ zero_extendqisi2
+ 681              	.LVL107:
+ 205:../fatfs/src/diskio.c ****           n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
+ 682              		.loc 1 205 0
+ 683 0080 9DF80A00 		ldrb	r0, [sp, #10]	@ zero_extendqisi2
+ 684              		.loc 1 206 0
+ 685 0084 8900     		lsls	r1, r1, #2
+ 686              	.LVL108:
+ 687 0086 01EB9212 		add	r2, r1, r2, lsr #6
+ 688 008a 9DF80610 		ldrb	r1, [sp, #6]	@ zero_extendqisi2
+ 205:../fatfs/src/diskio.c ****           n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
+ 689              		.loc 1 205 0
+ 690 008e 03F00303 		and	r3, r3, #3
+ 691              		.loc 1 206 0
+ 692 0092 01F00301 		and	r1, r1, #3
+ 693 0096 02EB8122 		add	r2, r2, r1, lsl #10
+ 205:../fatfs/src/diskio.c ****           n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
+ 694              		.loc 1 205 0
+ 695 009a 9DF80510 		ldrb	r1, [sp, #5]	@ zero_extendqisi2
+ 696              		.loc 1 206 0
+ 697 009e 0132     		adds	r2, r2, #1
+ 205:../fatfs/src/diskio.c ****           n = (csd[5] & 15) + ((csd[10] & 128) >> 7) + ((csd[9] & 3) << 1) + 2;
+ 698              		.loc 1 205 0
+ARM GAS  /tmp/ccQzY2SP.s 			page 17
+
+
+ 699 00a0 01F00F01 		and	r1, r1, #15
+ 700 00a4 01EBD011 		add	r1, r1, r0, lsr #7
+ 207:../fatfs/src/diskio.c ****           *(DWORD*)buff = (DWORD)csize << (n - 9);
+ 701              		.loc 1 207 0
+ 702 00a8 01EB4303 		add	r3, r1, r3, lsl #1
+ 703 00ac 073B     		subs	r3, r3, #7
+ 704              	.LVL109:
+ 705              	.L128:
+ 706 00ae 02FA03F3 		lsl	r3, r2, r3
+ 707              	.L124:
+ 708 00b2 2B60     		str	r3, [r5]
+ 709 00b4 89E0     		b	.L90
+ 710              	.LVL110:
+ 711              	.L94:
+ 208:../fatfs/src/diskio.c ****         }
+ 209:../fatfs/src/diskio.c ****         res = RES_OK;
+ 210:../fatfs/src/diskio.c ****       }
+ 211:../fatfs/src/diskio.c ****       break;
+ 212:../fatfs/src/diskio.c **** 
+ 213:../fatfs/src/diskio.c ****     case GET_SECTOR_SIZE :          /* Get sectors on the disk (WORD) */
+ 214:../fatfs/src/diskio.c ****       *(WORD*)buff = 512;
+ 712              		.loc 1 214 0
+ 713 00b6 4FF40073 		mov	r3, #512
+ 714 00ba 2B80     		strh	r3, [r5]	@ movhi
+ 715              	.LVL111:
+ 716 00bc 84E0     		b	.L113
+ 717              	.LVL112:
+ 718              	.L95:
+ 215:../fatfs/src/diskio.c ****       res = RES_OK;
+ 216:../fatfs/src/diskio.c ****       break;
+ 217:../fatfs/src/diskio.c **** 
+ 218:../fatfs/src/diskio.c ****     case GET_BLOCK_SIZE :           /* Get erase block size in unit of sectors (DWORD) */
+ 219:../fatfs/src/diskio.c ****       if (CardType & CT_SD2) {      /* SDv2? */
+ 719              		.loc 1 219 0
+ 720 00be 484E     		ldr	r6, .L131+4
+ 721 00c0 3188     		ldrh	r1, [r6]
+ 722              	.LVL113:
+ 723 00c2 01F00401 		and	r1, r1, #4
+ 724 00c6 89B2     		uxth	r1, r1
+ 725 00c8 D9B1     		cbz	r1, .L105
+ 220:../fatfs/src/diskio.c ****         if (MICROSD_SendCmd(ACMD13, 0) == 0) {    /* Read SD status */
+ 726              		.loc 1 220 0
+ 727 00ca 8D20     		movs	r0, #141
+ 728              	.LVL114:
+ 729 00cc 0021     		movs	r1, #0
+ 730 00ce FFF7FEFF 		bl	MICROSD_SendCmd
+ 731              	.LVL115:
+ 732 00d2 0028     		cmp	r0, #0
+ 733 00d4 AFD1     		bne	.L103
+ 221:../fatfs/src/diskio.c ****           MICROSD_XferSpi(0xff);
+ 734              		.loc 1 221 0
+ 735 00d6 FF20     		movs	r0, #255
+ 736 00d8 FFF7FEFF 		bl	MICROSD_XferSpi
+ 737              	.LVL116:
+ 222:../fatfs/src/diskio.c ****           if (MICROSD_BlockRx(csd, 16)) {         /* Read partial block */
+ 738              		.loc 1 222 0
+ 739 00dc 6846     		mov	r0, sp
+ARM GAS  /tmp/ccQzY2SP.s 			page 18
+
+
+ 740 00de 1021     		movs	r1, #16
+ 741 00e0 FFF7FEFF 		bl	MICROSD_BlockRx
+ 742              	.LVL117:
+ 743 00e4 0028     		cmp	r0, #0
+ 744 00e6 A6D0     		beq	.L103
+ 745 00e8 3024     		movs	r4, #48
+ 746              	.L107:
+ 747              	.LVL118:
+ 223:../fatfs/src/diskio.c ****             for (n = 64 - 16; n; n--) MICROSD_XferSpi(0xff); /* Purge trailing data */
+ 748              		.loc 1 223 0 discriminator 2
+ 749 00ea FF20     		movs	r0, #255
+ 750 00ec 013C     		subs	r4, r4, #1
+ 751              	.LVL119:
+ 752 00ee FFF7FEFF 		bl	MICROSD_XferSpi
+ 753              	.LVL120:
+ 754 00f2 14F0FF04 		ands	r4, r4, #255
+ 755 00f6 F8D1     		bne	.L107
+ 224:../fatfs/src/diskio.c ****             *(DWORD*)buff = 16UL << (csd[10] >> 4);
+ 756              		.loc 1 224 0
+ 757 00f8 9DF80A30 		ldrb	r3, [sp, #10]	@ zero_extendqisi2
+ 758 00fc 1022     		movs	r2, #16
+ 759 00fe 1B09     		lsrs	r3, r3, #4
+ 760 0100 D5E7     		b	.L128
+ 761              	.LVL121:
+ 762              	.L105:
+ 225:../fatfs/src/diskio.c ****             res = RES_OK;
+ 226:../fatfs/src/diskio.c ****           }
+ 227:../fatfs/src/diskio.c ****         }
+ 228:../fatfs/src/diskio.c ****       } else {                      /* SDv1 or MMCv3 */
+ 229:../fatfs/src/diskio.c ****         if ((MICROSD_SendCmd(CMD9, 0) == 0) && MICROSD_BlockRx(csd, 16)) {  /* Read CSD */
+ 763              		.loc 1 229 0
+ 764 0102 0920     		movs	r0, #9
+ 765              	.LVL122:
+ 766 0104 FFF7FEFF 		bl	MICROSD_SendCmd
+ 767              	.LVL123:
+ 768 0108 0028     		cmp	r0, #0
+ 769 010a 94D1     		bne	.L103
+ 770              		.loc 1 229 0 is_stmt 0 discriminator 1
+ 771 010c 6846     		mov	r0, sp
+ 772 010e 1021     		movs	r1, #16
+ 773 0110 FFF7FEFF 		bl	MICROSD_BlockRx
+ 774              	.LVL124:
+ 775 0114 0028     		cmp	r0, #0
+ 776 0116 8ED0     		beq	.L103
+ 230:../fatfs/src/diskio.c ****           if (CardType & CT_SD1) {	/* SDv1 */
+ 777              		.loc 1 230 0 is_stmt 1
+ 778 0118 3488     		ldrh	r4, [r6]
+ 779 011a 9DF80A20 		ldrb	r2, [sp, #10]	@ zero_extendqisi2
+ 780 011e 04F00204 		and	r4, r4, #2
+ 781 0122 A4B2     		uxth	r4, r4
+ 782 0124 9DF80B30 		ldrb	r3, [sp, #11]	@ zero_extendqisi2
+ 783 0128 64B1     		cbz	r4, .L108
+ 231:../fatfs/src/diskio.c ****             *(DWORD*)buff = (((csd[10] & 63) << 1) + ((WORD)(csd[11] & 128) >> 7) + 1) << ((csd[13]
+ 784              		.loc 1 231 0
+ 785 012a 9DF80D10 		ldrb	r1, [sp, #13]	@ zero_extendqisi2
+ 786 012e 02F03F02 		and	r2, r2, #63
+ 787 0132 DB09     		lsrs	r3, r3, #7
+ARM GAS  /tmp/ccQzY2SP.s 			page 19
+
+
+ 788 0134 03EB4203 		add	r3, r3, r2, lsl #1
+ 789 0138 8909     		lsrs	r1, r1, #6
+ 790 013a 0133     		adds	r3, r3, #1
+ 791 013c 0139     		subs	r1, r1, #1
+ 792 013e 8B40     		lsls	r3, r3, r1
+ 793 0140 2B60     		str	r3, [r5]
+ 794 0142 41E0     		b	.L113
+ 795              	.L108:
+ 232:../fatfs/src/diskio.c ****           } else {                  /* MMCv3 */
+ 233:../fatfs/src/diskio.c ****             *(DWORD*)buff = ((WORD)((csd[10] & 124) >> 2) + 1) * (((csd[11] & 3) << 3) + ((csd[11] 
+ 796              		.loc 1 233 0
+ 797 0144 03F00301 		and	r1, r3, #3
+ 798 0148 5B09     		lsrs	r3, r3, #5
+ 799 014a 03EBC103 		add	r3, r3, r1, lsl #3
+ 800 014e C2F38402 		ubfx	r2, r2, #2, #5
+ 801 0152 0133     		adds	r3, r3, #1
+ 802 0154 02FB0333 		mla	r3, r2, r3, r3
+ 803 0158 ABE7     		b	.L124
+ 804              	.LVL125:
+ 805              	.L97:
+ 234:../fatfs/src/diskio.c ****           }
+ 235:../fatfs/src/diskio.c ****           res = RES_OK;
+ 236:../fatfs/src/diskio.c ****         }
+ 237:../fatfs/src/diskio.c ****       }
+ 238:../fatfs/src/diskio.c ****       break;
+ 239:../fatfs/src/diskio.c **** 
+ 240:../fatfs/src/diskio.c ****     case MMC_GET_TYPE :             /* Get card type flags (1 byte) */
+ 241:../fatfs/src/diskio.c ****       *ptr = CardType;
+ 806              		.loc 1 241 0
+ 807 015a 214B     		ldr	r3, .L131+4
+ 808 015c 1B88     		ldrh	r3, [r3]
+ 809 015e 2B70     		strb	r3, [r5]
+ 810              	.LVL126:
+ 811 0160 32E0     		b	.L113
+ 812              	.LVL127:
+ 813              	.L98:
+ 242:../fatfs/src/diskio.c ****       res = RES_OK;
+ 243:../fatfs/src/diskio.c ****       break;
+ 244:../fatfs/src/diskio.c **** 
+ 245:../fatfs/src/diskio.c ****     case MMC_GET_CSD :              /* Receive CSD as a data block (16 bytes) */
+ 246:../fatfs/src/diskio.c ****       if ((MICROSD_SendCmd(CMD9, 0) == 0)       /* READ_CSD */
+ 814              		.loc 1 246 0
+ 815 0162 0920     		movs	r0, #9
+ 816              	.LVL128:
+ 817 0164 00E0     		b	.L130
+ 818              	.LVL129:
+ 819              	.L99:
+ 247:../fatfs/src/diskio.c ****         && MICROSD_BlockRx(buff, 16))
+ 248:../fatfs/src/diskio.c ****         res = RES_OK;
+ 249:../fatfs/src/diskio.c ****       break;
+ 250:../fatfs/src/diskio.c **** 
+ 251:../fatfs/src/diskio.c ****     case MMC_GET_CID :              /* Receive CID as a data block (16 bytes) */
+ 252:../fatfs/src/diskio.c ****       if ((MICROSD_SendCmd(CMD10, 0) == 0)      /* READ_CID */
+ 820              		.loc 1 252 0
+ 821 0166 0A20     		movs	r0, #10
+ 822              	.LVL130:
+ 823              	.L130:
+ARM GAS  /tmp/ccQzY2SP.s 			page 20
+
+
+ 824 0168 0021     		movs	r1, #0
+ 825              	.LVL131:
+ 826 016a FFF7FEFF 		bl	MICROSD_SendCmd
+ 827              	.LVL132:
+ 828 016e 0028     		cmp	r0, #0
+ 829 0170 7FF461AF 		bne	.L103
+ 253:../fatfs/src/diskio.c ****         && MICROSD_BlockRx(buff, 16))
+ 830              		.loc 1 253 0
+ 831 0174 2846     		mov	r0, r5
+ 832 0176 1021     		movs	r1, #16
+ 833 0178 FFF7FEFF 		bl	MICROSD_BlockRx
+ 834              	.LVL133:
+ 835 017c 1DE0     		b	.L125
+ 836              	.LVL134:
+ 837              	.L100:
+ 254:../fatfs/src/diskio.c ****         res = RES_OK;
+ 255:../fatfs/src/diskio.c ****       break;
+ 256:../fatfs/src/diskio.c **** 
+ 257:../fatfs/src/diskio.c ****     case MMC_GET_OCR :              /* Receive OCR as an R3 resp (4 bytes) */
+ 258:../fatfs/src/diskio.c ****       if (MICROSD_SendCmd(CMD58, 0) == 0) {     /* READ_OCR */
+ 838              		.loc 1 258 0
+ 839 017e 3A20     		movs	r0, #58
+ 840              	.LVL135:
+ 841 0180 0021     		movs	r1, #0
+ 842              	.LVL136:
+ 843 0182 FFF7FEFF 		bl	MICROSD_SendCmd
+ 844              	.LVL137:
+ 845 0186 0028     		cmp	r0, #0
+ 846 0188 7FF455AF 		bne	.L103
+ 847 018c 0446     		mov	r4, r0
+ 848              	.L109:
+ 849              	.LVL138:
+ 259:../fatfs/src/diskio.c ****         for (n = 0; n < 4; n++)
+ 260:../fatfs/src/diskio.c ****           *((BYTE*)buff+n) = MICROSD_XferSpi(0xff);
+ 850              		.loc 1 260 0 discriminator 2
+ 851 018e FF20     		movs	r0, #255
+ 852 0190 FFF7FEFF 		bl	MICROSD_XferSpi
+ 853              	.LVL139:
+ 854 0194 2855     		strb	r0, [r5, r4]
+ 855              	.LVL140:
+ 856 0196 0134     		adds	r4, r4, #1
+ 857              	.LVL141:
+ 259:../fatfs/src/diskio.c ****         for (n = 0; n < 4; n++)
+ 858              		.loc 1 259 0 discriminator 2
+ 859 0198 042C     		cmp	r4, #4
+ 860 019a F8D1     		bne	.L109
+ 861 019c 14E0     		b	.L113
+ 862              	.LVL142:
+ 863              	.L101:
+ 261:../fatfs/src/diskio.c ****         res = RES_OK;
+ 262:../fatfs/src/diskio.c ****       }
+ 263:../fatfs/src/diskio.c ****       break;
+ 264:../fatfs/src/diskio.c **** 
+ 265:../fatfs/src/diskio.c ****     case MMC_GET_SDSTAT :           /* Receive SD statsu as a data block (64 bytes) */
+ 266:../fatfs/src/diskio.c ****       if (MICROSD_SendCmd(ACMD13, 0) == 0) {    /* SD_STATUS */
+ 864              		.loc 1 266 0
+ 865 019e 8D20     		movs	r0, #141
+ARM GAS  /tmp/ccQzY2SP.s 			page 21
+
+
+ 866              	.LVL143:
+ 867 01a0 0021     		movs	r1, #0
+ 868              	.LVL144:
+ 869 01a2 FFF7FEFF 		bl	MICROSD_SendCmd
+ 870              	.LVL145:
+ 871 01a6 0028     		cmp	r0, #0
+ 872 01a8 7FF445AF 		bne	.L103
+ 267:../fatfs/src/diskio.c ****         MICROSD_XferSpi(0xff);
+ 873              		.loc 1 267 0
+ 874 01ac FF20     		movs	r0, #255
+ 875 01ae FFF7FEFF 		bl	MICROSD_XferSpi
+ 876              	.LVL146:
+ 268:../fatfs/src/diskio.c ****         if (MICROSD_BlockTx(buff, 64))
+ 877              		.loc 1 268 0
+ 878 01b2 2846     		mov	r0, r5
+ 879 01b4 4021     		movs	r1, #64
+ 880 01b6 FFF7FEFF 		bl	MICROSD_BlockTx
+ 881              	.LVL147:
+ 882              	.L125:
+ 190:../fatfs/src/diskio.c ****         res = RES_OK;
+ 883              		.loc 1 190 0
+ 884 01ba D0F10104 		rsbs	r4, r0, #1
+ 885 01be 38BF     		it	cc
+ 886 01c0 0024     		movcc	r4, #0
+ 887 01c2 02E0     		b	.L90
+ 888              	.LVL148:
+ 889              	.L112:
+ 269:../fatfs/src/diskio.c ****           res = RES_OK;
+ 270:../fatfs/src/diskio.c ****       }
+ 271:../fatfs/src/diskio.c ****       break;
+ 272:../fatfs/src/diskio.c **** 
+ 273:../fatfs/src/diskio.c ****     default:
+ 274:../fatfs/src/diskio.c ****       res = RES_PARERR;
+ 890              		.loc 1 274 0
+ 891 01c4 0424     		movs	r4, #4
+ 892 01c6 00E0     		b	.L90
+ 893              	.LVL149:
+ 894              	.L113:
+ 261:../fatfs/src/diskio.c ****         res = RES_OK;
+ 895              		.loc 1 261 0
+ 896 01c8 0024     		movs	r4, #0
+ 897              	.L90:
+ 898              	.LVL150:
+ 275:../fatfs/src/diskio.c ****   }
+ 276:../fatfs/src/diskio.c **** 
+ 277:../fatfs/src/diskio.c ****   MICROSD_Deselect();
+ 899              		.loc 1 277 0
+ 900 01ca FFF7FEFF 		bl	MICROSD_Deselect
+ 901              	.LVL151:
+ 278:../fatfs/src/diskio.c **** 
+ 279:../fatfs/src/diskio.c ****   return res;
+ 902              		.loc 1 279 0
+ 903 01ce 2046     		mov	r0, r4
+ 904 01d0 02E0     		b	.L89
+ 905              	.LVL152:
+ 906              	.L110:
+ 182:../fatfs/src/diskio.c ****   if (drv) return RES_PARERR;
+ARM GAS  /tmp/ccQzY2SP.s 			page 22
+
+
+ 907              		.loc 1 182 0
+ 908 01d2 0420     		movs	r0, #4
+ 909              	.LVL153:
+ 910 01d4 00E0     		b	.L89
+ 911              	.LVL154:
+ 912              	.L111:
+ 183:../fatfs/src/diskio.c ****   if (stat & STA_NOINIT) return RES_NOTRDY;
+ 913              		.loc 1 183 0
+ 914 01d6 0320     		movs	r0, #3
+ 915              	.LVL155:
+ 916              	.L89:
+ 280:../fatfs/src/diskio.c **** }
+ 917              		.loc 1 280 0
+ 918 01d8 05B0     		add	sp, sp, #20
+ 919              		@ sp needed
+ 920 01da F0BD     		pop	{r4, r5, r6, r7, pc}
+ 921              	.LVL156:
+ 922              	.L132:
+ 923              		.align	2
+ 924              	.L131:
+ 925 01dc 00000000 		.word	.LANCHOR0
+ 926 01e0 00000000 		.word	.LANCHOR1
+ 927              		.cfi_endproc
+ 928              	.LFE88:
+ 930              		.section	.bss.CardType,"aw",%nobits
+ 931              		.align	1
+ 932              		.set	.LANCHOR1,. + 0
+ 935              	CardType:
+ 936 0000 0000     		.space	2
+ 937              		.section	.data.stat,"aw",%progbits
+ 938              		.set	.LANCHOR0,. + 0
+ 941              	stat:
+ 942 0000 01       		.byte	1
+ 943              		.text
+ 944              	.Letext0:
+ 945              		.file 2 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/machine/_default_types.h"
+ 946              		.file 3 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdint.h"
+ 947              		.file 4 "../fatfs/inc/integer.h"
+ 948              		.file 5 "../fatfs/inc/diskio.h"
+ 949              		.file 6 "../drivers/microsd.h"
+ 950              		.file 7 "../CMSIS/Include/core_cm3.h"

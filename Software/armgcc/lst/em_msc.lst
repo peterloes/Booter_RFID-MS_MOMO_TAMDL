@@ -1,0 +1,1090 @@
+ARM GAS  /tmp/ccak1xiI.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"em_msc.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.MSC_Init,"ax",%progbits
+  19              		.align	1
+  20              		.global	MSC_Init
+  21              		.thumb
+  22              		.thumb_func
+  24              	MSC_Init:
+  25              	.LFB73:
+  26              		.file 1 "../emlib/src/em_msc.c"
+   1:../emlib/src/em_msc.c **** /***************************************************************************//**
+   2:../emlib/src/em_msc.c ****  * @file
+   3:../emlib/src/em_msc.c ****  * @brief Flash controller (MSC) Peripheral API
+   4:../emlib/src/em_msc.c ****  * @author Energy Micro AS
+   5:../emlib/src/em_msc.c ****  * @version 3.20.2
+   6:../emlib/src/em_msc.c ****  *******************************************************************************
+   7:../emlib/src/em_msc.c ****  * @section License
+   8:../emlib/src/em_msc.c ****  * <b>(C) Copyright 2012 Energy Micro AS, http://www.energymicro.com</b>
+   9:../emlib/src/em_msc.c ****  *******************************************************************************
+  10:../emlib/src/em_msc.c ****  *
+  11:../emlib/src/em_msc.c ****  * Permission is granted to anyone to use this software for any purpose,
+  12:../emlib/src/em_msc.c ****  * including commercial applications, and to alter it and redistribute it
+  13:../emlib/src/em_msc.c ****  * freely, subject to the following restrictions:
+  14:../emlib/src/em_msc.c ****  *
+  15:../emlib/src/em_msc.c ****  * 1. The origin of this software must not be misrepresented; you must not
+  16:../emlib/src/em_msc.c ****  *    claim that you wrote the original software.
+  17:../emlib/src/em_msc.c ****  * 2. Altered source versions must be plainly marked as such, and must not be
+  18:../emlib/src/em_msc.c ****  *    misrepresented as being the original software.
+  19:../emlib/src/em_msc.c ****  * 3. This notice may not be removed or altered from any source distribution.
+  20:../emlib/src/em_msc.c ****  *
+  21:../emlib/src/em_msc.c ****  * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Energy Micro AS has no
+  22:../emlib/src/em_msc.c ****  * obligation to support this Software. Energy Micro AS is providing the
+  23:../emlib/src/em_msc.c ****  * Software "AS IS", with no express or implied warranties of any kind,
+  24:../emlib/src/em_msc.c ****  * including, but not limited to, any implied warranties of merchantability
+  25:../emlib/src/em_msc.c ****  * or fitness for any particular purpose or warranties against infringement
+  26:../emlib/src/em_msc.c ****  * of any proprietary rights of a third party.
+  27:../emlib/src/em_msc.c ****  *
+  28:../emlib/src/em_msc.c ****  * Energy Micro AS will not be liable for any consequential, incidental, or
+  29:../emlib/src/em_msc.c ****  * special damages, or any other relief, or for any claim by any third party,
+  30:../emlib/src/em_msc.c ****  * arising from your use of this Software.
+  31:../emlib/src/em_msc.c ****  *
+  32:../emlib/src/em_msc.c ****  ******************************************************************************/
+ARM GAS  /tmp/ccak1xiI.s 			page 2
+
+
+  33:../emlib/src/em_msc.c **** #include "em_msc.h"
+  34:../emlib/src/em_msc.c **** #if defined(MSC_COUNT) && (MSC_COUNT > 0)
+  35:../emlib/src/em_msc.c **** 
+  36:../emlib/src/em_msc.c **** #include "em_system.h"
+  37:../emlib/src/em_msc.c **** #if defined( _MSC_TIMEBASE_MASK )
+  38:../emlib/src/em_msc.c **** #include "em_cmu.h"
+  39:../emlib/src/em_msc.c **** #endif
+  40:../emlib/src/em_msc.c **** #include "em_assert.h"
+  41:../emlib/src/em_msc.c **** 
+  42:../emlib/src/em_msc.c **** /** @cond DO_NOT_INCLUDE_WITH_DOXYGEN */
+  43:../emlib/src/em_msc.c **** 
+  44:../emlib/src/em_msc.c **** #if defined( MSC_WRITECTRL_WDOUBLE )
+  45:../emlib/src/em_msc.c **** #define WORDS_PER_DATA_PHASE (FLASH_SIZE<(512*1024) ? 1 : 2)
+  46:../emlib/src/em_msc.c **** #else
+  47:../emlib/src/em_msc.c **** #define WORDS_PER_DATA_PHASE (1)
+  48:../emlib/src/em_msc.c **** #endif
+  49:../emlib/src/em_msc.c **** 
+  50:../emlib/src/em_msc.c **** 
+  51:../emlib/src/em_msc.c **** #ifdef __CC_ARM  /* MDK-ARM compiler */
+  52:../emlib/src/em_msc.c **** msc_Return_TypeDef MscLoadData(uint32_t *data, int num);
+  53:../emlib/src/em_msc.c **** msc_Return_TypeDef MscLoadAddress(uint32_t *address);
+  54:../emlib/src/em_msc.c **** #endif /* __CC_ARM */
+  55:../emlib/src/em_msc.c **** 
+  56:../emlib/src/em_msc.c **** #ifdef __ICCARM__ /* IAR compiler */
+  57:../emlib/src/em_msc.c **** __ramfunc msc_Return_TypeDef MscLoadData(uint32_t *data, int num);
+  58:../emlib/src/em_msc.c **** __ramfunc msc_Return_TypeDef MscLoadAddress(uint32_t *address);
+  59:../emlib/src/em_msc.c **** #endif /* __ICCARM__ */
+  60:../emlib/src/em_msc.c **** 
+  61:../emlib/src/em_msc.c **** #ifdef __GNUC__  /* GCC based compilers */
+  62:../emlib/src/em_msc.c **** #ifdef __CROSSWORKS_ARM  /* Rowley Crossworks */
+  63:../emlib/src/em_msc.c **** msc_Return_TypeDef MscLoadData(uint32_t *data, int num) __attribute__ ((section(".fast")));
+  64:../emlib/src/em_msc.c **** msc_Return_TypeDef MscLoadAddress(uint32_t *address) __attribute__ ((section(".fast")));
+  65:../emlib/src/em_msc.c **** #else /* Sourcery G++ */
+  66:../emlib/src/em_msc.c **** msc_Return_TypeDef MscLoadData(uint32_t *data, int num) __attribute__ ((section(".ram")));
+  67:../emlib/src/em_msc.c **** msc_Return_TypeDef MscLoadAddress(uint32_t *address) __attribute__ ((section(".ram")));
+  68:../emlib/src/em_msc.c **** #endif /* __CROSSWORKS_ARM */
+  69:../emlib/src/em_msc.c **** #endif /* __GNUC__ */
+  70:../emlib/src/em_msc.c **** 
+  71:../emlib/src/em_msc.c **** /** @endcond */
+  72:../emlib/src/em_msc.c **** 
+  73:../emlib/src/em_msc.c **** /***************************************************************************//**
+  74:../emlib/src/em_msc.c ****  * @addtogroup EM_Library
+  75:../emlib/src/em_msc.c ****  * @{
+  76:../emlib/src/em_msc.c ****  ******************************************************************************/
+  77:../emlib/src/em_msc.c **** 
+  78:../emlib/src/em_msc.c **** /***************************************************************************//**
+  79:../emlib/src/em_msc.c ****  * @addtogroup MSC
+  80:../emlib/src/em_msc.c ****  * @brief Flash controller (MSC) Peripheral API
+  81:../emlib/src/em_msc.c ****  * @{
+  82:../emlib/src/em_msc.c ****  ******************************************************************************/
+  83:../emlib/src/em_msc.c **** 
+  84:../emlib/src/em_msc.c **** /*******************************************************************************
+  85:../emlib/src/em_msc.c ****  **************************   GLOBAL FUNCTIONS   *******************************
+  86:../emlib/src/em_msc.c ****  ******************************************************************************/
+  87:../emlib/src/em_msc.c **** 
+  88:../emlib/src/em_msc.c **** /***************************************************************************//**
+  89:../emlib/src/em_msc.c ****  * @brief
+ARM GAS  /tmp/ccak1xiI.s 			page 3
+
+
+  90:../emlib/src/em_msc.c ****  *   Enables the flash controller for writing.
+  91:../emlib/src/em_msc.c ****  * @note
+  92:../emlib/src/em_msc.c ****  *   IMPORTANT: This function must be called before flash operations when
+  93:../emlib/src/em_msc.c ****  *   AUXHFRCO clock has been changed from default 14MHz band.
+  94:../emlib/src/em_msc.c ****  ******************************************************************************/
+  95:../emlib/src/em_msc.c **** void MSC_Init(void)
+  96:../emlib/src/em_msc.c **** {
+  27              		.loc 1 96 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+  97:../emlib/src/em_msc.c **** #if defined( _MSC_TIMEBASE_MASK )
+  98:../emlib/src/em_msc.c ****   uint32_t freq, cycles;
+  99:../emlib/src/em_msc.c **** #endif
+ 100:../emlib/src/em_msc.c ****   /* Unlock the MSC */
+ 101:../emlib/src/em_msc.c ****   MSC->LOCK = MSC_UNLOCK_CODE;
+  32              		.loc 1 101 0
+  33 0000 044B     		ldr	r3, .L2
+  34 0002 41F67132 		movw	r2, #7025
+  35 0006 DA63     		str	r2, [r3, #60]
+ 102:../emlib/src/em_msc.c ****   /* Disable writing to the flash */
+ 103:../emlib/src/em_msc.c ****   MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+  36              		.loc 1 103 0
+  37 0008 9A68     		ldr	r2, [r3, #8]
+  38 000a 22F00102 		bic	r2, r2, #1
+  39 000e 9A60     		str	r2, [r3, #8]
+  40 0010 7047     		bx	lr
+  41              	.L3:
+  42 0012 00BF     		.align	2
+  43              	.L2:
+  44 0014 00000C40 		.word	1074528256
+  45              		.cfi_endproc
+  46              	.LFE73:
+  48              		.section	.text.MSC_Deinit,"ax",%progbits
+  49              		.align	1
+  50              		.global	MSC_Deinit
+  51              		.thumb
+  52              		.thumb_func
+  54              	MSC_Deinit:
+  55              	.LFB74:
+ 104:../emlib/src/em_msc.c **** 
+ 105:../emlib/src/em_msc.c **** #if defined( _MSC_TIMEBASE_MASK )
+ 106:../emlib/src/em_msc.c ****   /* Configure MSC->TIMEBASE according to selected frequency */
+ 107:../emlib/src/em_msc.c ****   freq = CMU_ClockFreqGet(cmuClock_AUX);
+ 108:../emlib/src/em_msc.c **** 
+ 109:../emlib/src/em_msc.c ****   if (freq > 7000000)
+ 110:../emlib/src/em_msc.c ****   {
+ 111:../emlib/src/em_msc.c ****     /* Calculate number of clock cycles for 1us as base period */
+ 112:../emlib/src/em_msc.c ****     freq   = (freq * 11) / 10;
+ 113:../emlib/src/em_msc.c ****     cycles = (freq / 1000000) + 1;
+ 114:../emlib/src/em_msc.c **** 
+ 115:../emlib/src/em_msc.c ****     /* Configure clock cycles for flash timing */
+ 116:../emlib/src/em_msc.c ****     MSC->TIMEBASE = (MSC->TIMEBASE & ~(_MSC_TIMEBASE_BASE_MASK |
+ 117:../emlib/src/em_msc.c ****                                        _MSC_TIMEBASE_PERIOD_MASK)) |
+ 118:../emlib/src/em_msc.c ****                     MSC_TIMEBASE_PERIOD_1US |
+ 119:../emlib/src/em_msc.c ****                     (cycles << _MSC_TIMEBASE_BASE_SHIFT);
+ARM GAS  /tmp/ccak1xiI.s 			page 4
+
+
+ 120:../emlib/src/em_msc.c ****   }
+ 121:../emlib/src/em_msc.c ****   else
+ 122:../emlib/src/em_msc.c ****   {
+ 123:../emlib/src/em_msc.c ****     /* Calculate number of clock cycles for 5us as base period */
+ 124:../emlib/src/em_msc.c ****     freq   = (freq * 5 * 11) / 10;
+ 125:../emlib/src/em_msc.c ****     cycles = (freq / 1000000) + 1;
+ 126:../emlib/src/em_msc.c **** 
+ 127:../emlib/src/em_msc.c ****     /* Configure clock cycles for flash timing */
+ 128:../emlib/src/em_msc.c ****     MSC->TIMEBASE = (MSC->TIMEBASE & ~(_MSC_TIMEBASE_BASE_MASK |
+ 129:../emlib/src/em_msc.c ****                                        _MSC_TIMEBASE_PERIOD_MASK)) |
+ 130:../emlib/src/em_msc.c ****                     MSC_TIMEBASE_PERIOD_5US |
+ 131:../emlib/src/em_msc.c ****                     (cycles << _MSC_TIMEBASE_BASE_SHIFT);
+ 132:../emlib/src/em_msc.c ****   }
+ 133:../emlib/src/em_msc.c **** #endif
+ 134:../emlib/src/em_msc.c **** }
+ 135:../emlib/src/em_msc.c **** 
+ 136:../emlib/src/em_msc.c **** /***************************************************************************//**
+ 137:../emlib/src/em_msc.c ****  * @brief
+ 138:../emlib/src/em_msc.c ****  *   Disables the flash controller for writing.
+ 139:../emlib/src/em_msc.c ****  ******************************************************************************/
+ 140:../emlib/src/em_msc.c **** void MSC_Deinit(void)
+ 141:../emlib/src/em_msc.c **** {
+  56              		.loc 1 141 0
+  57              		.cfi_startproc
+  58              		@ args = 0, pretend = 0, frame = 0
+  59              		@ frame_needed = 0, uses_anonymous_args = 0
+  60              		@ link register save eliminated.
+ 142:../emlib/src/em_msc.c ****   /* Disable writing to the flash */
+ 143:../emlib/src/em_msc.c ****   MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+  61              		.loc 1 143 0
+  62 0000 034B     		ldr	r3, .L5
+  63 0002 9A68     		ldr	r2, [r3, #8]
+  64 0004 22F00102 		bic	r2, r2, #1
+  65 0008 9A60     		str	r2, [r3, #8]
+ 144:../emlib/src/em_msc.c ****   /* Lock the MSC */
+ 145:../emlib/src/em_msc.c ****   MSC->LOCK = 0;
+  66              		.loc 1 145 0
+  67 000a 0022     		movs	r2, #0
+  68 000c DA63     		str	r2, [r3, #60]
+  69 000e 7047     		bx	lr
+  70              	.L6:
+  71              		.align	2
+  72              	.L5:
+  73 0010 00000C40 		.word	1074528256
+  74              		.cfi_endproc
+  75              	.LFE74:
+  77              		.section	.ram,"ax",%progbits
+  78              		.align	1
+  79              		.global	MscLoadAddress
+  80              		.thumb
+  81              		.thumb_func
+  83              	MscLoadAddress:
+  84              	.LFB75:
+ 146:../emlib/src/em_msc.c **** }
+ 147:../emlib/src/em_msc.c **** 
+ 148:../emlib/src/em_msc.c **** 
+ 149:../emlib/src/em_msc.c **** /** @cond DO_NOT_INCLUDE_WITH_DOXYGEN */
+ARM GAS  /tmp/ccak1xiI.s 			page 5
+
+
+ 150:../emlib/src/em_msc.c **** 
+ 151:../emlib/src/em_msc.c **** /***************************************************************************//**
+ 152:../emlib/src/em_msc.c ****  * @brief
+ 153:../emlib/src/em_msc.c ****  *   Perform address phase of FLASH write cycle.
+ 154:../emlib/src/em_msc.c ****  * @details
+ 155:../emlib/src/em_msc.c ****  *   This function performs the address phase of a Flash write operation by
+ 156:../emlib/src/em_msc.c ****  *   writing the given flash address to the ADDRB register and issuing the
+ 157:../emlib/src/em_msc.c ****  *   LADDRIM command to load the address.
+ 158:../emlib/src/em_msc.c ****  * @note
+ 159:../emlib/src/em_msc.c ****  *   This function MUST be executed from RAM. Failure to execute this portion
+ 160:../emlib/src/em_msc.c ****  *   of the code in RAM will result in a hardfault. For IAR, Rowley and
+ 161:../emlib/src/em_msc.c ****  *   Codesourcery this will be achieved automatically. For Keil uVision 4 you
+ 162:../emlib/src/em_msc.c ****  *   must define a section called "ram_code" and place this manually in your
+ 163:../emlib/src/em_msc.c ****  *   project's scatter file.
+ 164:../emlib/src/em_msc.c ****  * @param[in] address
+ 165:../emlib/src/em_msc.c ****  *   Address in flash memory. Must be aligned at a 4 byte boundary.
+ 166:../emlib/src/em_msc.c ****  * @return
+ 167:../emlib/src/em_msc.c ****  *   Returns the status of the address load operation, #msc_Return_TypeDef
+ 168:../emlib/src/em_msc.c ****  * @verbatim
+ 169:../emlib/src/em_msc.c ****  *   mscReturnOk - Operation completed successfully.
+ 170:../emlib/src/em_msc.c ****  *   mscReturnInvalidAddr - Operation tried to erase a non-flash area.
+ 171:../emlib/src/em_msc.c ****  *   mscReturnLocked - Operation tried to erase a locked area of the flash.
+ 172:../emlib/src/em_msc.c ****  * @endverbatim
+ 173:../emlib/src/em_msc.c ****  ******************************************************************************/
+ 174:../emlib/src/em_msc.c **** #ifdef __CC_ARM  /* MDK-ARM compiler */
+ 175:../emlib/src/em_msc.c **** #pragma arm section code="ram_code"
+ 176:../emlib/src/em_msc.c **** #endif /* __CC_ARM */
+ 177:../emlib/src/em_msc.c **** #if defined(__ICCARM__)
+ 178:../emlib/src/em_msc.c **** /* Suppress warnings originating from use of EFM_ASSERT():              */
+ 179:../emlib/src/em_msc.c **** /* "Call to a non __ramfunc function from within a __ramfunc function"  */
+ 180:../emlib/src/em_msc.c **** /* "Possible rom access from within a __ramfunc function"               */
+ 181:../emlib/src/em_msc.c **** #pragma diag_suppress=Ta022
+ 182:../emlib/src/em_msc.c **** #pragma diag_suppress=Ta023
+ 183:../emlib/src/em_msc.c **** #endif
+ 184:../emlib/src/em_msc.c **** 
+ 185:../emlib/src/em_msc.c **** msc_Return_TypeDef MscLoadAddress(uint32_t* address)
+ 186:../emlib/src/em_msc.c **** {
+  85              		.loc 1 186 0
+  86              		.cfi_startproc
+  87              		@ args = 0, pretend = 0, frame = 0
+  88              		@ frame_needed = 0, uses_anonymous_args = 0
+  89              		@ link register save eliminated.
+  90              	.LVL0:
+ 187:../emlib/src/em_msc.c ****   uint32_t status;
+ 188:../emlib/src/em_msc.c **** 
+ 189:../emlib/src/em_msc.c ****   /* Load address */
+ 190:../emlib/src/em_msc.c ****   MSC->ADDRB    = (uint32_t) (address);
+  91              		.loc 1 190 0
+  92 0000 094B     		ldr	r3, .L13
+ 191:../emlib/src/em_msc.c ****   MSC->WRITECMD = MSC_WRITECMD_LADDRIM;
+  93              		.loc 1 191 0
+  94 0002 0122     		movs	r2, #1
+ 190:../emlib/src/em_msc.c ****   MSC->ADDRB    = (uint32_t) (address);
+  95              		.loc 1 190 0
+  96 0004 1861     		str	r0, [r3, #16]
+  97              		.loc 1 191 0
+  98 0006 DA60     		str	r2, [r3, #12]
+ARM GAS  /tmp/ccak1xiI.s 			page 6
+
+
+ 192:../emlib/src/em_msc.c **** 
+ 193:../emlib/src/em_msc.c ****   status = MSC->STATUS;
+  99              		.loc 1 193 0
+ 100 0008 DB69     		ldr	r3, [r3, #28]
+ 101              	.LVL1:
+ 194:../emlib/src/em_msc.c ****   if (status & (MSC_STATUS_INVADDR | MSC_STATUS_LOCKED))
+ 102              		.loc 1 194 0
+ 103 000a 13F00600 		ands	r0, r3, #6
+ 104              	.LVL2:
+ 105 000e 08D0     		beq	.L8
+ 195:../emlib/src/em_msc.c ****   {
+ 196:../emlib/src/em_msc.c ****     /* Check for invalid address */
+ 197:../emlib/src/em_msc.c ****     if (status & MSC_STATUS_INVADDR)
+ 106              		.loc 1 197 0
+ 107 0010 5A07     		lsls	r2, r3, #29
+ 108 0012 05D4     		bmi	.L10
+ 198:../emlib/src/em_msc.c ****       return mscReturnInvalidAddr;
+ 199:../emlib/src/em_msc.c ****     /* Check for write protected page */
+ 200:../emlib/src/em_msc.c ****     if (status & MSC_STATUS_LOCKED)
+ 109              		.loc 1 200 0
+ 110 0014 13F0020F 		tst	r3, #2
+ 201:../emlib/src/em_msc.c ****       return mscReturnLocked;
+ 111              		.loc 1 201 0
+ 112 0018 0CBF     		ite	eq
+ 113 001a 0020     		moveq	r0, #0
+ 114 001c FE20     		movne	r0, #254
+ 115 001e 00E0     		b	.L8
+ 116              	.L10:
+ 198:../emlib/src/em_msc.c ****       return mscReturnInvalidAddr;
+ 117              		.loc 1 198 0
+ 118 0020 FF20     		movs	r0, #255
+ 119              	.L8:
+ 202:../emlib/src/em_msc.c ****   }
+ 203:../emlib/src/em_msc.c ****   return mscReturnOk;
+ 204:../emlib/src/em_msc.c **** }
+ 120              		.loc 1 204 0
+ 121 0022 40B2     		sxtb	r0, r0
+ 122 0024 7047     		bx	lr
+ 123              	.L14:
+ 124 0026 00BF     		.align	2
+ 125              	.L13:
+ 126 0028 00000C40 		.word	1074528256
+ 127              		.cfi_endproc
+ 128              	.LFE75:
+ 130              		.align	1
+ 131              		.global	MscLoadData
+ 132              		.thumb
+ 133              		.thumb_func
+ 135              	MscLoadData:
+ 136              	.LFB76:
+ 205:../emlib/src/em_msc.c **** 
+ 206:../emlib/src/em_msc.c **** #if defined(__ICCARM__)
+ 207:../emlib/src/em_msc.c **** #pragma diag_default=Ta022
+ 208:../emlib/src/em_msc.c **** #pragma diag_default=Ta023
+ 209:../emlib/src/em_msc.c **** #endif
+ 210:../emlib/src/em_msc.c **** #ifdef __CC_ARM  /* MDK-ARM compiler */
+ 211:../emlib/src/em_msc.c **** #pragma arm section code
+ARM GAS  /tmp/ccak1xiI.s 			page 7
+
+
+ 212:../emlib/src/em_msc.c **** #endif /* __CC_ARM */
+ 213:../emlib/src/em_msc.c **** 
+ 214:../emlib/src/em_msc.c **** 
+ 215:../emlib/src/em_msc.c **** 
+ 216:../emlib/src/em_msc.c **** /***************************************************************************//**
+ 217:../emlib/src/em_msc.c ****  * @brief
+ 218:../emlib/src/em_msc.c ****  *   Perform data phase of FLASH write cycle.
+ 219:../emlib/src/em_msc.c ****  * @details
+ 220:../emlib/src/em_msc.c ****  *   This function performs the data phase of a Flash write operation by loading
+ 221:../emlib/src/em_msc.c ****  *   the given number of 32-bit words to the WDATA register.
+ 222:../emlib/src/em_msc.c ****  * @note
+ 223:../emlib/src/em_msc.c ****  *   This function MUST be executed from RAM. Failure to execute this portion
+ 224:../emlib/src/em_msc.c ****  *   of the code in RAM will result in a hardfault. For IAR, Rowley and
+ 225:../emlib/src/em_msc.c ****  *   Codesourcery this will be achieved automatically. For Keil uVision 4 you
+ 226:../emlib/src/em_msc.c ****  *   must define a section called "ram_code" and place this manually in your
+ 227:../emlib/src/em_msc.c ****  *   project's scatter file.
+ 228:../emlib/src/em_msc.c ****  * @param[in] data
+ 229:../emlib/src/em_msc.c ****  *   Pointer to the first data word to load.
+ 230:../emlib/src/em_msc.c ****  * @param[in] num
+ 231:../emlib/src/em_msc.c ****  *   Number of data words (32-bit) to load.
+ 232:../emlib/src/em_msc.c ****  * @return
+ 233:../emlib/src/em_msc.c ****  *   Returns the status of the data load operation, #msc_Return_TypeDef
+ 234:../emlib/src/em_msc.c ****  * @verbatim
+ 235:../emlib/src/em_msc.c ****  *   mscReturnOk - Operation completed successfully.
+ 236:../emlib/src/em_msc.c ****  *   mscReturnTimeOut - Operation timed out waiting for flash operation
+ 237:../emlib/src/em_msc.c ****  *                      to complete.
+ 238:../emlib/src/em_msc.c ****  * @endverbatim
+ 239:../emlib/src/em_msc.c ****  ******************************************************************************/
+ 240:../emlib/src/em_msc.c **** #ifdef __CC_ARM  /* MDK-ARM compiler */
+ 241:../emlib/src/em_msc.c **** #pragma arm section code="ram_code"
+ 242:../emlib/src/em_msc.c **** #endif /* __CC_ARM */
+ 243:../emlib/src/em_msc.c **** #if defined(__ICCARM__)
+ 244:../emlib/src/em_msc.c **** /* Suppress warnings originating from use of EFM_ASSERT():              */
+ 245:../emlib/src/em_msc.c **** /* "Call to a non __ramfunc function from within a __ramfunc function"  */
+ 246:../emlib/src/em_msc.c **** /* "Possible rom access from within a __ramfunc function"               */
+ 247:../emlib/src/em_msc.c **** #pragma diag_suppress=Ta022
+ 248:../emlib/src/em_msc.c **** #pragma diag_suppress=Ta023
+ 249:../emlib/src/em_msc.c **** #endif
+ 250:../emlib/src/em_msc.c **** 
+ 251:../emlib/src/em_msc.c **** msc_Return_TypeDef MscLoadData(uint32_t* data, int num)
+ 252:../emlib/src/em_msc.c **** {
+ 137              		.loc 1 252 0
+ 138              		.cfi_startproc
+ 139              		@ args = 0, pretend = 0, frame = 0
+ 140              		@ frame_needed = 0, uses_anonymous_args = 0
+ 141              	.LVL3:
+ 142 002c 30B5     		push	{r4, r5, lr}
+ 143              		.cfi_def_cfa_offset 12
+ 144              		.cfi_offset 4, -12
+ 145              		.cfi_offset 5, -8
+ 146              		.cfi_offset 14, -4
+ 253:../emlib/src/em_msc.c ****   int      timeOut  = MSC_PROGRAM_TIMEOUT;
+ 254:../emlib/src/em_msc.c ****   int      i;
+ 255:../emlib/src/em_msc.c **** 
+ 256:../emlib/src/em_msc.c ****   /* Wait for the MSC to be ready for a new data word.
+ 257:../emlib/src/em_msc.c ****    * Due to the timing of this function, the MSC should
+ 258:../emlib/src/em_msc.c ****    * already by ready */
+ARM GAS  /tmp/ccak1xiI.s 			page 8
+
+
+ 259:../emlib/src/em_msc.c ****   timeOut = MSC_PROGRAM_TIMEOUT;
+ 147              		.loc 1 259 0
+ 148 002e 124B     		ldr	r3, .L34
+ 149              	.LVL4:
+ 150              	.L16:
+ 260:../emlib/src/em_msc.c ****   while (((MSC->STATUS & MSC_STATUS_WDATAREADY) == 0) && (timeOut != 0))
+ 151              		.loc 1 260 0 discriminator 1
+ 152 0030 124A     		ldr	r2, .L34+4
+ 153 0032 D469     		ldr	r4, [r2, #28]
+ 154 0034 2407     		lsls	r4, r4, #28
+ 155 0036 0DD4     		bmi	.L17
+ 156              		.loc 1 260 0 is_stmt 0 discriminator 2
+ 157 0038 53B1     		cbz	r3, .L20
+ 261:../emlib/src/em_msc.c ****   {
+ 262:../emlib/src/em_msc.c ****     timeOut--;
+ 158              		.loc 1 262 0 is_stmt 1
+ 159 003a 013B     		subs	r3, r3, #1
+ 160              	.LVL5:
+ 161 003c F8E7     		b	.L16
+ 162              	.LVL6:
+ 163              	.L33:
+ 263:../emlib/src/em_msc.c ****   }
+ 264:../emlib/src/em_msc.c **** 
+ 265:../emlib/src/em_msc.c ****   /* Check for timeout */
+ 266:../emlib/src/em_msc.c ****   if (timeOut == 0)
+ 267:../emlib/src/em_msc.c ****     return mscReturnTimeOut;
+ 268:../emlib/src/em_msc.c **** 
+ 269:../emlib/src/em_msc.c ****   /* Load 'num' 32-bit words into write data register. */
+ 270:../emlib/src/em_msc.c ****   for (i=0; i<num; i++, data++)
+ 271:../emlib/src/em_msc.c ****     MSC->WDATA = *data;
+ 272:../emlib/src/em_msc.c **** 
+ 273:../emlib/src/em_msc.c ****   /* Trigger write once */
+ 274:../emlib/src/em_msc.c ****   MSC->WRITECMD = MSC_WRITECMD_WRITEONCE;
+ 164              		.loc 1 274 0
+ 165 003e 0823     		movs	r3, #8
+ 166              	.LVL7:
+ 167 0040 D360     		str	r3, [r2, #12]
+ 168              	.LVL8:
+ 275:../emlib/src/em_msc.c **** 
+ 276:../emlib/src/em_msc.c ****   /* Wait for the write to complete */
+ 277:../emlib/src/em_msc.c ****   timeOut = MSC_PROGRAM_TIMEOUT;
+ 169              		.loc 1 277 0
+ 170 0042 0D4B     		ldr	r3, .L34
+ 171              	.LVL9:
+ 172              	.L23:
+ 278:../emlib/src/em_msc.c ****   while ((MSC->STATUS & MSC_STATUS_BUSY) && (timeOut != 0))
+ 173              		.loc 1 278 0 discriminator 1
+ 174 0044 0D4A     		ldr	r2, .L34+4
+ 175 0046 D069     		ldr	r0, [r2, #28]
+ 176 0048 10F00100 		ands	r0, r0, #1
+ 177 004c 0DD1     		bne	.L32
+ 279:../emlib/src/em_msc.c ****   {
+ 280:../emlib/src/em_msc.c ****     timeOut--;
+ 281:../emlib/src/em_msc.c ****   }
+ 282:../emlib/src/em_msc.c **** 
+ 283:../emlib/src/em_msc.c ****   /* Check for timeout */
+ 284:../emlib/src/em_msc.c ****   if (timeOut == 0) return mscReturnTimeOut;
+ARM GAS  /tmp/ccak1xiI.s 			page 9
+
+
+ 178              		.loc 1 284 0
+ 179 004e 83B9     		cbnz	r3, .L19
+ 180              	.L20:
+ 267:../emlib/src/em_msc.c ****     return mscReturnTimeOut;
+ 181              		.loc 1 267 0
+ 182 0050 FD20     		movs	r0, #253
+ 183 0052 0EE0     		b	.L19
+ 184              	.LVL10:
+ 185              	.L17:
+ 266:../emlib/src/em_msc.c ****   if (timeOut == 0)
+ 186              		.loc 1 266 0
+ 187 0054 002B     		cmp	r3, #0
+ 188 0056 FBD0     		beq	.L20
+ 189 0058 0023     		movs	r3, #0
+ 190              	.LVL11:
+ 191              	.L21:
+ 270:../emlib/src/em_msc.c ****   for (i=0; i<num; i++, data++)
+ 192              		.loc 1 270 0 discriminator 1
+ 193 005a 8B42     		cmp	r3, r1
+ 194 005c EFDA     		bge	.L33
+ 271:../emlib/src/em_msc.c ****     MSC->WDATA = *data;
+ 195              		.loc 1 271 0 discriminator 2
+ 196 005e 50F82340 		ldr	r4, [r0, r3, lsl #2]
+ 197 0062 064D     		ldr	r5, .L34+4
+ 270:../emlib/src/em_msc.c ****   for (i=0; i<num; i++, data++)
+ 198              		.loc 1 270 0 discriminator 2
+ 199 0064 0133     		adds	r3, r3, #1
+ 200              	.LVL12:
+ 271:../emlib/src/em_msc.c ****     MSC->WDATA = *data;
+ 201              		.loc 1 271 0 discriminator 2
+ 202 0066 AC61     		str	r4, [r5, #24]
+ 203 0068 F7E7     		b	.L21
+ 204              	.LVL13:
+ 205              	.L32:
+ 278:../emlib/src/em_msc.c ****   while ((MSC->STATUS & MSC_STATUS_BUSY) && (timeOut != 0))
+ 206              		.loc 1 278 0 discriminator 2
+ 207 006a 002B     		cmp	r3, #0
+ 208 006c F0D0     		beq	.L20
+ 280:../emlib/src/em_msc.c ****     timeOut--;
+ 209              		.loc 1 280 0
+ 210 006e 013B     		subs	r3, r3, #1
+ 211              	.LVL14:
+ 212 0070 E8E7     		b	.L23
+ 213              	.L19:
+ 285:../emlib/src/em_msc.c **** 
+ 286:../emlib/src/em_msc.c ****   return mscReturnOk;
+ 287:../emlib/src/em_msc.c **** }
+ 214              		.loc 1 287 0
+ 215 0072 40B2     		sxtb	r0, r0
+ 216 0074 30BD     		pop	{r4, r5, pc}
+ 217              	.L35:
+ 218 0076 00BF     		.align	2
+ 219              	.L34:
+ 220 0078 80969800 		.word	10000000
+ 221 007c 00000C40 		.word	1074528256
+ 222              		.cfi_endproc
+ 223              	.LFE76:
+ARM GAS  /tmp/ccak1xiI.s 			page 10
+
+
+ 225              		.align	1
+ 226              		.global	MSC_ErasePage
+ 227              		.thumb
+ 228              		.thumb_func
+ 230              	MSC_ErasePage:
+ 231              	.LFB77:
+ 288:../emlib/src/em_msc.c **** #if defined(__ICCARM__)
+ 289:../emlib/src/em_msc.c **** #pragma diag_default=Ta022
+ 290:../emlib/src/em_msc.c **** #pragma diag_default=Ta023
+ 291:../emlib/src/em_msc.c **** #endif
+ 292:../emlib/src/em_msc.c **** #ifdef __CC_ARM  /* MDK-ARM compiler */
+ 293:../emlib/src/em_msc.c **** #pragma arm section code
+ 294:../emlib/src/em_msc.c **** #endif /* __CC_ARM */
+ 295:../emlib/src/em_msc.c **** 
+ 296:../emlib/src/em_msc.c **** /** @endcond */
+ 297:../emlib/src/em_msc.c **** 
+ 298:../emlib/src/em_msc.c **** 
+ 299:../emlib/src/em_msc.c **** /***************************************************************************//**
+ 300:../emlib/src/em_msc.c ****  * @brief
+ 301:../emlib/src/em_msc.c ****  *   Erases a page in flash memory.
+ 302:../emlib/src/em_msc.c ****  * @note
+ 303:../emlib/src/em_msc.c ****  *   This function MUST be executed from RAM. Failure to execute this portion
+ 304:../emlib/src/em_msc.c ****  *   of the code in RAM will result in a hardfault. For IAR, Rowley and
+ 305:../emlib/src/em_msc.c ****  *   Codesourcery this will be achieved automatically. For Keil uVision 4 you
+ 306:../emlib/src/em_msc.c ****  *   must define a section called "ram_code" and place this manually in your
+ 307:../emlib/src/em_msc.c ****  *   project's scatter file.
+ 308:../emlib/src/em_msc.c ****  * @param[in] startAddress
+ 309:../emlib/src/em_msc.c ****  *   Pointer to the flash page to erase. Must be aligned to beginning of page
+ 310:../emlib/src/em_msc.c ****  *   boundary.
+ 311:../emlib/src/em_msc.c ****  * @return
+ 312:../emlib/src/em_msc.c ****  *   Returns the status of erase operation, #msc_Return_TypeDef
+ 313:../emlib/src/em_msc.c ****  * @verbatim
+ 314:../emlib/src/em_msc.c ****  *   mscReturnOk - Operation completed successfully.
+ 315:../emlib/src/em_msc.c ****  *   mscReturnInvalidAddr - Operation tried to erase a non-flash area.
+ 316:../emlib/src/em_msc.c ****  *   mscReturnLocked - Operation tried to erase a locked area of the flash.
+ 317:../emlib/src/em_msc.c ****  *   mscReturnTimeOut - Operation timed out waiting for flash operation
+ 318:../emlib/src/em_msc.c ****  *       to complete.
+ 319:../emlib/src/em_msc.c ****  * @endverbatim
+ 320:../emlib/src/em_msc.c ****  ******************************************************************************/
+ 321:../emlib/src/em_msc.c **** #ifdef __CC_ARM  /* MDK-ARM compiler */
+ 322:../emlib/src/em_msc.c **** #pragma arm section code="ram_code"
+ 323:../emlib/src/em_msc.c **** #endif /* __CC_ARM */
+ 324:../emlib/src/em_msc.c **** #if defined(__ICCARM__)
+ 325:../emlib/src/em_msc.c **** /* Suppress warnings originating from use of EFM_ASSERT():              */
+ 326:../emlib/src/em_msc.c **** /* "Call to a non __ramfunc function from within a __ramfunc function"  */
+ 327:../emlib/src/em_msc.c **** /* "Possible rom access from within a __ramfunc function"               */
+ 328:../emlib/src/em_msc.c **** #pragma diag_suppress=Ta022
+ 329:../emlib/src/em_msc.c **** #pragma diag_suppress=Ta023
+ 330:../emlib/src/em_msc.c **** #endif
+ 331:../emlib/src/em_msc.c **** msc_Return_TypeDef MSC_ErasePage(uint32_t *startAddress)
+ 332:../emlib/src/em_msc.c **** {
+ 232              		.loc 1 332 0
+ 233              		.cfi_startproc
+ 234              		@ args = 0, pretend = 0, frame = 0
+ 235              		@ frame_needed = 0, uses_anonymous_args = 0
+ 236              	.LVL15:
+ 333:../emlib/src/em_msc.c ****   int      timeOut  = MSC_PROGRAM_TIMEOUT;
+ARM GAS  /tmp/ccak1xiI.s 			page 11
+
+
+ 334:../emlib/src/em_msc.c **** 
+ 335:../emlib/src/em_msc.c ****   /* Address must be aligned to pages */
+ 336:../emlib/src/em_msc.c ****   EFM_ASSERT((((uint32_t) startAddress) & (FLASH_PAGE_SIZE - 1)) == 0);
+ 237              		.loc 1 336 0
+ 238 0080 C0F30803 		ubfx	r3, r0, #0, #9
+ 332:../emlib/src/em_msc.c **** {
+ 239              		.loc 1 332 0
+ 240 0084 10B5     		push	{r4, lr}
+ 241              		.cfi_def_cfa_offset 8
+ 242              		.cfi_offset 4, -8
+ 243              		.cfi_offset 14, -4
+ 332:../emlib/src/em_msc.c **** {
+ 244              		.loc 1 332 0
+ 245 0086 0446     		mov	r4, r0
+ 246              		.loc 1 336 0
+ 247 0088 23B1     		cbz	r3, .L37
+ 248              		.loc 1 336 0 is_stmt 0 discriminator 1
+ 249 008a 1C48     		ldr	r0, .L49
+ 250              	.LVL16:
+ 251 008c 4FF4A871 		mov	r1, #336
+ 252 0090 FFF7FEFF 		bl	assertEFM
+ 253              	.LVL17:
+ 254              	.L37:
+ 337:../emlib/src/em_msc.c **** 
+ 338:../emlib/src/em_msc.c ****   /* Enable writing to the MSC */
+ 339:../emlib/src/em_msc.c ****   MSC->WRITECTRL |= MSC_WRITECTRL_WREN;
+ 255              		.loc 1 339 0 is_stmt 1
+ 256 0094 1A4B     		ldr	r3, .L49+4
+ 257 0096 9A68     		ldr	r2, [r3, #8]
+ 258 0098 42F00102 		orr	r2, r2, #1
+ 259 009c 9A60     		str	r2, [r3, #8]
+ 340:../emlib/src/em_msc.c **** 
+ 341:../emlib/src/em_msc.c ****   /* Load address */
+ 342:../emlib/src/em_msc.c ****   MSC->ADDRB    = (uint32_t) startAddress;
+ 343:../emlib/src/em_msc.c ****   MSC->WRITECMD = MSC_WRITECMD_LADDRIM;
+ 260              		.loc 1 343 0
+ 261 009e 0122     		movs	r2, #1
+ 342:../emlib/src/em_msc.c ****   MSC->ADDRB    = (uint32_t) startAddress;
+ 262              		.loc 1 342 0
+ 263 00a0 1C61     		str	r4, [r3, #16]
+ 264              		.loc 1 343 0
+ 265 00a2 DA60     		str	r2, [r3, #12]
+ 344:../emlib/src/em_msc.c **** 
+ 345:../emlib/src/em_msc.c ****   /* Check for invalid address */
+ 346:../emlib/src/em_msc.c ****   if (MSC->STATUS & MSC_STATUS_INVADDR)
+ 266              		.loc 1 346 0
+ 267 00a4 DA69     		ldr	r2, [r3, #28]
+ 268 00a6 5107     		lsls	r1, r2, #29
+ 269 00a8 05D5     		bpl	.L38
+ 347:../emlib/src/em_msc.c ****   {
+ 348:../emlib/src/em_msc.c ****     /* Disable writing to the MSC */
+ 349:../emlib/src/em_msc.c ****     MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+ 270              		.loc 1 349 0
+ 271 00aa 9A68     		ldr	r2, [r3, #8]
+ 350:../emlib/src/em_msc.c ****     return mscReturnInvalidAddr;
+ 272              		.loc 1 350 0
+ 273 00ac FF20     		movs	r0, #255
+ARM GAS  /tmp/ccak1xiI.s 			page 12
+
+
+ 349:../emlib/src/em_msc.c ****     MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+ 274              		.loc 1 349 0
+ 275 00ae 22F00102 		bic	r2, r2, #1
+ 276 00b2 9A60     		str	r2, [r3, #8]
+ 277              		.loc 1 350 0
+ 278 00b4 1FE0     		b	.L39
+ 279              	.L38:
+ 351:../emlib/src/em_msc.c ****   }
+ 352:../emlib/src/em_msc.c **** 
+ 353:../emlib/src/em_msc.c ****   /* Check for write protected page */
+ 354:../emlib/src/em_msc.c ****   if (MSC->STATUS & MSC_STATUS_LOCKED)
+ 280              		.loc 1 354 0
+ 281 00b6 DA69     		ldr	r2, [r3, #28]
+ 282 00b8 9207     		lsls	r2, r2, #30
+ 283 00ba 05D5     		bpl	.L40
+ 355:../emlib/src/em_msc.c ****   {
+ 356:../emlib/src/em_msc.c ****     /* Disable writing to the MSC */
+ 357:../emlib/src/em_msc.c ****     MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+ 284              		.loc 1 357 0
+ 285 00bc 9A68     		ldr	r2, [r3, #8]
+ 358:../emlib/src/em_msc.c ****     return mscReturnLocked;
+ 286              		.loc 1 358 0
+ 287 00be FE20     		movs	r0, #254
+ 357:../emlib/src/em_msc.c ****     MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+ 288              		.loc 1 357 0
+ 289 00c0 22F00102 		bic	r2, r2, #1
+ 290 00c4 9A60     		str	r2, [r3, #8]
+ 291              		.loc 1 358 0
+ 292 00c6 16E0     		b	.L39
+ 293              	.L40:
+ 359:../emlib/src/em_msc.c ****   }
+ 360:../emlib/src/em_msc.c **** 
+ 361:../emlib/src/em_msc.c ****   /* Send erase page command */
+ 362:../emlib/src/em_msc.c ****   MSC->WRITECMD = MSC_WRITECMD_ERASEPAGE;
+ 294              		.loc 1 362 0
+ 295 00c8 0222     		movs	r2, #2
+ 296 00ca DA60     		str	r2, [r3, #12]
+ 333:../emlib/src/em_msc.c ****   int      timeOut  = MSC_PROGRAM_TIMEOUT;
+ 297              		.loc 1 333 0
+ 298 00cc 0D4A     		ldr	r2, .L49+8
+ 299              	.LVL18:
+ 300              	.L41:
+ 363:../emlib/src/em_msc.c **** 
+ 364:../emlib/src/em_msc.c ****   /* Wait for the erase to complete */
+ 365:../emlib/src/em_msc.c ****   while ((MSC->STATUS & MSC_STATUS_BUSY) && (timeOut != 0))
+ 301              		.loc 1 365 0 discriminator 1
+ 302 00ce 0C4B     		ldr	r3, .L49+4
+ 303 00d0 D869     		ldr	r0, [r3, #28]
+ 304 00d2 1946     		mov	r1, r3
+ 305 00d4 10F00100 		ands	r0, r0, #1
+ 306 00d8 02D0     		beq	.L42
+ 307              		.loc 1 365 0 is_stmt 0 discriminator 2
+ 308 00da 12B1     		cbz	r2, .L44
+ 366:../emlib/src/em_msc.c ****   {
+ 367:../emlib/src/em_msc.c ****     timeOut--;
+ 309              		.loc 1 367 0 is_stmt 1
+ 310 00dc 013A     		subs	r2, r2, #1
+ARM GAS  /tmp/ccak1xiI.s 			page 13
+
+
+ 311              	.LVL19:
+ 312 00de F6E7     		b	.L41
+ 313              	.L42:
+ 368:../emlib/src/em_msc.c ****   }
+ 369:../emlib/src/em_msc.c **** 
+ 370:../emlib/src/em_msc.c ****   if (timeOut == 0)
+ 314              		.loc 1 370 0
+ 315 00e0 2AB9     		cbnz	r2, .L45
+ 316              	.L44:
+ 371:../emlib/src/em_msc.c ****   {
+ 372:../emlib/src/em_msc.c ****     /* Disable writing to the MSC */
+ 373:../emlib/src/em_msc.c ****     MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+ 317              		.loc 1 373 0
+ 318 00e2 8B68     		ldr	r3, [r1, #8]
+ 374:../emlib/src/em_msc.c ****     return mscReturnTimeOut;
+ 319              		.loc 1 374 0
+ 320 00e4 FD20     		movs	r0, #253
+ 373:../emlib/src/em_msc.c ****     MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+ 321              		.loc 1 373 0
+ 322 00e6 23F00103 		bic	r3, r3, #1
+ 323 00ea 8B60     		str	r3, [r1, #8]
+ 324              		.loc 1 374 0
+ 325 00ec 03E0     		b	.L39
+ 326              	.L45:
+ 375:../emlib/src/em_msc.c ****   }
+ 376:../emlib/src/em_msc.c **** 
+ 377:../emlib/src/em_msc.c ****   /* Disable writing to the MSC */
+ 378:../emlib/src/em_msc.c ****   MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+ 327              		.loc 1 378 0
+ 328 00ee 9A68     		ldr	r2, [r3, #8]
+ 329              	.LVL20:
+ 330 00f0 22F00102 		bic	r2, r2, #1
+ 331 00f4 9A60     		str	r2, [r3, #8]
+ 332              	.L39:
+ 379:../emlib/src/em_msc.c ****   return mscReturnOk;
+ 380:../emlib/src/em_msc.c **** }
+ 333              		.loc 1 380 0
+ 334 00f6 40B2     		sxtb	r0, r0
+ 335 00f8 10BD     		pop	{r4, pc}
+ 336              	.LVL21:
+ 337              	.L50:
+ 338 00fa 00BF     		.align	2
+ 339              	.L49:
+ 340 00fc 00000000 		.word	.LC0
+ 341 0100 00000C40 		.word	1074528256
+ 342 0104 80969800 		.word	10000000
+ 343              		.cfi_endproc
+ 344              	.LFE77:
+ 346              		.align	1
+ 347              		.global	MSC_WriteWord
+ 348              		.thumb
+ 349              		.thumb_func
+ 351              	MSC_WriteWord:
+ 352              	.LFB78:
+ 381:../emlib/src/em_msc.c **** #if defined(__ICCARM__)
+ 382:../emlib/src/em_msc.c **** #pragma diag_default=Ta022
+ 383:../emlib/src/em_msc.c **** #pragma diag_default=Ta023
+ARM GAS  /tmp/ccak1xiI.s 			page 14
+
+
+ 384:../emlib/src/em_msc.c **** #endif
+ 385:../emlib/src/em_msc.c **** #ifdef __CC_ARM  /* MDK-ARM compiler */
+ 386:../emlib/src/em_msc.c **** #pragma arm section code
+ 387:../emlib/src/em_msc.c **** #endif /* __CC_ARM */
+ 388:../emlib/src/em_msc.c **** 
+ 389:../emlib/src/em_msc.c **** 
+ 390:../emlib/src/em_msc.c **** 
+ 391:../emlib/src/em_msc.c **** /***************************************************************************//**
+ 392:../emlib/src/em_msc.c ****  * @brief
+ 393:../emlib/src/em_msc.c ****  *   Writes a single word to flash memory. Data to write must be aligned to
+ 394:../emlib/src/em_msc.c ****  *   words and contain a number of bytes that is divisable by four.
+ 395:../emlib/src/em_msc.c ****  * @note
+ 396:../emlib/src/em_msc.c ****  *   The flash must be erased prior to writing a new word.
+ 397:../emlib/src/em_msc.c ****  *   This function must be run from RAM. Failure to execute this portion
+ 398:../emlib/src/em_msc.c ****  *   of the code in RAM will result in a hardfault. For IAR, Rowley and
+ 399:../emlib/src/em_msc.c ****  *   Codesourcery this will be achieved automatically. For Keil uVision 4 you
+ 400:../emlib/src/em_msc.c ****  *   must define a section called "ram_code" and place this manually in your
+ 401:../emlib/src/em_msc.c ****  *   project's scatter file.
+ 402:../emlib/src/em_msc.c ****  *
+ 403:../emlib/src/em_msc.c ****  * @param[in] address
+ 404:../emlib/src/em_msc.c ****  *   Pointer to the flash word to write to. Must be aligned to words.
+ 405:../emlib/src/em_msc.c ****  * @param[in] data
+ 406:../emlib/src/em_msc.c ****  *   Data to write to flash.
+ 407:../emlib/src/em_msc.c ****  * @param[in] numBytes
+ 408:../emlib/src/em_msc.c ****  *   Number of bytes to write from flash. NB: Must be divisable by four.
+ 409:../emlib/src/em_msc.c ****  * @return
+ 410:../emlib/src/em_msc.c ****  *   Returns the status of the write operation, #msc_Return_TypeDef
+ 411:../emlib/src/em_msc.c ****  * @verbatim
+ 412:../emlib/src/em_msc.c ****  *   flashReturnOk - Operation completed successfully.
+ 413:../emlib/src/em_msc.c ****  *   flashReturnInvalidAddr - Operation tried to erase a non-flash area.
+ 414:../emlib/src/em_msc.c ****  *   flashReturnLocked - Operation tried to erase a locked area of the flash.
+ 415:../emlib/src/em_msc.c ****  *   flashReturnTimeOut - Operation timed out waiting for flash operation
+ 416:../emlib/src/em_msc.c ****  *       to complete.
+ 417:../emlib/src/em_msc.c ****  * @endverbatim
+ 418:../emlib/src/em_msc.c ****  ******************************************************************************/
+ 419:../emlib/src/em_msc.c **** #ifdef __CC_ARM  /* MDK-ARM compiler */
+ 420:../emlib/src/em_msc.c **** #pragma arm section code="ram_code"
+ 421:../emlib/src/em_msc.c **** #endif /* __CC_ARM */
+ 422:../emlib/src/em_msc.c **** #if defined(__ICCARM__)
+ 423:../emlib/src/em_msc.c **** /* Suppress warnings originating from use of EFM_ASSERT():              */
+ 424:../emlib/src/em_msc.c **** /* "Call to a non __ramfunc function from within a __ramfunc function"  */
+ 425:../emlib/src/em_msc.c **** /* "Possible rom access from within a __ramfunc function"               */
+ 426:../emlib/src/em_msc.c **** #pragma diag_suppress=Ta022
+ 427:../emlib/src/em_msc.c **** #pragma diag_suppress=Ta023
+ 428:../emlib/src/em_msc.c **** #endif
+ 429:../emlib/src/em_msc.c **** 
+ 430:../emlib/src/em_msc.c **** msc_Return_TypeDef MSC_WriteWord(uint32_t *address, void const *data, int numBytes)
+ 431:../emlib/src/em_msc.c **** {
+ 353              		.loc 1 431 0
+ 354              		.cfi_startproc
+ 355              		@ args = 0, pretend = 0, frame = 0
+ 356              		@ frame_needed = 0, uses_anonymous_args = 0
+ 357              	.LVL22:
+ 358 0108 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 359              		.cfi_def_cfa_offset 24
+ 360              		.cfi_offset 4, -24
+ 361              		.cfi_offset 5, -20
+ARM GAS  /tmp/ccak1xiI.s 			page 15
+
+
+ 362              		.cfi_offset 6, -16
+ 363              		.cfi_offset 7, -12
+ 364              		.cfi_offset 8, -8
+ 365              		.cfi_offset 14, -4
+ 366              		.loc 1 431 0
+ 367 010c 1446     		mov	r4, r2
+ 432:../emlib/src/em_msc.c ****   int wordCount;
+ 433:../emlib/src/em_msc.c ****   int numWords;
+ 434:../emlib/src/em_msc.c **** #if defined(_EFM32_TINY_FAMILY) || defined (_EFM32_GIANT_FAMILY) || defined(_EFM32_WONDER_FAMILY)
+ 435:../emlib/src/em_msc.c ****   int pageWords;
+ 436:../emlib/src/em_msc.c ****   uint32_t* pData;
+ 437:../emlib/src/em_msc.c **** #endif
+ 438:../emlib/src/em_msc.c ****   msc_Return_TypeDef retval = mscReturnOk;
+ 439:../emlib/src/em_msc.c **** 
+ 440:../emlib/src/em_msc.c ****   /* Check alignment (Must be aligned to words) */
+ 441:../emlib/src/em_msc.c ****   EFM_ASSERT(((uint32_t) address & 0x3) == 0);
+ 368              		.loc 1 441 0
+ 369 010e 8207     		lsls	r2, r0, #30
+ 370              	.LVL23:
+ 431:../emlib/src/em_msc.c **** {
+ 371              		.loc 1 431 0
+ 372 0110 0546     		mov	r5, r0
+ 373 0112 8846     		mov	r8, r1
+ 374              		.loc 1 441 0
+ 375 0114 04D0     		beq	.L52
+ 376              		.loc 1 441 0 is_stmt 0 discriminator 1
+ 377 0116 1548     		ldr	r0, .L64
+ 378              	.LVL24:
+ 379 0118 40F2B911 		movw	r1, #441
+ 380              	.LVL25:
+ 381 011c FFF7FEFF 		bl	assertEFM
+ 382              	.LVL26:
+ 383              	.L52:
+ 442:../emlib/src/em_msc.c **** 
+ 443:../emlib/src/em_msc.c ****   /* Check number of bytes. Must be divisable by four */
+ 444:../emlib/src/em_msc.c ****   EFM_ASSERT((numBytes & 0x3) == 0);
+ 384              		.loc 1 444 0 is_stmt 1
+ 385 0120 A307     		lsls	r3, r4, #30
+ 386 0122 04D0     		beq	.L53
+ 387              		.loc 1 444 0 is_stmt 0 discriminator 1
+ 388 0124 1148     		ldr	r0, .L64
+ 389 0126 4FF4DE71 		mov	r1, #444
+ 390 012a FFF7FEFF 		bl	assertEFM
+ 391              	.LVL27:
+ 392              	.L53:
+ 445:../emlib/src/em_msc.c **** 
+ 446:../emlib/src/em_msc.c ****   /* Enable writing to the MSC */
+ 447:../emlib/src/em_msc.c ****   MSC->WRITECTRL |= MSC_WRITECTRL_WREN;
+ 393              		.loc 1 447 0 is_stmt 1
+ 394 012e 104B     		ldr	r3, .L64+4
+ 448:../emlib/src/em_msc.c **** 
+ 449:../emlib/src/em_msc.c ****   /* Convert bytes to words */
+ 450:../emlib/src/em_msc.c ****   numWords = numBytes >> 2;
+ 395              		.loc 1 450 0
+ 396 0130 A710     		asrs	r7, r4, #2
+ 397              	.LVL28:
+ 447:../emlib/src/em_msc.c ****   MSC->WRITECTRL |= MSC_WRITECTRL_WREN;
+ARM GAS  /tmp/ccak1xiI.s 			page 16
+
+
+ 398              		.loc 1 447 0
+ 399 0132 9A68     		ldr	r2, [r3, #8]
+ 451:../emlib/src/em_msc.c **** 
+ 452:../emlib/src/em_msc.c **** #if (defined(_EFM32_GIANT_FAMILY) || defined(_EFM32_WONDER_FAMILY)) && (2==WORDS_PER_DATA_PHASE)
+ 453:../emlib/src/em_msc.c **** 
+ 454:../emlib/src/em_msc.c ****   /* For the Giant and Wonder families we want to use the double word write
+ 455:../emlib/src/em_msc.c ****    * feature in order to improve the speed. The devices with flash size
+ 456:../emlib/src/em_msc.c ****    * larger than 512KiBytes support double word write cycles. The address is
+ 457:../emlib/src/em_msc.c ****    * loaded by the software for the first word, and automatically incremented
+ 458:../emlib/src/em_msc.c ****    * by the hardware for the second word. However this will not work across a
+ 459:../emlib/src/em_msc.c ****    * page boundary, so we need to align the address of double word write
+ 460:../emlib/src/em_msc.c ****    * cycles to an even address.
+ 461:../emlib/src/em_msc.c ****    */
+ 462:../emlib/src/em_msc.c **** 
+ 463:../emlib/src/em_msc.c ****   if ((((uint32_t) address) % FLASH_PAGE_SIZE + numBytes)
+ 464:../emlib/src/em_msc.c ****       > FLASH_PAGE_SIZE)
+ 465:../emlib/src/em_msc.c ****   {
+ 466:../emlib/src/em_msc.c ****     if (((uint32_t) address) & 0x7)
+ 467:../emlib/src/em_msc.c ****     {
+ 468:../emlib/src/em_msc.c ****       MSC->WRITECTRL &= ~MSC_WRITECTRL_WDOUBLE;
+ 469:../emlib/src/em_msc.c ****       retval = MscLoadAddress(address);
+ 470:../emlib/src/em_msc.c ****       if (mscReturnOk != retval) goto msc_write_word_exit;
+ 471:../emlib/src/em_msc.c ****       retval = MscLoadData((uint32_t *) data, 1);
+ 472:../emlib/src/em_msc.c ****       if (mscReturnOk != retval) goto msc_write_word_exit;
+ 473:../emlib/src/em_msc.c ****       data = (void *) ((uint32_t) data + sizeof(uint32_t));
+ 474:../emlib/src/em_msc.c ****       address++;
+ 475:../emlib/src/em_msc.c ****       numWords--;
+ 476:../emlib/src/em_msc.c ****     }
+ 477:../emlib/src/em_msc.c ****   }
+ 478:../emlib/src/em_msc.c **** 
+ 479:../emlib/src/em_msc.c ****   /* If there is an odd number of words remaining to be written,
+ 480:../emlib/src/em_msc.c ****    * we write the last word now because this has to be written
+ 481:../emlib/src/em_msc.c ****    * as a single word and will simplify the for() loop below writing
+ 482:../emlib/src/em_msc.c ****    * double words. */
+ 483:../emlib/src/em_msc.c **** 
+ 484:../emlib/src/em_msc.c ****   if (numWords & 0x1)
+ 485:../emlib/src/em_msc.c ****   {
+ 486:../emlib/src/em_msc.c ****     MSC->WRITECTRL &= ~MSC_WRITECTRL_WDOUBLE;
+ 487:../emlib/src/em_msc.c ****     retval = MscLoadAddress(address + numWords - 1);
+ 488:../emlib/src/em_msc.c ****     if (mscReturnOk != retval) goto msc_write_word_exit;
+ 489:../emlib/src/em_msc.c ****     retval = MscLoadData(((uint32_t *) data) + numWords - 1, 1);
+ 490:../emlib/src/em_msc.c ****     if (mscReturnOk != retval) goto msc_write_word_exit;
+ 491:../emlib/src/em_msc.c ****     numWords--;
+ 492:../emlib/src/em_msc.c ****   }
+ 493:../emlib/src/em_msc.c **** 
+ 494:../emlib/src/em_msc.c ****   MSC->WRITECTRL |= MSC_WRITECTRL_WDOUBLE;
+ 495:../emlib/src/em_msc.c **** 
+ 496:../emlib/src/em_msc.c **** #endif /* (defined(_EFM32_GIANT_FAMILY) || defined(_EFM32_WONDER_FAMILY)) && (2==WORDS_PER_DATA_PHA
+ 497:../emlib/src/em_msc.c **** 
+ 498:../emlib/src/em_msc.c **** #if defined(_EFM32_TINY_FAMILY) || defined (_EFM32_GIANT_FAMILY) || defined(_EFM32_WONDER_FAMILY)
+ 499:../emlib/src/em_msc.c **** 
+ 500:../emlib/src/em_msc.c ****   pData = (uint32_t*) data;
+ 501:../emlib/src/em_msc.c **** 
+ 502:../emlib/src/em_msc.c ****   /* The following loop splits the data into chunks corresponding to flash pages.
+ 503:../emlib/src/em_msc.c ****      The address is loaded only once per page, because the hardware automatically
+ 504:../emlib/src/em_msc.c ****      increments the address internally for each data load inside a page. */
+ 505:../emlib/src/em_msc.c ****   for (wordCount = 0; wordCount < numWords; )
+ARM GAS  /tmp/ccak1xiI.s 			page 17
+
+
+ 506:../emlib/src/em_msc.c ****   {
+ 507:../emlib/src/em_msc.c ****     /* First we load address. The address is auto-incremented within a page.
+ 508:../emlib/src/em_msc.c ****        Therefore the address phase is only needed once for each page. */
+ 509:../emlib/src/em_msc.c ****     retval = MscLoadAddress(address + wordCount);
+ 510:../emlib/src/em_msc.c ****     if (mscReturnOk != retval) goto msc_write_word_exit;
+ 511:../emlib/src/em_msc.c **** 
+ 512:../emlib/src/em_msc.c ****     /* Compute the number of words to write to the current page. */
+ 513:../emlib/src/em_msc.c ****     pageWords =
+ 514:../emlib/src/em_msc.c ****       (FLASH_PAGE_SIZE - ((uint32_t) (address + wordCount)) % FLASH_PAGE_SIZE) /
+ 515:../emlib/src/em_msc.c ****       sizeof(uint32_t);
+ 516:../emlib/src/em_msc.c ****     if (pageWords > numWords-wordCount)
+ 517:../emlib/src/em_msc.c ****       pageWords = numWords-wordCount;
+ 518:../emlib/src/em_msc.c ****     wordCount += pageWords;
+ 519:../emlib/src/em_msc.c **** 
+ 520:../emlib/src/em_msc.c ****     /* Now program the data in this page. */
+ 521:../emlib/src/em_msc.c ****     for (; pageWords; pData+=WORDS_PER_DATA_PHASE, pageWords-=WORDS_PER_DATA_PHASE)
+ 522:../emlib/src/em_msc.c ****     {
+ 523:../emlib/src/em_msc.c ****       retval = MscLoadData(pData, WORDS_PER_DATA_PHASE);
+ 524:../emlib/src/em_msc.c ****       if (mscReturnOk != retval)
+ 525:../emlib/src/em_msc.c ****         goto msc_write_word_exit;
+ 526:../emlib/src/em_msc.c ****     }
+ 527:../emlib/src/em_msc.c ****   }
+ 528:../emlib/src/em_msc.c **** 
+ 529:../emlib/src/em_msc.c **** #else /* _EFM32_GECKO_FAMILY  */
+ 530:../emlib/src/em_msc.c **** 
+ 531:../emlib/src/em_msc.c ****   for (wordCount = 0; wordCount < numWords; wordCount++)
+ 400              		.loc 1 531 0
+ 401 0134 0024     		movs	r4, #0
+ 402              	.LVL29:
+ 447:../emlib/src/em_msc.c ****   MSC->WRITECTRL |= MSC_WRITECTRL_WREN;
+ 403              		.loc 1 447 0
+ 404 0136 42F00102 		orr	r2, r2, #1
+ 405 013a 9A60     		str	r2, [r3, #8]
+ 406              	.LVL30:
+ 407              	.L54:
+ 408              		.loc 1 531 0 discriminator 1
+ 409 013c BC42     		cmp	r4, r7
+ 410 013e 0CDA     		bge	.L63
+ 411 0140 A600     		lsls	r6, r4, #2
+ 532:../emlib/src/em_msc.c ****   {
+ 533:../emlib/src/em_msc.c ****     retval = MscLoadAddress(address + wordCount);
+ 412              		.loc 1 533 0
+ 413 0142 A819     		adds	r0, r5, r6
+ 414 0144 FFF7FEFF 		bl	MscLoadAddress
+ 415              	.LVL31:
+ 534:../emlib/src/em_msc.c ****     if (mscReturnOk != retval)
+ 416              		.loc 1 534 0
+ 417 0148 40B9     		cbnz	r0, .L55
+ 535:../emlib/src/em_msc.c ****       goto msc_write_word_exit;
+ 536:../emlib/src/em_msc.c ****     retval = MscLoadData(((uint32_t *) data) + wordCount, 1);
+ 418              		.loc 1 536 0
+ 419 014a 08EB0600 		add	r0, r8, r6
+ 420              	.LVL32:
+ 421 014e 0121     		movs	r1, #1
+ 422 0150 FFF7FEFF 		bl	MscLoadData
+ 423              	.LVL33:
+ 537:../emlib/src/em_msc.c ****     if (mscReturnOk != retval)
+ARM GAS  /tmp/ccak1xiI.s 			page 18
+
+
+ 424              		.loc 1 537 0
+ 425 0154 10B9     		cbnz	r0, .L55
+ 531:../emlib/src/em_msc.c ****   for (wordCount = 0; wordCount < numWords; wordCount++)
+ 426              		.loc 1 531 0
+ 427 0156 0134     		adds	r4, r4, #1
+ 428              	.LVL34:
+ 429 0158 F0E7     		b	.L54
+ 430              	.LVL35:
+ 431              	.L63:
+ 432 015a 0020     		movs	r0, #0
+ 433              	.LVL36:
+ 434              	.L55:
+ 538:../emlib/src/em_msc.c ****       goto msc_write_word_exit;
+ 539:../emlib/src/em_msc.c ****   }
+ 540:../emlib/src/em_msc.c **** 
+ 541:../emlib/src/em_msc.c **** #endif
+ 542:../emlib/src/em_msc.c **** 
+ 543:../emlib/src/em_msc.c ****  msc_write_word_exit:
+ 544:../emlib/src/em_msc.c **** 
+ 545:../emlib/src/em_msc.c ****   /* Disable writing to the MSC */
+ 546:../emlib/src/em_msc.c ****   MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+ 435              		.loc 1 546 0
+ 436 015c 044B     		ldr	r3, .L64+4
+ 547:../emlib/src/em_msc.c **** 
+ 548:../emlib/src/em_msc.c **** #if (defined(_EFM32_GIANT_FAMILY) || defined(_EFM32_WONDER_FAMILY)) && (2==WORDS_PER_DATA_PHASE)
+ 549:../emlib/src/em_msc.c ****   /* Turn off double word write cycle support. */
+ 550:../emlib/src/em_msc.c ****   MSC->WRITECTRL &= ~MSC_WRITECTRL_WDOUBLE;
+ 551:../emlib/src/em_msc.c **** #endif
+ 552:../emlib/src/em_msc.c **** 
+ 553:../emlib/src/em_msc.c ****   return retval;
+ 554:../emlib/src/em_msc.c **** }
+ 437              		.loc 1 554 0
+ 438 015e 40B2     		sxtb	r0, r0
+ 439              	.LVL37:
+ 546:../emlib/src/em_msc.c ****   MSC->WRITECTRL &= ~MSC_WRITECTRL_WREN;
+ 440              		.loc 1 546 0
+ 441 0160 9A68     		ldr	r2, [r3, #8]
+ 442 0162 22F00102 		bic	r2, r2, #1
+ 443 0166 9A60     		str	r2, [r3, #8]
+ 444              		.loc 1 554 0
+ 445 0168 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 446              	.LVL38:
+ 447              	.L65:
+ 448              		.align	2
+ 449              	.L64:
+ 450 016c 00000000 		.word	.LC0
+ 451 0170 00000C40 		.word	1074528256
+ 452              		.cfi_endproc
+ 453              	.LFE78:
+ 455              		.section	.rodata.str1.1,"aMS",%progbits,1
+ 456              	.LC0:
+ 457 0000 2E2E2F65 		.ascii	"../emlib/src/em_msc.c\000"
+ 457      6D6C6962 
+ 457      2F737263 
+ 457      2F656D5F 
+ 457      6D73632E 
+ 458              		.text
+ARM GAS  /tmp/ccak1xiI.s 			page 19
+
+
+ 459              	.Letext0:
+ 460              		.file 2 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/machine/_default_types.h"
+ 461              		.file 3 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdint.h"
+ 462              		.file 4 "../Device/EnergyMicro/EFM32G/Include/efm32g_msc.h"
+ 463              		.file 5 "../emlib/inc/em_msc.h"
+ 464              		.file 6 "../CMSIS/Include/core_cm3.h"
+ 465              		.file 7 "../emlib/inc/em_assert.h"

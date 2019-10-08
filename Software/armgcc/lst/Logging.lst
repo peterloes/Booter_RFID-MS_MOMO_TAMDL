@@ -1,0 +1,1845 @@
+ARM GAS  /tmp/cciG9ks9.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"Logging.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.INT_Disable,"ax",%progbits
+  19              		.align	1
+  20              		.thumb
+  21              		.thumb_func
+  23              	INT_Disable:
+  24              	.LFB57:
+  25              		.file 1 "../emlib/inc/em_int.h"
+   1:../emlib/inc/em_int.h **** /***************************************************************************//**
+   2:../emlib/inc/em_int.h ****  * @file
+   3:../emlib/inc/em_int.h ****  * @brief Interrupt enable/disable unit API
+   4:../emlib/inc/em_int.h ****  * @author Energy Micro AS
+   5:../emlib/inc/em_int.h ****  * @version 3.20.2
+   6:../emlib/inc/em_int.h ****  *******************************************************************************
+   7:../emlib/inc/em_int.h ****  * @section License
+   8:../emlib/inc/em_int.h ****  * <b>(C) Copyright 2012 Energy Micro AS, http://www.energymicro.com</b>
+   9:../emlib/inc/em_int.h ****  *******************************************************************************
+  10:../emlib/inc/em_int.h ****  *
+  11:../emlib/inc/em_int.h ****  * Permission is granted to anyone to use this software for any purpose,
+  12:../emlib/inc/em_int.h ****  * including commercial applications, and to alter it and redistribute it
+  13:../emlib/inc/em_int.h ****  * freely, subject to the following restrictions:
+  14:../emlib/inc/em_int.h ****  *
+  15:../emlib/inc/em_int.h ****  * 1. The origin of this software must not be misrepresented; you must not
+  16:../emlib/inc/em_int.h ****  *    claim that you wrote the original software.
+  17:../emlib/inc/em_int.h ****  * 2. Altered source versions must be plainly marked as such, and must not be
+  18:../emlib/inc/em_int.h ****  *    misrepresented as being the original software.
+  19:../emlib/inc/em_int.h ****  * 3. This notice may not be removed or altered from any source distribution.
+  20:../emlib/inc/em_int.h ****  *
+  21:../emlib/inc/em_int.h ****  * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Energy Micro AS has no
+  22:../emlib/inc/em_int.h ****  * obligation to support this Software. Energy Micro AS is providing the
+  23:../emlib/inc/em_int.h ****  * Software "AS IS", with no express or implied warranties of any kind,
+  24:../emlib/inc/em_int.h ****  * including, but not limited to, any implied warranties of merchantability
+  25:../emlib/inc/em_int.h ****  * or fitness for any particular purpose or warranties against infringement
+  26:../emlib/inc/em_int.h ****  * of any proprietary rights of a third party.
+  27:../emlib/inc/em_int.h ****  *
+  28:../emlib/inc/em_int.h ****  * Energy Micro AS will not be liable for any consequential, incidental, or
+  29:../emlib/inc/em_int.h ****  * special damages, or any other relief, or for any claim by any third party,
+  30:../emlib/inc/em_int.h ****  * arising from your use of this Software.
+  31:../emlib/inc/em_int.h ****  *
+  32:../emlib/inc/em_int.h ****  ******************************************************************************/
+  33:../emlib/inc/em_int.h **** #ifndef __EM_INT_H
+ARM GAS  /tmp/cciG9ks9.s 			page 2
+
+
+  34:../emlib/inc/em_int.h **** #define __EM_INT_H
+  35:../emlib/inc/em_int.h **** 
+  36:../emlib/inc/em_int.h **** #include "em_device.h"
+  37:../emlib/inc/em_int.h **** 
+  38:../emlib/inc/em_int.h **** extern uint32_t INT_LockCnt;
+  39:../emlib/inc/em_int.h **** 
+  40:../emlib/inc/em_int.h **** #ifdef __cplusplus
+  41:../emlib/inc/em_int.h **** extern "C" {
+  42:../emlib/inc/em_int.h **** #endif
+  43:../emlib/inc/em_int.h **** 
+  44:../emlib/inc/em_int.h **** /***************************************************************************//**
+  45:../emlib/inc/em_int.h ****  * @addtogroup EM_Library
+  46:../emlib/inc/em_int.h ****  * @{
+  47:../emlib/inc/em_int.h ****  ******************************************************************************/
+  48:../emlib/inc/em_int.h **** 
+  49:../emlib/inc/em_int.h **** /***************************************************************************//**
+  50:../emlib/inc/em_int.h ****  * @addtogroup INT
+  51:../emlib/inc/em_int.h ****  * @{
+  52:../emlib/inc/em_int.h ****  ******************************************************************************/
+  53:../emlib/inc/em_int.h **** 
+  54:../emlib/inc/em_int.h **** /***************************************************************************//**
+  55:../emlib/inc/em_int.h ****  * @brief
+  56:../emlib/inc/em_int.h ****  *   Disable interrupts.
+  57:../emlib/inc/em_int.h ****  *
+  58:../emlib/inc/em_int.h ****  * @return
+  59:../emlib/inc/em_int.h ****  *   The resulting interrupt nesting level.
+  60:../emlib/inc/em_int.h ****  *
+  61:../emlib/inc/em_int.h ****  * @details
+  62:../emlib/inc/em_int.h ****  *   Disable interrupts and increment lock level counter.
+  63:../emlib/inc/em_int.h ****  *
+  64:../emlib/inc/em_int.h ****  ******************************************************************************/
+  65:../emlib/inc/em_int.h **** __STATIC_INLINE uint32_t INT_Disable(void)
+  66:../emlib/inc/em_int.h **** {
+  26              		.loc 1 66 0
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 0
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30              		@ link register save eliminated.
+  31              	.LBB6:
+  32              	.LBB7:
+  33              		.file 2 "../CMSIS/Include/core_cmFunc.h"
+   1:../CMSIS/Include/core_cmFunc.h **** /**************************************************************************//**
+   2:../CMSIS/Include/core_cmFunc.h ****  * @file     core_cmFunc.h
+   3:../CMSIS/Include/core_cmFunc.h ****  * @brief    CMSIS Cortex-M Core Function Access Header File
+   4:../CMSIS/Include/core_cmFunc.h ****  * @version  V3.20
+   5:../CMSIS/Include/core_cmFunc.h ****  * @date     25. February 2013
+   6:../CMSIS/Include/core_cmFunc.h ****  *
+   7:../CMSIS/Include/core_cmFunc.h ****  * @note
+   8:../CMSIS/Include/core_cmFunc.h ****  *
+   9:../CMSIS/Include/core_cmFunc.h ****  ******************************************************************************/
+  10:../CMSIS/Include/core_cmFunc.h **** /* Copyright (c) 2009 - 2013 ARM LIMITED
+  11:../CMSIS/Include/core_cmFunc.h **** 
+  12:../CMSIS/Include/core_cmFunc.h ****    All rights reserved.
+  13:../CMSIS/Include/core_cmFunc.h ****    Redistribution and use in source and binary forms, with or without
+  14:../CMSIS/Include/core_cmFunc.h ****    modification, are permitted provided that the following conditions are met:
+  15:../CMSIS/Include/core_cmFunc.h ****    - Redistributions of source code must retain the above copyright
+  16:../CMSIS/Include/core_cmFunc.h ****      notice, this list of conditions and the following disclaimer.
+ARM GAS  /tmp/cciG9ks9.s 			page 3
+
+
+  17:../CMSIS/Include/core_cmFunc.h ****    - Redistributions in binary form must reproduce the above copyright
+  18:../CMSIS/Include/core_cmFunc.h ****      notice, this list of conditions and the following disclaimer in the
+  19:../CMSIS/Include/core_cmFunc.h ****      documentation and/or other materials provided with the distribution.
+  20:../CMSIS/Include/core_cmFunc.h ****    - Neither the name of ARM nor the names of its contributors may be used
+  21:../CMSIS/Include/core_cmFunc.h ****      to endorse or promote products derived from this software without
+  22:../CMSIS/Include/core_cmFunc.h ****      specific prior written permission.
+  23:../CMSIS/Include/core_cmFunc.h ****    *
+  24:../CMSIS/Include/core_cmFunc.h ****    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  25:../CMSIS/Include/core_cmFunc.h ****    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  26:../CMSIS/Include/core_cmFunc.h ****    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  27:../CMSIS/Include/core_cmFunc.h ****    ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS AND CONTRIBUTORS BE
+  28:../CMSIS/Include/core_cmFunc.h ****    LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  29:../CMSIS/Include/core_cmFunc.h ****    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  30:../CMSIS/Include/core_cmFunc.h ****    SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  31:../CMSIS/Include/core_cmFunc.h ****    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  32:../CMSIS/Include/core_cmFunc.h ****    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  33:../CMSIS/Include/core_cmFunc.h ****    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  34:../CMSIS/Include/core_cmFunc.h ****    POSSIBILITY OF SUCH DAMAGE.
+  35:../CMSIS/Include/core_cmFunc.h ****    ---------------------------------------------------------------------------*/
+  36:../CMSIS/Include/core_cmFunc.h **** 
+  37:../CMSIS/Include/core_cmFunc.h **** 
+  38:../CMSIS/Include/core_cmFunc.h **** #ifndef __CORE_CMFUNC_H
+  39:../CMSIS/Include/core_cmFunc.h **** #define __CORE_CMFUNC_H
+  40:../CMSIS/Include/core_cmFunc.h **** 
+  41:../CMSIS/Include/core_cmFunc.h **** 
+  42:../CMSIS/Include/core_cmFunc.h **** /* ###########################  Core Function Access  ########################### */
+  43:../CMSIS/Include/core_cmFunc.h **** /** \ingroup  CMSIS_Core_FunctionInterface
+  44:../CMSIS/Include/core_cmFunc.h ****     \defgroup CMSIS_Core_RegAccFunctions CMSIS Core Register Access Functions
+  45:../CMSIS/Include/core_cmFunc.h ****   @{
+  46:../CMSIS/Include/core_cmFunc.h ****  */
+  47:../CMSIS/Include/core_cmFunc.h **** 
+  48:../CMSIS/Include/core_cmFunc.h **** #if   defined ( __CC_ARM ) /*------------------RealView Compiler -----------------*/
+  49:../CMSIS/Include/core_cmFunc.h **** /* ARM armcc specific functions */
+  50:../CMSIS/Include/core_cmFunc.h **** 
+  51:../CMSIS/Include/core_cmFunc.h **** #if (__ARMCC_VERSION < 400677)
+  52:../CMSIS/Include/core_cmFunc.h ****   #error "Please use ARM Compiler Toolchain V4.0.677 or later!"
+  53:../CMSIS/Include/core_cmFunc.h **** #endif
+  54:../CMSIS/Include/core_cmFunc.h **** 
+  55:../CMSIS/Include/core_cmFunc.h **** /* intrinsic void __enable_irq();     */
+  56:../CMSIS/Include/core_cmFunc.h **** /* intrinsic void __disable_irq();    */
+  57:../CMSIS/Include/core_cmFunc.h **** 
+  58:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Control Register
+  59:../CMSIS/Include/core_cmFunc.h **** 
+  60:../CMSIS/Include/core_cmFunc.h ****     This function returns the content of the Control Register.
+  61:../CMSIS/Include/core_cmFunc.h **** 
+  62:../CMSIS/Include/core_cmFunc.h ****     \return               Control Register value
+  63:../CMSIS/Include/core_cmFunc.h ****  */
+  64:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_CONTROL(void)
+  65:../CMSIS/Include/core_cmFunc.h **** {
+  66:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regControl         __ASM("control");
+  67:../CMSIS/Include/core_cmFunc.h ****   return(__regControl);
+  68:../CMSIS/Include/core_cmFunc.h **** }
+  69:../CMSIS/Include/core_cmFunc.h **** 
+  70:../CMSIS/Include/core_cmFunc.h **** 
+  71:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Control Register
+  72:../CMSIS/Include/core_cmFunc.h **** 
+  73:../CMSIS/Include/core_cmFunc.h ****     This function writes the given value to the Control Register.
+ARM GAS  /tmp/cciG9ks9.s 			page 4
+
+
+  74:../CMSIS/Include/core_cmFunc.h **** 
+  75:../CMSIS/Include/core_cmFunc.h ****     \param [in]    control  Control Register value to set
+  76:../CMSIS/Include/core_cmFunc.h ****  */
+  77:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_CONTROL(uint32_t control)
+  78:../CMSIS/Include/core_cmFunc.h **** {
+  79:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regControl         __ASM("control");
+  80:../CMSIS/Include/core_cmFunc.h ****   __regControl = control;
+  81:../CMSIS/Include/core_cmFunc.h **** }
+  82:../CMSIS/Include/core_cmFunc.h **** 
+  83:../CMSIS/Include/core_cmFunc.h **** 
+  84:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get IPSR Register
+  85:../CMSIS/Include/core_cmFunc.h **** 
+  86:../CMSIS/Include/core_cmFunc.h ****     This function returns the content of the IPSR Register.
+  87:../CMSIS/Include/core_cmFunc.h **** 
+  88:../CMSIS/Include/core_cmFunc.h ****     \return               IPSR Register value
+  89:../CMSIS/Include/core_cmFunc.h ****  */
+  90:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_IPSR(void)
+  91:../CMSIS/Include/core_cmFunc.h **** {
+  92:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regIPSR          __ASM("ipsr");
+  93:../CMSIS/Include/core_cmFunc.h ****   return(__regIPSR);
+  94:../CMSIS/Include/core_cmFunc.h **** }
+  95:../CMSIS/Include/core_cmFunc.h **** 
+  96:../CMSIS/Include/core_cmFunc.h **** 
+  97:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get APSR Register
+  98:../CMSIS/Include/core_cmFunc.h **** 
+  99:../CMSIS/Include/core_cmFunc.h ****     This function returns the content of the APSR Register.
+ 100:../CMSIS/Include/core_cmFunc.h **** 
+ 101:../CMSIS/Include/core_cmFunc.h ****     \return               APSR Register value
+ 102:../CMSIS/Include/core_cmFunc.h ****  */
+ 103:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_APSR(void)
+ 104:../CMSIS/Include/core_cmFunc.h **** {
+ 105:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regAPSR          __ASM("apsr");
+ 106:../CMSIS/Include/core_cmFunc.h ****   return(__regAPSR);
+ 107:../CMSIS/Include/core_cmFunc.h **** }
+ 108:../CMSIS/Include/core_cmFunc.h **** 
+ 109:../CMSIS/Include/core_cmFunc.h **** 
+ 110:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get xPSR Register
+ 111:../CMSIS/Include/core_cmFunc.h **** 
+ 112:../CMSIS/Include/core_cmFunc.h ****     This function returns the content of the xPSR Register.
+ 113:../CMSIS/Include/core_cmFunc.h **** 
+ 114:../CMSIS/Include/core_cmFunc.h ****     \return               xPSR Register value
+ 115:../CMSIS/Include/core_cmFunc.h ****  */
+ 116:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_xPSR(void)
+ 117:../CMSIS/Include/core_cmFunc.h **** {
+ 118:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regXPSR          __ASM("xpsr");
+ 119:../CMSIS/Include/core_cmFunc.h ****   return(__regXPSR);
+ 120:../CMSIS/Include/core_cmFunc.h **** }
+ 121:../CMSIS/Include/core_cmFunc.h **** 
+ 122:../CMSIS/Include/core_cmFunc.h **** 
+ 123:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Process Stack Pointer
+ 124:../CMSIS/Include/core_cmFunc.h **** 
+ 125:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Process Stack Pointer (PSP).
+ 126:../CMSIS/Include/core_cmFunc.h **** 
+ 127:../CMSIS/Include/core_cmFunc.h ****     \return               PSP Register value
+ 128:../CMSIS/Include/core_cmFunc.h ****  */
+ 129:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_PSP(void)
+ 130:../CMSIS/Include/core_cmFunc.h **** {
+ARM GAS  /tmp/cciG9ks9.s 			page 5
+
+
+ 131:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regProcessStackPointer  __ASM("psp");
+ 132:../CMSIS/Include/core_cmFunc.h ****   return(__regProcessStackPointer);
+ 133:../CMSIS/Include/core_cmFunc.h **** }
+ 134:../CMSIS/Include/core_cmFunc.h **** 
+ 135:../CMSIS/Include/core_cmFunc.h **** 
+ 136:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Process Stack Pointer
+ 137:../CMSIS/Include/core_cmFunc.h **** 
+ 138:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Process Stack Pointer (PSP).
+ 139:../CMSIS/Include/core_cmFunc.h **** 
+ 140:../CMSIS/Include/core_cmFunc.h ****     \param [in]    topOfProcStack  Process Stack Pointer value to set
+ 141:../CMSIS/Include/core_cmFunc.h ****  */
+ 142:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_PSP(uint32_t topOfProcStack)
+ 143:../CMSIS/Include/core_cmFunc.h **** {
+ 144:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regProcessStackPointer  __ASM("psp");
+ 145:../CMSIS/Include/core_cmFunc.h ****   __regProcessStackPointer = topOfProcStack;
+ 146:../CMSIS/Include/core_cmFunc.h **** }
+ 147:../CMSIS/Include/core_cmFunc.h **** 
+ 148:../CMSIS/Include/core_cmFunc.h **** 
+ 149:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Main Stack Pointer
+ 150:../CMSIS/Include/core_cmFunc.h **** 
+ 151:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Main Stack Pointer (MSP).
+ 152:../CMSIS/Include/core_cmFunc.h **** 
+ 153:../CMSIS/Include/core_cmFunc.h ****     \return               MSP Register value
+ 154:../CMSIS/Include/core_cmFunc.h ****  */
+ 155:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_MSP(void)
+ 156:../CMSIS/Include/core_cmFunc.h **** {
+ 157:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regMainStackPointer     __ASM("msp");
+ 158:../CMSIS/Include/core_cmFunc.h ****   return(__regMainStackPointer);
+ 159:../CMSIS/Include/core_cmFunc.h **** }
+ 160:../CMSIS/Include/core_cmFunc.h **** 
+ 161:../CMSIS/Include/core_cmFunc.h **** 
+ 162:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Main Stack Pointer
+ 163:../CMSIS/Include/core_cmFunc.h **** 
+ 164:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Main Stack Pointer (MSP).
+ 165:../CMSIS/Include/core_cmFunc.h **** 
+ 166:../CMSIS/Include/core_cmFunc.h ****     \param [in]    topOfMainStack  Main Stack Pointer value to set
+ 167:../CMSIS/Include/core_cmFunc.h ****  */
+ 168:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_MSP(uint32_t topOfMainStack)
+ 169:../CMSIS/Include/core_cmFunc.h **** {
+ 170:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regMainStackPointer     __ASM("msp");
+ 171:../CMSIS/Include/core_cmFunc.h ****   __regMainStackPointer = topOfMainStack;
+ 172:../CMSIS/Include/core_cmFunc.h **** }
+ 173:../CMSIS/Include/core_cmFunc.h **** 
+ 174:../CMSIS/Include/core_cmFunc.h **** 
+ 175:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Priority Mask
+ 176:../CMSIS/Include/core_cmFunc.h **** 
+ 177:../CMSIS/Include/core_cmFunc.h ****     This function returns the current state of the priority mask bit from the Priority Mask Registe
+ 178:../CMSIS/Include/core_cmFunc.h **** 
+ 179:../CMSIS/Include/core_cmFunc.h ****     \return               Priority Mask value
+ 180:../CMSIS/Include/core_cmFunc.h ****  */
+ 181:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_PRIMASK(void)
+ 182:../CMSIS/Include/core_cmFunc.h **** {
+ 183:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regPriMask         __ASM("primask");
+ 184:../CMSIS/Include/core_cmFunc.h ****   return(__regPriMask);
+ 185:../CMSIS/Include/core_cmFunc.h **** }
+ 186:../CMSIS/Include/core_cmFunc.h **** 
+ 187:../CMSIS/Include/core_cmFunc.h **** 
+ARM GAS  /tmp/cciG9ks9.s 			page 6
+
+
+ 188:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Priority Mask
+ 189:../CMSIS/Include/core_cmFunc.h **** 
+ 190:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Priority Mask Register.
+ 191:../CMSIS/Include/core_cmFunc.h **** 
+ 192:../CMSIS/Include/core_cmFunc.h ****     \param [in]    priMask  Priority Mask
+ 193:../CMSIS/Include/core_cmFunc.h ****  */
+ 194:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_PRIMASK(uint32_t priMask)
+ 195:../CMSIS/Include/core_cmFunc.h **** {
+ 196:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regPriMask         __ASM("primask");
+ 197:../CMSIS/Include/core_cmFunc.h ****   __regPriMask = (priMask);
+ 198:../CMSIS/Include/core_cmFunc.h **** }
+ 199:../CMSIS/Include/core_cmFunc.h **** 
+ 200:../CMSIS/Include/core_cmFunc.h **** 
+ 201:../CMSIS/Include/core_cmFunc.h **** #if       (__CORTEX_M >= 0x03)
+ 202:../CMSIS/Include/core_cmFunc.h **** 
+ 203:../CMSIS/Include/core_cmFunc.h **** /** \brief  Enable FIQ
+ 204:../CMSIS/Include/core_cmFunc.h **** 
+ 205:../CMSIS/Include/core_cmFunc.h ****     This function enables FIQ interrupts by clearing the F-bit in the CPSR.
+ 206:../CMSIS/Include/core_cmFunc.h ****     Can only be executed in Privileged modes.
+ 207:../CMSIS/Include/core_cmFunc.h ****  */
+ 208:../CMSIS/Include/core_cmFunc.h **** #define __enable_fault_irq                __enable_fiq
+ 209:../CMSIS/Include/core_cmFunc.h **** 
+ 210:../CMSIS/Include/core_cmFunc.h **** 
+ 211:../CMSIS/Include/core_cmFunc.h **** /** \brief  Disable FIQ
+ 212:../CMSIS/Include/core_cmFunc.h **** 
+ 213:../CMSIS/Include/core_cmFunc.h ****     This function disables FIQ interrupts by setting the F-bit in the CPSR.
+ 214:../CMSIS/Include/core_cmFunc.h ****     Can only be executed in Privileged modes.
+ 215:../CMSIS/Include/core_cmFunc.h ****  */
+ 216:../CMSIS/Include/core_cmFunc.h **** #define __disable_fault_irq               __disable_fiq
+ 217:../CMSIS/Include/core_cmFunc.h **** 
+ 218:../CMSIS/Include/core_cmFunc.h **** 
+ 219:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Base Priority
+ 220:../CMSIS/Include/core_cmFunc.h **** 
+ 221:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Base Priority register.
+ 222:../CMSIS/Include/core_cmFunc.h **** 
+ 223:../CMSIS/Include/core_cmFunc.h ****     \return               Base Priority register value
+ 224:../CMSIS/Include/core_cmFunc.h ****  */
+ 225:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t  __get_BASEPRI(void)
+ 226:../CMSIS/Include/core_cmFunc.h **** {
+ 227:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regBasePri         __ASM("basepri");
+ 228:../CMSIS/Include/core_cmFunc.h ****   return(__regBasePri);
+ 229:../CMSIS/Include/core_cmFunc.h **** }
+ 230:../CMSIS/Include/core_cmFunc.h **** 
+ 231:../CMSIS/Include/core_cmFunc.h **** 
+ 232:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Base Priority
+ 233:../CMSIS/Include/core_cmFunc.h **** 
+ 234:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Base Priority register.
+ 235:../CMSIS/Include/core_cmFunc.h **** 
+ 236:../CMSIS/Include/core_cmFunc.h ****     \param [in]    basePri  Base Priority value to set
+ 237:../CMSIS/Include/core_cmFunc.h ****  */
+ 238:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_BASEPRI(uint32_t basePri)
+ 239:../CMSIS/Include/core_cmFunc.h **** {
+ 240:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regBasePri         __ASM("basepri");
+ 241:../CMSIS/Include/core_cmFunc.h ****   __regBasePri = (basePri & 0xff);
+ 242:../CMSIS/Include/core_cmFunc.h **** }
+ 243:../CMSIS/Include/core_cmFunc.h **** 
+ 244:../CMSIS/Include/core_cmFunc.h **** 
+ARM GAS  /tmp/cciG9ks9.s 			page 7
+
+
+ 245:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Fault Mask
+ 246:../CMSIS/Include/core_cmFunc.h **** 
+ 247:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Fault Mask register.
+ 248:../CMSIS/Include/core_cmFunc.h **** 
+ 249:../CMSIS/Include/core_cmFunc.h ****     \return               Fault Mask register value
+ 250:../CMSIS/Include/core_cmFunc.h ****  */
+ 251:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_FAULTMASK(void)
+ 252:../CMSIS/Include/core_cmFunc.h **** {
+ 253:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regFaultMask       __ASM("faultmask");
+ 254:../CMSIS/Include/core_cmFunc.h ****   return(__regFaultMask);
+ 255:../CMSIS/Include/core_cmFunc.h **** }
+ 256:../CMSIS/Include/core_cmFunc.h **** 
+ 257:../CMSIS/Include/core_cmFunc.h **** 
+ 258:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Fault Mask
+ 259:../CMSIS/Include/core_cmFunc.h **** 
+ 260:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Fault Mask register.
+ 261:../CMSIS/Include/core_cmFunc.h **** 
+ 262:../CMSIS/Include/core_cmFunc.h ****     \param [in]    faultMask  Fault Mask value to set
+ 263:../CMSIS/Include/core_cmFunc.h ****  */
+ 264:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_FAULTMASK(uint32_t faultMask)
+ 265:../CMSIS/Include/core_cmFunc.h **** {
+ 266:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regFaultMask       __ASM("faultmask");
+ 267:../CMSIS/Include/core_cmFunc.h ****   __regFaultMask = (faultMask & (uint32_t)1);
+ 268:../CMSIS/Include/core_cmFunc.h **** }
+ 269:../CMSIS/Include/core_cmFunc.h **** 
+ 270:../CMSIS/Include/core_cmFunc.h **** #endif /* (__CORTEX_M >= 0x03) */
+ 271:../CMSIS/Include/core_cmFunc.h **** 
+ 272:../CMSIS/Include/core_cmFunc.h **** 
+ 273:../CMSIS/Include/core_cmFunc.h **** #if       (__CORTEX_M == 0x04)
+ 274:../CMSIS/Include/core_cmFunc.h **** 
+ 275:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get FPSCR
+ 276:../CMSIS/Include/core_cmFunc.h **** 
+ 277:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Floating Point Status/Control register.
+ 278:../CMSIS/Include/core_cmFunc.h **** 
+ 279:../CMSIS/Include/core_cmFunc.h ****     \return               Floating Point Status/Control register value
+ 280:../CMSIS/Include/core_cmFunc.h ****  */
+ 281:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_FPSCR(void)
+ 282:../CMSIS/Include/core_cmFunc.h **** {
+ 283:../CMSIS/Include/core_cmFunc.h **** #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
+ 284:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regfpscr         __ASM("fpscr");
+ 285:../CMSIS/Include/core_cmFunc.h ****   return(__regfpscr);
+ 286:../CMSIS/Include/core_cmFunc.h **** #else
+ 287:../CMSIS/Include/core_cmFunc.h ****    return(0);
+ 288:../CMSIS/Include/core_cmFunc.h **** #endif
+ 289:../CMSIS/Include/core_cmFunc.h **** }
+ 290:../CMSIS/Include/core_cmFunc.h **** 
+ 291:../CMSIS/Include/core_cmFunc.h **** 
+ 292:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set FPSCR
+ 293:../CMSIS/Include/core_cmFunc.h **** 
+ 294:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Floating Point Status/Control register.
+ 295:../CMSIS/Include/core_cmFunc.h **** 
+ 296:../CMSIS/Include/core_cmFunc.h ****     \param [in]    fpscr  Floating Point Status/Control value to set
+ 297:../CMSIS/Include/core_cmFunc.h ****  */
+ 298:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_FPSCR(uint32_t fpscr)
+ 299:../CMSIS/Include/core_cmFunc.h **** {
+ 300:../CMSIS/Include/core_cmFunc.h **** #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
+ 301:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regfpscr         __ASM("fpscr");
+ARM GAS  /tmp/cciG9ks9.s 			page 8
+
+
+ 302:../CMSIS/Include/core_cmFunc.h ****   __regfpscr = (fpscr);
+ 303:../CMSIS/Include/core_cmFunc.h **** #else
+ 304:../CMSIS/Include/core_cmFunc.h ****   (void)fpscr;
+ 305:../CMSIS/Include/core_cmFunc.h **** #endif
+ 306:../CMSIS/Include/core_cmFunc.h **** }
+ 307:../CMSIS/Include/core_cmFunc.h **** 
+ 308:../CMSIS/Include/core_cmFunc.h **** #endif /* (__CORTEX_M == 0x04) */
+ 309:../CMSIS/Include/core_cmFunc.h **** 
+ 310:../CMSIS/Include/core_cmFunc.h **** 
+ 311:../CMSIS/Include/core_cmFunc.h **** #elif defined ( __ICCARM__ ) /*------------------ ICC Compiler -------------------*/
+ 312:../CMSIS/Include/core_cmFunc.h **** /* IAR iccarm specific functions */
+ 313:../CMSIS/Include/core_cmFunc.h **** 
+ 314:../CMSIS/Include/core_cmFunc.h **** #include <cmsis_iar.h>
+ 315:../CMSIS/Include/core_cmFunc.h **** 
+ 316:../CMSIS/Include/core_cmFunc.h **** 
+ 317:../CMSIS/Include/core_cmFunc.h **** #elif defined ( __TMS470__ ) /*---------------- TI CCS Compiler ------------------*/
+ 318:../CMSIS/Include/core_cmFunc.h **** /* TI CCS specific functions */
+ 319:../CMSIS/Include/core_cmFunc.h **** 
+ 320:../CMSIS/Include/core_cmFunc.h **** #include <cmsis_ccs.h>
+ 321:../CMSIS/Include/core_cmFunc.h **** 
+ 322:../CMSIS/Include/core_cmFunc.h **** 
+ 323:../CMSIS/Include/core_cmFunc.h **** #elif defined ( __GNUC__ ) /*------------------ GNU Compiler ---------------------*/
+ 324:../CMSIS/Include/core_cmFunc.h **** /* GNU gcc specific functions */
+ 325:../CMSIS/Include/core_cmFunc.h **** 
+ 326:../CMSIS/Include/core_cmFunc.h **** /** \brief  Enable IRQ Interrupts
+ 327:../CMSIS/Include/core_cmFunc.h **** 
+ 328:../CMSIS/Include/core_cmFunc.h ****   This function enables IRQ interrupts by clearing the I-bit in the CPSR.
+ 329:../CMSIS/Include/core_cmFunc.h ****   Can only be executed in Privileged modes.
+ 330:../CMSIS/Include/core_cmFunc.h ****  */
+ 331:../CMSIS/Include/core_cmFunc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __enable_irq(void)
+ 332:../CMSIS/Include/core_cmFunc.h **** {
+ 333:../CMSIS/Include/core_cmFunc.h ****   __ASM volatile ("cpsie i" : : : "memory");
+ 334:../CMSIS/Include/core_cmFunc.h **** }
+ 335:../CMSIS/Include/core_cmFunc.h **** 
+ 336:../CMSIS/Include/core_cmFunc.h **** 
+ 337:../CMSIS/Include/core_cmFunc.h **** /** \brief  Disable IRQ Interrupts
+ 338:../CMSIS/Include/core_cmFunc.h **** 
+ 339:../CMSIS/Include/core_cmFunc.h ****   This function disables IRQ interrupts by setting the I-bit in the CPSR.
+ 340:../CMSIS/Include/core_cmFunc.h ****   Can only be executed in Privileged modes.
+ 341:../CMSIS/Include/core_cmFunc.h ****  */
+ 342:../CMSIS/Include/core_cmFunc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __disable_irq(void)
+ 343:../CMSIS/Include/core_cmFunc.h **** {
+ 344:../CMSIS/Include/core_cmFunc.h ****   __ASM volatile ("cpsid i" : : : "memory");
+  34              		.loc 2 344 0
+  35              	@ 344 "../CMSIS/Include/core_cmFunc.h" 1
+  36 0000 72B6     		cpsid i
+  37              	@ 0 "" 2
+  38              		.thumb
+  39              	.LBE7:
+  40              	.LBE6:
+  67:../emlib/inc/em_int.h ****   __disable_irq();
+  68:../emlib/inc/em_int.h ****   if (INT_LockCnt < UINT32_MAX)
+  41              		.loc 1 68 0
+  42 0002 044B     		ldr	r3, .L6
+  43 0004 1A68     		ldr	r2, [r3]
+  44 0006 511C     		adds	r1, r2, #1
+  69:../emlib/inc/em_int.h ****   {
+ARM GAS  /tmp/cciG9ks9.s 			page 9
+
+
+  70:../emlib/inc/em_int.h ****     INT_LockCnt++;
+  45              		.loc 1 70 0
+  46 0008 1CBF     		itt	ne
+  47 000a 0132     		addne	r2, r2, #1
+  48 000c 1A60     		strne	r2, [r3]
+  71:../emlib/inc/em_int.h ****   }
+  72:../emlib/inc/em_int.h **** 
+  73:../emlib/inc/em_int.h ****   return INT_LockCnt;
+  74:../emlib/inc/em_int.h **** }
+  49              		.loc 1 74 0
+  50 000e 1868     		ldr	r0, [r3]
+  51 0010 7047     		bx	lr
+  52              	.L7:
+  53 0012 00BF     		.align	2
+  54              	.L6:
+  55 0014 00000000 		.word	INT_LockCnt
+  56              		.cfi_endproc
+  57              	.LFE57:
+  59              		.section	.text.INT_Enable,"ax",%progbits
+  60              		.align	1
+  61              		.thumb
+  62              		.thumb_func
+  64              	INT_Enable:
+  65              	.LFB58:
+  75:../emlib/inc/em_int.h **** 
+  76:../emlib/inc/em_int.h **** /***************************************************************************//**
+  77:../emlib/inc/em_int.h ****  * @brief
+  78:../emlib/inc/em_int.h ****  *   Enable interrupts.
+  79:../emlib/inc/em_int.h ****  *
+  80:../emlib/inc/em_int.h ****  * @return
+  81:../emlib/inc/em_int.h ****  *   The resulting interrupt nesting level.
+  82:../emlib/inc/em_int.h ****  *
+  83:../emlib/inc/em_int.h ****  * @details
+  84:../emlib/inc/em_int.h ****  *   Decrement interrupt lock level counter and enable interrupts if counter
+  85:../emlib/inc/em_int.h ****  *   reached zero.
+  86:../emlib/inc/em_int.h ****  *
+  87:../emlib/inc/em_int.h ****  ******************************************************************************/
+  88:../emlib/inc/em_int.h **** __STATIC_INLINE uint32_t INT_Enable(void)
+  89:../emlib/inc/em_int.h **** {
+  66              		.loc 1 89 0
+  67              		.cfi_startproc
+  68              		@ args = 0, pretend = 0, frame = 0
+  69              		@ frame_needed = 0, uses_anonymous_args = 0
+  70              		@ link register save eliminated.
+  90:../emlib/inc/em_int.h ****   uint32_t retVal;
+  91:../emlib/inc/em_int.h **** 
+  92:../emlib/inc/em_int.h ****   if (INT_LockCnt > 0)
+  71              		.loc 1 92 0
+  72 0000 034B     		ldr	r3, .L13
+  73 0002 1868     		ldr	r0, [r3]
+  74 0004 18B1     		cbz	r0, .L9
+  93:../emlib/inc/em_int.h ****   {
+  94:../emlib/inc/em_int.h ****     INT_LockCnt--;
+  75              		.loc 1 94 0
+  76 0006 0138     		subs	r0, r0, #1
+  77 0008 1860     		str	r0, [r3]
+  78              	.LVL0:
+ARM GAS  /tmp/cciG9ks9.s 			page 10
+
+
+  95:../emlib/inc/em_int.h ****     retVal = INT_LockCnt;
+  96:../emlib/inc/em_int.h ****     if (retVal == 0)
+  79              		.loc 1 96 0
+  80 000a 00B9     		cbnz	r0, .L9
+  81              	.LBB8:
+  82              	.LBB9:
+ 333:../CMSIS/Include/core_cmFunc.h ****   __ASM volatile ("cpsie i" : : : "memory");
+  83              		.loc 2 333 0
+  84              	@ 333 "../CMSIS/Include/core_cmFunc.h" 1
+  85 000c 62B6     		cpsie i
+  86              	@ 0 "" 2
+  87              	.LVL1:
+  88              		.thumb
+  89              	.L9:
+  90              	.LBE9:
+  91              	.LBE8:
+  97:../emlib/inc/em_int.h ****     {
+  98:../emlib/inc/em_int.h ****       __enable_irq();
+  99:../emlib/inc/em_int.h ****     }
+ 100:../emlib/inc/em_int.h ****     return retVal;
+ 101:../emlib/inc/em_int.h ****   }
+ 102:../emlib/inc/em_int.h ****   else
+ 103:../emlib/inc/em_int.h ****   {
+ 104:../emlib/inc/em_int.h ****     return 0;
+ 105:../emlib/inc/em_int.h ****   }
+ 106:../emlib/inc/em_int.h **** }
+  92              		.loc 1 106 0
+  93 000e 7047     		bx	lr
+  94              	.L14:
+  95              		.align	2
+  96              	.L13:
+  97 0010 00000000 		.word	INT_LockCnt
+  98              		.cfi_endproc
+  99              	.LFE58:
+ 101              		.section	.text.logMsg,"ax",%progbits
+ 102              		.align	1
+ 103              		.thumb
+ 104              		.thumb_func
+ 106              	logMsg:
+ 107              	.LFB92:
+ 108              		.file 3 "../drivers/Logging.c"
+   1:../drivers/Logging.c **** /***************************************************************************//**
+   2:../drivers/Logging.c ****  * @file
+   3:../drivers/Logging.c ****  * @brief	Logging
+   4:../drivers/Logging.c ****  * @author	Ralf Gerhauser
+   5:../drivers/Logging.c ****  * @version	2018-02-19
+   6:../drivers/Logging.c ****  *
+   7:../drivers/Logging.c ****  * This module provides a logging facility to send messages to the LEUART and
+   8:../drivers/Logging.c ****  * store them into a file on the SD-Card.
+   9:../drivers/Logging.c ****  *
+  10:../drivers/Logging.c ****  ****************************************************************************//*
+  11:../drivers/Logging.c **** Revision History:
+  12:../drivers/Logging.c **** 2018-02-19,rage	Use INT_En/Disable() instead of __en/disable_irq().
+  13:../drivers/Logging.c **** 2016,02,17,rage	Taken from SNB_Heaven, removed time stamp generation.
+  14:../drivers/Logging.c **** 2015-07-09,rage	IAR Compiler: Use sprintf() instead siprintf().
+  15:../drivers/Logging.c **** 2015-04-02,rage	Initial version.
+  16:../drivers/Logging.c **** */
+ARM GAS  /tmp/cciG9ks9.s 			page 11
+
+
+  17:../drivers/Logging.c **** 
+  18:../drivers/Logging.c **** /*=============================== Header Files ===============================*/
+  19:../drivers/Logging.c **** 
+  20:../drivers/Logging.c **** #include <stdio.h>
+  21:../drivers/Logging.c **** #include <stdarg.h>
+  22:../drivers/Logging.c **** #include <string.h>
+  23:../drivers/Logging.c **** #include "em_device.h"
+  24:../drivers/Logging.c **** #include "em_assert.h"
+  25:../drivers/Logging.c **** #include "em_int.h"
+  26:../drivers/Logging.c **** #include "Logging.h"
+  27:../drivers/Logging.c **** #include "ff.h"		// FS_FAT12/16/32
+  28:../drivers/Logging.c **** #include "diskio.h"	// DSTATUS
+  29:../drivers/Logging.c **** #include "microsd.h"
+  30:../drivers/Logging.c **** 
+  31:../drivers/Logging.c **** /*=============================== Definitions ================================*/
+  32:../drivers/Logging.c **** 
+  33:../drivers/Logging.c **** #if LOG_MONITOR_FUNCTION == NONE
+  34:../drivers/Logging.c ****     #undef LOG_MONITOR_FUNCTION
+  35:../drivers/Logging.c **** #endif
+  36:../drivers/Logging.c **** 
+  37:../drivers/Logging.c **** /*================================ Local Data ================================*/
+  38:../drivers/Logging.c **** 
+  39:../drivers/Logging.c **** /*
+  40:../drivers/Logging.c ****  * The Log Buffer and its indices.  To ensure efficient data handling, all log
+  41:../drivers/Logging.c ****  * messages are directly stored as a consecutive stream of characters into the
+  42:../drivers/Logging.c ****  * log buffer, terminated by 0.  If the remaining amount of bytes to the end of
+  43:../drivers/Logging.c ****  * the buffer is less than LOG_ENTRY_MAX_SIZE, the storage wraps around, and
+  44:../drivers/Logging.c ****  * <idxLogPut> is set to 0, i.e. the beginning of the buffer.  This is marked
+  45:../drivers/Logging.c ****  * by an extra 0 byte, directly after the terminating 0 of the previous string.
+  46:../drivers/Logging.c ****  */
+  47:../drivers/Logging.c **** static char	l_LogBuf[LOG_BUF_SIZE];
+  48:../drivers/Logging.c **** static int	idxLogPut, idxLogGet;
+  49:../drivers/Logging.c **** 
+  50:../drivers/Logging.c ****     /* Counter for lost log entries */
+  51:../drivers/Logging.c **** static uint32_t	l_LostEntryCnt;
+  52:../drivers/Logging.c **** 
+  53:../drivers/Logging.c ****     /* Counter how many error messages may still be generated */
+  54:../drivers/Logging.c **** static int	l_ErrMsgCnt;
+  55:../drivers/Logging.c **** 
+  56:../drivers/Logging.c ****     /* Flag to trigger a flush of the log buffer, see LOG_SAMPLE_TIMEOUT. */
+  57:../drivers/Logging.c **** static volatile bool l_flgLogFlushTrigger;
+  58:../drivers/Logging.c **** 
+  59:../drivers/Logging.c ****     /* Counter to specify how often the Log Flush LED will flash */
+  60:../drivers/Logging.c **** static volatile uint8_t l_LogFlushLED_FlashCnt;
+  61:../drivers/Logging.c **** 
+  62:../drivers/Logging.c ****     /* File handle for log file */
+  63:../drivers/Logging.c **** static FIL	l_fh;
+  64:../drivers/Logging.c **** 
+  65:../drivers/Logging.c **** /*=========================== Forward Declarations ===========================*/
+  66:../drivers/Logging.c **** 
+  67:../drivers/Logging.c **** static void	logMsg(const char *prefix, const char *frmt, va_list args);
+  68:../drivers/Logging.c **** 
+  69:../drivers/Logging.c **** 
+  70:../drivers/Logging.c **** /***************************************************************************//**
+  71:../drivers/Logging.c ****  *
+  72:../drivers/Logging.c ****  * @brief	Initialize the Logging Facility
+  73:../drivers/Logging.c ****  *
+ARM GAS  /tmp/cciG9ks9.s 			page 12
+
+
+  74:../drivers/Logging.c ****  * This routine must be called once to initialize the logging facility.
+  75:../drivers/Logging.c ****  * It sets up the log buffer and allocates timers.  Disk access is not done
+  76:../drivers/Logging.c ****  * here because it is not available at this early point, see function
+  77:../drivers/Logging.c ****  * @ref LogFlushCheck() for this.
+  78:../drivers/Logging.c ****  *
+  79:../drivers/Logging.c ****  ******************************************************************************/
+  80:../drivers/Logging.c **** void	 LogInit (void)
+  81:../drivers/Logging.c **** {
+  82:../drivers/Logging.c ****     /* initialize indices */
+  83:../drivers/Logging.c ****     idxLogGet = idxLogPut = 0;
+  84:../drivers/Logging.c **** }
+  85:../drivers/Logging.c **** 
+  86:../drivers/Logging.c **** 
+  87:../drivers/Logging.c **** /***************************************************************************//**
+  88:../drivers/Logging.c ****  *
+  89:../drivers/Logging.c ****  * @brief	Open Log File
+  90:../drivers/Logging.c ****  *
+  91:../drivers/Logging.c ****  * This routine (re-)opens the log file for writing.
+  92:../drivers/Logging.c ****  *
+  93:../drivers/Logging.c ****  * @param[in] filepattern
+  94:../drivers/Logging.c ****  *	Filename to compare all file entries in the root directory of the disk
+  95:../drivers/Logging.c ****  *	with.  The filename must follow the DOS 8.3 notation, i.e. 8 characters
+  96:../drivers/Logging.c ****  *	for the basename and 3 characters extension, separated by a dot.
+  97:../drivers/Logging.c ****  *	An asterisk (*) at the end of the basename or/and extension is treated
+  98:../drivers/Logging.c ****  *	as wildcard, the further characters will not be compared.
+  99:../drivers/Logging.c ****  *
+ 100:../drivers/Logging.c ****  * @param[in] filename
+ 101:../drivers/Logging.c ****  *	Fall-back filename to use if no appropriate file pattern could be
+ 102:../drivers/Logging.c ****  *	found on the disk.
+ 103:../drivers/Logging.c ****  *
+ 104:../drivers/Logging.c ****  * @return
+ 105:../drivers/Logging.c ****  *	Result: true if file exists or could be opened, false if not.
+ 106:../drivers/Logging.c ****  *
+ 107:../drivers/Logging.c ****  ******************************************************************************/
+ 108:../drivers/Logging.c **** bool	 LogFileOpen (char *filepattern, char *filename)
+ 109:../drivers/Logging.c **** {
+ 110:../drivers/Logging.c **** FRESULT	 res;		// FatFs function common result code
+ 111:../drivers/Logging.c **** char	*pStr;		// string pointer
+ 112:../drivers/Logging.c **** 
+ 113:../drivers/Logging.c **** 
+ 114:../drivers/Logging.c ****     /* Parameter Check */
+ 115:../drivers/Logging.c ****     if (filepattern != NULL)
+ 116:../drivers/Logging.c ****     {
+ 117:../drivers/Logging.c **** 	/* Find filename with specified pattern on the SD-Card */
+ 118:../drivers/Logging.c **** 	pStr = FindFile ("/", filepattern);
+ 119:../drivers/Logging.c **** 	if (pStr != NULL)
+ 120:../drivers/Logging.c **** 	    filename = pStr;	// found pattern on disk
+ 121:../drivers/Logging.c ****     }
+ 122:../drivers/Logging.c **** 
+ 123:../drivers/Logging.c ****     /* Check if file on the disk, or a fall-back name exists */
+ 124:../drivers/Logging.c ****     if (filename == NULL)
+ 125:../drivers/Logging.c **** 	return false;		// file not found and no fall-back specified
+ 126:../drivers/Logging.c **** 
+ 127:../drivers/Logging.c ****     /* Discard old file handle, open new file */
+ 128:../drivers/Logging.c ****     res = f_open (&l_fh, filename,  FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
+ 129:../drivers/Logging.c ****     if (res == FR_OK)
+ 130:../drivers/Logging.c ****     {
+ARM GAS  /tmp/cciG9ks9.s 			page 13
+
+
+ 131:../drivers/Logging.c **** 	res = f_lseek (&l_fh, f_size(&l_fh));
+ 132:../drivers/Logging.c ****     }
+ 133:../drivers/Logging.c **** 
+ 134:../drivers/Logging.c ****     if (res != FR_OK)
+ 135:../drivers/Logging.c ****     {
+ 136:../drivers/Logging.c **** 	LogError ("LogFileOpen: Error Code %d", res);
+ 137:../drivers/Logging.c **** 	l_fh.fs = NULL;		// invalidate file handle
+ 138:../drivers/Logging.c ****     }
+ 139:../drivers/Logging.c ****     else
+ 140:../drivers/Logging.c ****     {
+ 141:../drivers/Logging.c **** 	l_ErrMsgCnt = 2;
+ 142:../drivers/Logging.c ****     }
+ 143:../drivers/Logging.c **** 
+ 144:../drivers/Logging.c ****     /* Power off the SD-Card Interface */
+ 145:../drivers/Logging.c ****     MICROSD_PowerOff();
+ 146:../drivers/Logging.c **** 
+ 147:../drivers/Logging.c ****     return true;
+ 148:../drivers/Logging.c **** }
+ 149:../drivers/Logging.c **** 
+ 150:../drivers/Logging.c **** 
+ 151:../drivers/Logging.c **** /***************************************************************************//**
+ 152:../drivers/Logging.c ****  *
+ 153:../drivers/Logging.c ****  * @brief	Log a Message
+ 154:../drivers/Logging.c ****  *
+ 155:../drivers/Logging.c ****  * This routine writes a log message into the buffer.  It may be called from
+ 156:../drivers/Logging.c ****  * interrupt context.
+ 157:../drivers/Logging.c ****  *
+ 158:../drivers/Logging.c ****  * The format of a log message is:
+ 159:../drivers/Logging.c ****  * 20151231-235900 \<message\>
+ 160:../drivers/Logging.c ****  *
+ 161:../drivers/Logging.c ****  ******************************************************************************/
+ 162:../drivers/Logging.c **** void	 Log (const char *frmt, ...)
+ 163:../drivers/Logging.c **** {
+ 164:../drivers/Logging.c **** va_list	 args;
+ 165:../drivers/Logging.c **** 
+ 166:../drivers/Logging.c **** 
+ 167:../drivers/Logging.c ****     /* disable interrupts to prevent interferring of other logs */
+ 168:../drivers/Logging.c ****     INT_Disable();
+ 169:../drivers/Logging.c **** 
+ 170:../drivers/Logging.c ****     /* build variable argument list and call logMsg() */
+ 171:../drivers/Logging.c ****     va_start(args, frmt);
+ 172:../drivers/Logging.c ****     logMsg (NULL, frmt, args);
+ 173:../drivers/Logging.c ****     va_end(args);
+ 174:../drivers/Logging.c **** 
+ 175:../drivers/Logging.c ****     /* enable interrupts again */
+ 176:../drivers/Logging.c ****     INT_Enable();
+ 177:../drivers/Logging.c **** }
+ 178:../drivers/Logging.c **** 
+ 179:../drivers/Logging.c **** 
+ 180:../drivers/Logging.c **** /***************************************************************************//**
+ 181:../drivers/Logging.c ****  *
+ 182:../drivers/Logging.c ****  * @brief	Log an Error Message
+ 183:../drivers/Logging.c ****  *
+ 184:../drivers/Logging.c ****  * This routine writes an error log message into the buffer.  It may be called
+ 185:../drivers/Logging.c ****  * from interrupt context.
+ 186:../drivers/Logging.c ****  *
+ 187:../drivers/Logging.c ****  * The format of an error log message is:
+ARM GAS  /tmp/cciG9ks9.s 			page 14
+
+
+ 188:../drivers/Logging.c ****  * 20151231-235900 ERROR \<message\>
+ 189:../drivers/Logging.c ****  *
+ 190:../drivers/Logging.c ****  ******************************************************************************/
+ 191:../drivers/Logging.c **** void	 LogError (const char *frmt, ...)
+ 192:../drivers/Logging.c **** {
+ 193:../drivers/Logging.c **** va_list	 args;
+ 194:../drivers/Logging.c **** 
+ 195:../drivers/Logging.c **** 
+ 196:../drivers/Logging.c ****     /* disable interrupts to prevent interfering of other logs */
+ 197:../drivers/Logging.c ****     INT_Disable();
+ 198:../drivers/Logging.c **** 
+ 199:../drivers/Logging.c ****     /* build variable argument list and call logMsg() */
+ 200:../drivers/Logging.c ****     va_start(args, frmt);
+ 201:../drivers/Logging.c ****     logMsg ("ERROR ", frmt, args);
+ 202:../drivers/Logging.c ****     va_end(args);
+ 203:../drivers/Logging.c **** 
+ 204:../drivers/Logging.c ****     /* enable interrupts again */
+ 205:../drivers/Logging.c ****     INT_Enable();
+ 206:../drivers/Logging.c **** }
+ 207:../drivers/Logging.c **** 
+ 208:../drivers/Logging.c **** 
+ 209:../drivers/Logging.c **** /***************************************************************************//**
+ 210:../drivers/Logging.c ****  *
+ 211:../drivers/Logging.c ****  * @brief	Flush Log Buffer
+ 212:../drivers/Logging.c ****  *
+ 213:../drivers/Logging.c ****  * This routine flushes the log buffer, i.e. its contents is written to disk.
+ 214:../drivers/Logging.c ****  *
+ 215:../drivers/Logging.c ****  ******************************************************************************/
+ 216:../drivers/Logging.c **** void	 LogFlush (void)
+ 217:../drivers/Logging.c **** {
+ 218:../drivers/Logging.c **** FRESULT	 res;		// FatFs function common result code
+ 219:../drivers/Logging.c **** int	 cnt;
+ 220:../drivers/Logging.c **** UINT	 bytesWr;
+ 221:../drivers/Logging.c **** 
+ 222:../drivers/Logging.c **** 
+ 223:../drivers/Logging.c ****     /* See if Log File is open */
+ 224:../drivers/Logging.c ****     if (IsFileHandleValid(&l_fh) == false)
+ 225:../drivers/Logging.c **** 	return;			// no file open or invalid file handle
+ 226:../drivers/Logging.c **** 
+ 227:../drivers/Logging.c ****     /* Switch the SD-Card Interface on */
+ 228:../drivers/Logging.c ****     MICROSD_PowerOn();
+ 229:../drivers/Logging.c **** 
+ 230:../drivers/Logging.c ****     /* Re-Initialize disk (mount is still the same!) */
+ 231:../drivers/Logging.c ****     if (disk_initialize(0) != 0)
+ 232:../drivers/Logging.c ****     {
+ 233:../drivers/Logging.c **** 	if (--l_ErrMsgCnt >= 0)
+ 234:../drivers/Logging.c **** 	    LogError ("LogFlush: Init Failed");
+ 235:../drivers/Logging.c ****     }
+ 236:../drivers/Logging.c ****     else
+ 237:../drivers/Logging.c ****     {
+ 238:../drivers/Logging.c **** 	/* Write all log messages to disk */
+ 239:../drivers/Logging.c **** 	while (idxLogGet != idxLogPut)
+ 240:../drivers/Logging.c **** 	{
+ 241:../drivers/Logging.c **** 	    cnt = l_LogBuf[idxLogGet];	// get string length
+ 242:../drivers/Logging.c **** 	    if (cnt == 0)
+ 243:../drivers/Logging.c **** 	    {
+ 244:../drivers/Logging.c **** 		idxLogGet = 0;		// length of 0 indicates wrap-around
+ARM GAS  /tmp/cciG9ks9.s 			page 15
+
+
+ 245:../drivers/Logging.c **** 		cnt = l_LogBuf[idxLogGet];
+ 246:../drivers/Logging.c **** 	    }
+ 247:../drivers/Logging.c **** 
+ 248:../drivers/Logging.c **** 	    /* write string to file without the terminating 0 (EOS) */
+ 249:../drivers/Logging.c **** 	    res = f_write (&l_fh, l_LogBuf + idxLogGet + 1, cnt, &bytesWr);
+ 250:../drivers/Logging.c **** 	    if (res != FR_OK)
+ 251:../drivers/Logging.c **** 	    {
+ 252:../drivers/Logging.c **** 		if (--l_ErrMsgCnt >= 0)
+ 253:../drivers/Logging.c **** 		    LogError ("LogFlush: Error Code %d", res);
+ 254:../drivers/Logging.c **** 		break;
+ 255:../drivers/Logging.c **** 	    }
+ 256:../drivers/Logging.c **** 
+ 257:../drivers/Logging.c **** 	    if (bytesWr < cnt)
+ 258:../drivers/Logging.c **** 	    {
+ 259:../drivers/Logging.c **** 		if (--l_ErrMsgCnt >= 0)
+ 260:../drivers/Logging.c **** 		    LogError ("LogFlush: Disk Full");
+ 261:../drivers/Logging.c **** 		res = FR_DISK_ERR;
+ 262:../drivers/Logging.c **** 		break;
+ 263:../drivers/Logging.c **** 	    }
+ 264:../drivers/Logging.c **** 
+ 265:../drivers/Logging.c **** 	    /* update index, consider <len> byte and EOS */
+ 266:../drivers/Logging.c **** 	    idxLogGet += (cnt + 2);
+ 267:../drivers/Logging.c **** 	}
+ 268:../drivers/Logging.c **** 
+ 269:../drivers/Logging.c **** 	/* Synchronize file system */
+ 270:../drivers/Logging.c **** 	if (res == FR_OK)
+ 271:../drivers/Logging.c **** 	    f_sync (&l_fh);
+ 272:../drivers/Logging.c ****     }
+ 273:../drivers/Logging.c **** 
+ 274:../drivers/Logging.c ****     /* Switch the SD-Card Interface off */
+ 275:../drivers/Logging.c ****     MICROSD_PowerOff();
+ 276:../drivers/Logging.c **** }
+ 277:../drivers/Logging.c **** 
+ 278:../drivers/Logging.c **** 
+ 279:../drivers/Logging.c **** /***************************************************************************//**
+ 280:../drivers/Logging.c ****  *
+ 281:../drivers/Logging.c ****  * @brief	Check if Log Buffer should be Flushed
+ 282:../drivers/Logging.c ****  *
+ 283:../drivers/Logging.c ****  * This routine is periodically called from the main loop to check if the log
+ 284:../drivers/Logging.c ****  * buffer should be flushed, i.e. l_flgLogFlushTrigger is set, or more than
+ 285:../drivers/Logging.c ****  * @ref LOG_SAMPLE_MAX_SIZE bytes have been stored in the log buffer.
+ 286:../drivers/Logging.c ****  *
+ 287:../drivers/Logging.c ****  ******************************************************************************/
+ 288:../drivers/Logging.c **** void	 LogFlushCheck (void)
+ 289:../drivers/Logging.c **** {
+ 290:../drivers/Logging.c **** int	 cnt;			// allocated space in the log buffer
+ 291:../drivers/Logging.c **** 
+ 292:../drivers/Logging.c ****     cnt = idxLogPut - idxLogGet;	// calculate allocated space
+ 293:../drivers/Logging.c ****     if (cnt < 0)
+ 294:../drivers/Logging.c **** 	cnt += LOG_BUF_SIZE;		// wrap around
+ 295:../drivers/Logging.c **** 
+ 296:../drivers/Logging.c ****     if (cnt > LOG_SAMPLE_MAX_SIZE  ||  l_flgLogFlushTrigger)
+ 297:../drivers/Logging.c ****     {
+ 298:../drivers/Logging.c **** 	l_flgLogFlushTrigger = false;
+ 299:../drivers/Logging.c **** 
+ 300:../drivers/Logging.c **** 	LogFlush();
+ 301:../drivers/Logging.c ****     }
+ARM GAS  /tmp/cciG9ks9.s 			page 16
+
+
+ 302:../drivers/Logging.c **** }
+ 303:../drivers/Logging.c **** 
+ 304:../drivers/Logging.c **** 
+ 305:../drivers/Logging.c **** /***************************************************************************//**
+ 306:../drivers/Logging.c ****  *
+ 307:../drivers/Logging.c ****  * @brief	Log Message
+ 308:../drivers/Logging.c ****  *
+ 309:../drivers/Logging.c ****  * This routine writes the current time stamp, an optional prefix, and the
+ 310:../drivers/Logging.c ****  * specified log message into the buffer.
+ 311:../drivers/Logging.c ****  *
+ 312:../drivers/Logging.c ****  * The format of a log message is:
+ 313:../drivers/Logging.c ****  * \<prefix\> \<message\>
+ 314:../drivers/Logging.c ****  *
+ 315:../drivers/Logging.c ****  ******************************************************************************/
+ 316:../drivers/Logging.c **** static void	logMsg(const char *prefix, const char *frmt, va_list args)
+ 317:../drivers/Logging.c **** {
+ 109              		.loc 3 317 0
+ 110              		.cfi_startproc
+ 111              		@ args = 0, pretend = 0, frame = 104
+ 112              		@ frame_needed = 0, uses_anonymous_args = 0
+ 113              	.LVL2:
+ 114 0000 2DE9F047 		push	{r4, r5, r6, r7, r8, r9, r10, lr}
+ 115              		.cfi_def_cfa_offset 32
+ 116              		.cfi_offset 4, -32
+ 117              		.cfi_offset 5, -28
+ 118              		.cfi_offset 6, -24
+ 119              		.cfi_offset 7, -20
+ 120              		.cfi_offset 8, -16
+ 121              		.cfi_offset 9, -12
+ 122              		.cfi_offset 10, -8
+ 123              		.cfi_offset 14, -4
+ 318:../drivers/Logging.c **** char	 tmpBuffer[LOG_ENTRY_MAX_SIZE];	// use this if the log buffer is full
+ 319:../drivers/Logging.c **** char	*pBuf;				// pointer to the buffer to use
+ 320:../drivers/Logging.c **** int	 cnt, num;			// message length, available space
+ 321:../drivers/Logging.c **** 
+ 322:../drivers/Logging.c **** 
+ 323:../drivers/Logging.c ****     /* Check if there is enough space in the log buffer */
+ 324:../drivers/Logging.c ****     num = LOG_BUF_SIZE - idxLogPut;	// distance to end of buffer
+ 124              		.loc 3 324 0
+ 125 0004 2D4D     		ldr	r5, .L27
+ 317:../drivers/Logging.c **** {
+ 126              		.loc 3 317 0
+ 127 0006 9046     		mov	r8, r2
+ 128              		.loc 3 324 0
+ 129 0008 2A68     		ldr	r2, [r5]
+ 130              	.LVL3:
+ 317:../drivers/Logging.c **** {
+ 131              		.loc 3 317 0
+ 132 000a 8946     		mov	r9, r1
+ 133              		.loc 3 324 0
+ 134 000c C2F58053 		rsb	r3, r2, #4096
+ 135              	.LVL4:
+ 325:../drivers/Logging.c ****     if (num > LOG_ENTRY_MAX_SIZE)
+ 326:../drivers/Logging.c **** 	num = 0;			// enough space, no additional memory
+ 327:../drivers/Logging.c **** 
+ 328:../drivers/Logging.c ****     cnt = idxLogPut + num - idxLogGet;	// calculate allocated space
+ 136              		.loc 3 328 0
+ARM GAS  /tmp/cciG9ks9.s 			page 17
+
+
+ 137 0010 2B49     		ldr	r1, .L27+4
+ 138              	.LVL5:
+ 326:../drivers/Logging.c **** 	num = 0;			// enough space, no additional memory
+ 139              		.loc 3 326 0
+ 140 0012 652B     		cmp	r3, #101
+ 141 0014 A8BF     		it	ge
+ 142 0016 0023     		movge	r3, #0
+ 143              	.LVL6:
+ 144              		.loc 3 328 0
+ 145 0018 0968     		ldr	r1, [r1]
+ 317:../drivers/Logging.c **** {
+ 146              		.loc 3 317 0
+ 147 001a 0746     		mov	r7, r0
+ 148              		.loc 3 328 0
+ 149 001c D018     		adds	r0, r2, r3
+ 150              	.LVL7:
+ 329:../drivers/Logging.c ****     if (cnt < 0)
+ 151              		.loc 3 329 0
+ 152 001e 411A     		subs	r1, r0, r1
+ 153              	.LVL8:
+ 330:../drivers/Logging.c **** 	cnt += LOG_BUF_SIZE;		// wrap around
+ 154              		.loc 3 330 0
+ 155 0020 48BF     		it	mi
+ 156 0022 01F58051 		addmi	r1, r1, #4096
+ 157              	.LVL9:
+ 331:../drivers/Logging.c **** 
+ 332:../drivers/Logging.c ****     cnt = LOG_BUF_SIZE - cnt - 1;	// calculate free space
+ 158              		.loc 3 332 0
+ 159 0026 C1F57F61 		rsb	r1, r1, #4080
+ 160              	.LVL10:
+ 161 002a 0F31     		adds	r1, r1, #15
+ 317:../drivers/Logging.c **** {
+ 162              		.loc 3 317 0
+ 163 002c 9AB0     		sub	sp, sp, #104
+ 164              		.cfi_def_cfa_offset 136
+ 333:../drivers/Logging.c **** 
+ 334:../drivers/Logging.c ****     if (cnt < LOG_ENTRY_MAX_SIZE)
+ 165              		.loc 3 334 0
+ 166 002e 6329     		cmp	r1, #99
+ 167              	.LVL11:
+ 168 0030 01AE     		add	r6, sp, #4
+ 169 0032 0CDC     		bgt	.L18
+ 335:../drivers/Logging.c ****     {
+ 336:../drivers/Logging.c **** 	/* Not enough space in buffer - skip entry and count as "lost" */
+ 337:../drivers/Logging.c **** 	l_LostEntryCnt++;
+ 170              		.loc 3 337 0
+ 171 0034 234B     		ldr	r3, .L27+8
+ 172              	.LVL12:
+ 338:../drivers/Logging.c **** 
+ 339:../drivers/Logging.c **** #ifdef LOG_MONITOR_FUNCTION
+ 340:../drivers/Logging.c **** 	sprintf (tmpBuffer, "ERROR: Log Buffer Out of Memory"
+ 173              		.loc 3 340 0
+ 174 0036 2449     		ldr	r1, .L27+12
+ 337:../drivers/Logging.c **** 	l_LostEntryCnt++;
+ 175              		.loc 3 337 0
+ 176 0038 1A68     		ldr	r2, [r3]
+ 177              	.LVL13:
+ARM GAS  /tmp/cciG9ks9.s 			page 18
+
+
+ 178              		.loc 3 340 0
+ 179 003a 3046     		mov	r0, r6
+ 180              	.LVL14:
+ 337:../drivers/Logging.c **** 	l_LostEntryCnt++;
+ 181              		.loc 3 337 0
+ 182 003c 0132     		adds	r2, r2, #1
+ 183 003e 1A60     		str	r2, [r3]
+ 184              		.loc 3 340 0
+ 185 0040 FFF7FEFF 		bl	siprintf
+ 186              	.LVL15:
+ 341:../drivers/Logging.c **** 			    " - lost %ld Messages\n", l_LostEntryCnt);
+ 342:../drivers/Logging.c **** 	LOG_MONITOR_FUNCTION (tmpBuffer);
+ 187              		.loc 3 342 0
+ 188 0044 3046     		mov	r0, r6
+ 189 0046 FFF7FEFF 		bl	drvLEUART_puts
+ 190              	.LVL16:
+ 343:../drivers/Logging.c **** #endif
+ 344:../drivers/Logging.c **** 	pBuf = tmpBuffer;		// use temporary buffer
+ 191              		.loc 3 344 0
+ 192 004a 3446     		mov	r4, r6
+ 193 004c 07E0     		b	.L19
+ 194              	.LVL17:
+ 195              	.L18:
+ 345:../drivers/Logging.c ****     }
+ 346:../drivers/Logging.c ****     else
+ 347:../drivers/Logging.c ****     {
+ 348:../drivers/Logging.c **** 	/* There is enough memory in log buffer */
+ 349:../drivers/Logging.c **** 	if (num > 0)
+ 196              		.loc 3 349 0
+ 197 004e 002B     		cmp	r3, #0
+ 198 0050 1E4B     		ldr	r3, .L27+16
+ 199              	.LVL18:
+ 200 0052 02DD     		ble	.L20
+ 350:../drivers/Logging.c **** 	{
+ 351:../drivers/Logging.c **** 	    l_LogBuf[idxLogPut] = 0;	// mark wrap-around
+ 201              		.loc 3 351 0
+ 202 0054 0021     		movs	r1, #0
+ 203 0056 9954     		strb	r1, [r3, r2]
+ 352:../drivers/Logging.c **** 	    idxLogPut = 0;		// adjust start of new log message
+ 204              		.loc 3 352 0
+ 205 0058 2960     		str	r1, [r5]
+ 206              	.L20:
+ 353:../drivers/Logging.c **** 	}
+ 354:../drivers/Logging.c **** 
+ 355:../drivers/Logging.c **** 	pBuf = l_LogBuf + idxLogPut;	// use standard log buffer
+ 207              		.loc 3 355 0
+ 208 005a 2C68     		ldr	r4, [r5]
+ 209 005c 1C44     		add	r4, r4, r3
+ 210              	.LVL19:
+ 211              	.L19:
+ 212 005e 04F1010A 		add	r10, r4, #1
+ 356:../drivers/Logging.c ****     }
+ 357:../drivers/Logging.c **** 
+ 358:../drivers/Logging.c ****     /* Reserve one byte for string length information */
+ 359:../drivers/Logging.c ****     cnt = 1;
+ 360:../drivers/Logging.c **** 
+ 361:../drivers/Logging.c ****     /* Store optional prefix */
+ARM GAS  /tmp/cciG9ks9.s 			page 19
+
+
+ 362:../drivers/Logging.c ****     if (prefix != NULL)
+ 213              		.loc 3 362 0
+ 214 0062 57B1     		cbz	r7, .L26
+ 363:../drivers/Logging.c ****     {
+ 364:../drivers/Logging.c **** 	if (*prefix != EOS)
+ 215              		.loc 3 364 0
+ 216 0064 3B78     		ldrb	r3, [r7]	@ zero_extendqisi2
+ 217 0066 43B1     		cbz	r3, .L26
+ 365:../drivers/Logging.c **** 	{
+ 366:../drivers/Logging.c **** 	    strcpy (pBuf + cnt, prefix);
+ 218              		.loc 3 366 0
+ 219 0068 3946     		mov	r1, r7
+ 220 006a 5046     		mov	r0, r10
+ 221 006c FFF7FEFF 		bl	strcpy
+ 222              	.LVL20:
+ 367:../drivers/Logging.c **** 	    cnt += strlen(prefix);
+ 223              		.loc 3 367 0
+ 224 0070 3846     		mov	r0, r7
+ 225 0072 FFF7FEFF 		bl	strlen
+ 226              	.LVL21:
+ 227 0076 471C     		adds	r7, r0, #1
+ 228              	.LVL22:
+ 229 0078 00E0     		b	.L21
+ 230              	.LVL23:
+ 231              	.L26:
+ 359:../drivers/Logging.c ****     cnt = 1;
+ 232              		.loc 3 359 0
+ 233 007a 0127     		movs	r7, #1
+ 234              	.LVL24:
+ 235              	.L21:
+ 368:../drivers/Logging.c **** 	}
+ 369:../drivers/Logging.c ****     }
+ 370:../drivers/Logging.c **** 
+ 371:../drivers/Logging.c ****     /* Build and store the log message */
+ 372:../drivers/Logging.c ****     cnt += vsprintf(pBuf + cnt, frmt, args);
+ 236              		.loc 3 372 0
+ 237 007c 4246     		mov	r2, r8
+ 238 007e E019     		adds	r0, r4, r7
+ 239 0080 4946     		mov	r1, r9
+ 240 0082 FFF7FEFF 		bl	vsiprintf
+ 241              	.LVL25:
+ 242 0086 0744     		add	r7, r7, r0
+ 243              	.LVL26:
+ 373:../drivers/Logging.c **** 
+ 374:../drivers/Logging.c ****     /* add <CR><LF> */
+ 375:../drivers/Logging.c ****     strcpy (pBuf + cnt, "\r\n");
+ 244              		.loc 3 375 0
+ 245 0088 E019     		adds	r0, r4, r7
+ 246 008a 1149     		ldr	r1, .L27+20
+ 247 008c FFF7FEFF 		bl	strcpy
+ 248              	.LVL27:
+ 376:../drivers/Logging.c ****     cnt += 3;			// <CR> <LF> EOS
+ 249              		.loc 3 376 0
+ 250 0090 0337     		adds	r7, r7, #3
+ 251              	.LVL28:
+ 377:../drivers/Logging.c **** 
+ 378:../drivers/Logging.c ****     /* Immediately send the complete log message to the monitor output */
+ARM GAS  /tmp/cciG9ks9.s 			page 20
+
+
+ 379:../drivers/Logging.c **** #ifdef LOG_MONITOR_FUNCTION
+ 380:../drivers/Logging.c ****     LOG_MONITOR_FUNCTION (pBuf + 1);
+ 252              		.loc 3 380 0
+ 253 0092 5046     		mov	r0, r10
+ 254 0094 FFF7FEFF 		bl	drvLEUART_puts
+ 255              	.LVL29:
+ 381:../drivers/Logging.c **** #endif
+ 382:../drivers/Logging.c **** 
+ 383:../drivers/Logging.c ****     /* Check length */
+ 384:../drivers/Logging.c ****     EFM_ASSERT(cnt <= LOG_ENTRY_MAX_SIZE);
+ 256              		.loc 3 384 0
+ 257 0098 642F     		cmp	r7, #100
+ 258 009a 04DD     		ble	.L22
+ 259              		.loc 3 384 0 is_stmt 0 discriminator 1
+ 260 009c 0D48     		ldr	r0, .L27+24
+ 261 009e 4FF4C071 		mov	r1, #384
+ 262 00a2 FFF7FEFF 		bl	assertEFM
+ 263              	.LVL30:
+ 264              	.L22:
+ 385:../drivers/Logging.c **** 
+ 386:../drivers/Logging.c ****     /* If used, update standard log buffer */
+ 387:../drivers/Logging.c ****     if (pBuf != tmpBuffer)
+ 265              		.loc 3 387 0 is_stmt 1
+ 266 00a6 B442     		cmp	r4, r6
+ 267 00a8 05D0     		beq	.L15
+ 388:../drivers/Logging.c ****     {
+ 389:../drivers/Logging.c **** 	/* Store string length */
+ 390:../drivers/Logging.c **** 	l_LogBuf[idxLogPut] = cnt - 2;	// no <len> byte, no EOS
+ 268              		.loc 3 390 0
+ 269 00aa 2B68     		ldr	r3, [r5]
+ 270 00ac 074A     		ldr	r2, .L27+16
+ 271 00ae B91E     		subs	r1, r7, #2
+ 391:../drivers/Logging.c **** 
+ 392:../drivers/Logging.c **** 	/* Update index */
+ 393:../drivers/Logging.c **** 	idxLogPut += cnt;
+ 272              		.loc 3 393 0
+ 273 00b0 1F44     		add	r7, r7, r3
+ 274              	.LVL31:
+ 390:../drivers/Logging.c **** 	l_LogBuf[idxLogPut] = cnt - 2;	// no <len> byte, no EOS
+ 275              		.loc 3 390 0
+ 276 00b2 D154     		strb	r1, [r2, r3]
+ 277              		.loc 3 393 0
+ 278 00b4 2F60     		str	r7, [r5]
+ 279              	.LVL32:
+ 280              	.L15:
+ 394:../drivers/Logging.c ****     }
+ 395:../drivers/Logging.c **** }
+ 281              		.loc 3 395 0
+ 282 00b6 1AB0     		add	sp, sp, #104
+ 283              		@ sp needed
+ 284 00b8 BDE8F087 		pop	{r4, r5, r6, r7, r8, r9, r10, pc}
+ 285              	.LVL33:
+ 286              	.L28:
+ 287              		.align	2
+ 288              	.L27:
+ 289 00bc 00000000 		.word	.LANCHOR0
+ 290 00c0 00000000 		.word	.LANCHOR1
+ARM GAS  /tmp/cciG9ks9.s 			page 21
+
+
+ 291 00c4 00000000 		.word	.LANCHOR2
+ 292 00c8 00000000 		.word	.LC0
+ 293 00cc 00000000 		.word	.LANCHOR3
+ 294 00d0 35000000 		.word	.LC1
+ 295 00d4 38000000 		.word	.LC2
+ 296              		.cfi_endproc
+ 297              	.LFE92:
+ 299              		.section	.text.LogInit,"ax",%progbits
+ 300              		.align	1
+ 301              		.global	LogInit
+ 302              		.thumb
+ 303              		.thumb_func
+ 305              	LogInit:
+ 306              	.LFB86:
+  81:../drivers/Logging.c **** {
+ 307              		.loc 3 81 0
+ 308              		.cfi_startproc
+ 309              		@ args = 0, pretend = 0, frame = 0
+ 310              		@ frame_needed = 0, uses_anonymous_args = 0
+ 311              		@ link register save eliminated.
+  83:../drivers/Logging.c ****     idxLogGet = idxLogPut = 0;
+ 312              		.loc 3 83 0
+ 313 0000 024A     		ldr	r2, .L30
+ 314 0002 0023     		movs	r3, #0
+ 315 0004 1360     		str	r3, [r2]
+ 316 0006 024A     		ldr	r2, .L30+4
+ 317 0008 1360     		str	r3, [r2]
+ 318 000a 7047     		bx	lr
+ 319              	.L31:
+ 320              		.align	2
+ 321              	.L30:
+ 322 000c 00000000 		.word	.LANCHOR0
+ 323 0010 00000000 		.word	.LANCHOR1
+ 324              		.cfi_endproc
+ 325              	.LFE86:
+ 327              		.section	.text.Log,"ax",%progbits
+ 328              		.align	1
+ 329              		.global	Log
+ 330              		.thumb
+ 331              		.thumb_func
+ 333              	Log:
+ 334              	.LFB88:
+ 163:../drivers/Logging.c **** {
+ 335              		.loc 3 163 0
+ 336              		.cfi_startproc
+ 337              		@ args = 4, pretend = 16, frame = 8
+ 338              		@ frame_needed = 0, uses_anonymous_args = 1
+ 339              	.LVL34:
+ 340 0000 0FB4     		push	{r0, r1, r2, r3}
+ 341              		.cfi_def_cfa_offset 16
+ 342              		.cfi_offset 0, -16
+ 343              		.cfi_offset 1, -12
+ 344              		.cfi_offset 2, -8
+ 345              		.cfi_offset 3, -4
+ 346 0002 37B5     		push	{r0, r1, r2, r4, r5, lr}
+ 347              		.cfi_def_cfa_offset 40
+ 348              		.cfi_offset 0, -40
+ARM GAS  /tmp/cciG9ks9.s 			page 22
+
+
+ 349              		.cfi_offset 1, -36
+ 350              		.cfi_offset 2, -32
+ 351              		.cfi_offset 4, -28
+ 352              		.cfi_offset 5, -24
+ 353              		.cfi_offset 14, -20
+ 163:../drivers/Logging.c **** {
+ 354              		.loc 3 163 0
+ 355 0004 06AC     		add	r4, sp, #24
+ 356 0006 54F8045B 		ldr	r5, [r4], #4
+ 168:../drivers/Logging.c ****     INT_Disable();
+ 357              		.loc 3 168 0
+ 358 000a FFF7FEFF 		bl	INT_Disable
+ 359              	.LVL35:
+ 172:../drivers/Logging.c ****     logMsg (NULL, frmt, args);
+ 360              		.loc 3 172 0
+ 361 000e 2946     		mov	r1, r5
+ 362 0010 2246     		mov	r2, r4
+ 363 0012 0020     		movs	r0, #0
+ 171:../drivers/Logging.c ****     va_start(args, frmt);
+ 364              		.loc 3 171 0
+ 365 0014 0194     		str	r4, [sp, #4]
+ 172:../drivers/Logging.c ****     logMsg (NULL, frmt, args);
+ 366              		.loc 3 172 0
+ 367 0016 FFF7FEFF 		bl	logMsg
+ 368              	.LVL36:
+ 176:../drivers/Logging.c ****     INT_Enable();
+ 369              		.loc 3 176 0
+ 370 001a FFF7FEFF 		bl	INT_Enable
+ 371              	.LVL37:
+ 177:../drivers/Logging.c **** }
+ 372              		.loc 3 177 0
+ 373 001e 03B0     		add	sp, sp, #12
+ 374              		@ sp needed
+ 375 0020 BDE83040 		pop	{r4, r5, lr}
+ 376 0024 04B0     		add	sp, sp, #16
+ 377 0026 7047     		bx	lr
+ 378              		.cfi_endproc
+ 379              	.LFE88:
+ 381              		.section	.text.LogError,"ax",%progbits
+ 382              		.align	1
+ 383              		.global	LogError
+ 384              		.thumb
+ 385              		.thumb_func
+ 387              	LogError:
+ 388              	.LFB89:
+ 192:../drivers/Logging.c **** {
+ 389              		.loc 3 192 0
+ 390              		.cfi_startproc
+ 391              		@ args = 4, pretend = 16, frame = 8
+ 392              		@ frame_needed = 0, uses_anonymous_args = 1
+ 393              	.LVL38:
+ 394 0000 0FB4     		push	{r0, r1, r2, r3}
+ 395              		.cfi_def_cfa_offset 16
+ 396              		.cfi_offset 0, -16
+ 397              		.cfi_offset 1, -12
+ 398              		.cfi_offset 2, -8
+ 399              		.cfi_offset 3, -4
+ARM GAS  /tmp/cciG9ks9.s 			page 23
+
+
+ 400 0002 37B5     		push	{r0, r1, r2, r4, r5, lr}
+ 401              		.cfi_def_cfa_offset 40
+ 402              		.cfi_offset 0, -40
+ 403              		.cfi_offset 1, -36
+ 404              		.cfi_offset 2, -32
+ 405              		.cfi_offset 4, -28
+ 406              		.cfi_offset 5, -24
+ 407              		.cfi_offset 14, -20
+ 192:../drivers/Logging.c **** {
+ 408              		.loc 3 192 0
+ 409 0004 06AC     		add	r4, sp, #24
+ 410 0006 54F8045B 		ldr	r5, [r4], #4
+ 197:../drivers/Logging.c ****     INT_Disable();
+ 411              		.loc 3 197 0
+ 412 000a FFF7FEFF 		bl	INT_Disable
+ 413              	.LVL39:
+ 201:../drivers/Logging.c ****     logMsg ("ERROR ", frmt, args);
+ 414              		.loc 3 201 0
+ 415 000e 2946     		mov	r1, r5
+ 416 0010 2246     		mov	r2, r4
+ 417 0012 0548     		ldr	r0, .L34
+ 200:../drivers/Logging.c ****     va_start(args, frmt);
+ 418              		.loc 3 200 0
+ 419 0014 0194     		str	r4, [sp, #4]
+ 201:../drivers/Logging.c ****     logMsg ("ERROR ", frmt, args);
+ 420              		.loc 3 201 0
+ 421 0016 FFF7FEFF 		bl	logMsg
+ 422              	.LVL40:
+ 205:../drivers/Logging.c ****     INT_Enable();
+ 423              		.loc 3 205 0
+ 424 001a FFF7FEFF 		bl	INT_Enable
+ 425              	.LVL41:
+ 206:../drivers/Logging.c **** }
+ 426              		.loc 3 206 0
+ 427 001e 03B0     		add	sp, sp, #12
+ 428              		@ sp needed
+ 429 0020 BDE83040 		pop	{r4, r5, lr}
+ 430 0024 04B0     		add	sp, sp, #16
+ 431 0026 7047     		bx	lr
+ 432              	.L35:
+ 433              		.align	2
+ 434              	.L34:
+ 435 0028 4D000000 		.word	.LC3
+ 436              		.cfi_endproc
+ 437              	.LFE89:
+ 439              		.section	.text.LogFileOpen,"ax",%progbits
+ 440              		.align	1
+ 441              		.global	LogFileOpen
+ 442              		.thumb
+ 443              		.thumb_func
+ 445              	LogFileOpen:
+ 446              	.LFB87:
+ 109:../drivers/Logging.c **** {
+ 447              		.loc 3 109 0
+ 448              		.cfi_startproc
+ 449              		@ args = 0, pretend = 0, frame = 0
+ 450              		@ frame_needed = 0, uses_anonymous_args = 0
+ARM GAS  /tmp/cciG9ks9.s 			page 24
+
+
+ 451              	.LVL42:
+ 452 0000 38B5     		push	{r3, r4, r5, lr}
+ 453              		.cfi_def_cfa_offset 16
+ 454              		.cfi_offset 3, -16
+ 455              		.cfi_offset 4, -12
+ 456              		.cfi_offset 5, -8
+ 457              		.cfi_offset 14, -4
+ 109:../drivers/Logging.c **** {
+ 458              		.loc 3 109 0
+ 459 0002 0C46     		mov	r4, r1
+ 115:../drivers/Logging.c ****     if (filepattern != NULL)
+ 460              		.loc 3 115 0
+ 461 0004 0146     		mov	r1, r0
+ 462              	.LVL43:
+ 463 0006 08B9     		cbnz	r0, .L37
+ 464              	.LVL44:
+ 465              	.L40:
+ 124:../drivers/Logging.c ****     if (filename == NULL)
+ 466              		.loc 3 124 0
+ 467 0008 14B3     		cbz	r4, .L44
+ 468 000a 05E0     		b	.L39
+ 469              	.LVL45:
+ 470              	.L37:
+ 118:../drivers/Logging.c **** 	pStr = FindFile ("/", filepattern);
+ 471              		.loc 3 118 0
+ 472 000c 1148     		ldr	r0, .L48
+ 473              	.LVL46:
+ 474 000e FFF7FEFF 		bl	FindFile
+ 475              	.LVL47:
+ 119:../drivers/Logging.c **** 	if (pStr != NULL)
+ 476              		.loc 3 119 0
+ 477 0012 0028     		cmp	r0, #0
+ 478 0014 F8D0     		beq	.L40
+ 479 0016 0446     		mov	r4, r0
+ 480              	.LVL48:
+ 481              	.L39:
+ 128:../drivers/Logging.c ****     res = f_open (&l_fh, filename,  FA_READ | FA_WRITE | FA_OPEN_ALWAYS);
+ 482              		.loc 3 128 0
+ 483 0018 0F4D     		ldr	r5, .L48+4
+ 484 001a 2146     		mov	r1, r4
+ 485 001c 2846     		mov	r0, r5
+ 486 001e 1322     		movs	r2, #19
+ 487 0020 FFF7FEFF 		bl	f_open
+ 488              	.LVL49:
+ 489 0024 2C46     		mov	r4, r5
+ 490              	.LVL50:
+ 129:../drivers/Logging.c ****     if (res == FR_OK)
+ 491              		.loc 3 129 0
+ 492 0026 0146     		mov	r1, r0
+ 493 0028 28B9     		cbnz	r0, .L41
+ 131:../drivers/Logging.c **** 	res = f_lseek (&l_fh, f_size(&l_fh));
+ 494              		.loc 3 131 0
+ 495 002a E968     		ldr	r1, [r5, #12]
+ 496 002c 2846     		mov	r0, r5
+ 497              	.LVL51:
+ 498 002e FFF7FEFF 		bl	f_lseek
+ 499              	.LVL52:
+ARM GAS  /tmp/cciG9ks9.s 			page 25
+
+
+ 134:../drivers/Logging.c ****     if (res != FR_OK)
+ 500              		.loc 3 134 0
+ 501 0032 0146     		mov	r1, r0
+ 502 0034 28B1     		cbz	r0, .L42
+ 503              	.L41:
+ 504              	.LVL53:
+ 136:../drivers/Logging.c **** 	LogError ("LogFileOpen: Error Code %d", res);
+ 505              		.loc 3 136 0
+ 506 0036 0948     		ldr	r0, .L48+8
+ 507 0038 FFF7FEFF 		bl	LogError
+ 508              	.LVL54:
+ 137:../drivers/Logging.c **** 	l_fh.fs = NULL;		// invalidate file handle
+ 509              		.loc 3 137 0
+ 510 003c 0023     		movs	r3, #0
+ 511 003e 2360     		str	r3, [r4]
+ 512 0040 02E0     		b	.L43
+ 513              	.LVL55:
+ 514              	.L42:
+ 141:../drivers/Logging.c **** 	l_ErrMsgCnt = 2;
+ 515              		.loc 3 141 0
+ 516 0042 074B     		ldr	r3, .L48+12
+ 517 0044 0222     		movs	r2, #2
+ 518 0046 1A60     		str	r2, [r3]
+ 519              	.LVL56:
+ 520              	.L43:
+ 145:../drivers/Logging.c ****     MICROSD_PowerOff();
+ 521              		.loc 3 145 0
+ 522 0048 FFF7FEFF 		bl	MICROSD_PowerOff
+ 523              	.LVL57:
+ 147:../drivers/Logging.c ****     return true;
+ 524              		.loc 3 147 0
+ 525 004c 0120     		movs	r0, #1
+ 526 004e 38BD     		pop	{r3, r4, r5, pc}
+ 527              	.LVL58:
+ 528              	.L44:
+ 125:../drivers/Logging.c **** 	return false;		// file not found and no fall-back specified
+ 529              		.loc 3 125 0
+ 530 0050 2046     		mov	r0, r4
+ 148:../drivers/Logging.c **** }
+ 531              		.loc 3 148 0
+ 532 0052 38BD     		pop	{r3, r4, r5, pc}
+ 533              	.LVL59:
+ 534              	.L49:
+ 535              		.align	2
+ 536              	.L48:
+ 537 0054 54000000 		.word	.LC4
+ 538 0058 00000000 		.word	.LANCHOR4
+ 539 005c 56000000 		.word	.LC5
+ 540 0060 00000000 		.word	.LANCHOR5
+ 541              		.cfi_endproc
+ 542              	.LFE87:
+ 544              		.section	.text.LogFlush,"ax",%progbits
+ 545              		.align	1
+ 546              		.global	LogFlush
+ 547              		.thumb
+ 548              		.thumb_func
+ 550              	LogFlush:
+ARM GAS  /tmp/cciG9ks9.s 			page 26
+
+
+ 551              	.LFB90:
+ 217:../drivers/Logging.c **** {
+ 552              		.loc 3 217 0
+ 553              		.cfi_startproc
+ 554              		@ args = 0, pretend = 0, frame = 8
+ 555              		@ frame_needed = 0, uses_anonymous_args = 0
+ 556 0000 37B5     		push	{r0, r1, r2, r4, r5, lr}
+ 557              		.cfi_def_cfa_offset 24
+ 558              		.cfi_offset 0, -24
+ 559              		.cfi_offset 1, -20
+ 560              		.cfi_offset 2, -16
+ 561              		.cfi_offset 4, -12
+ 562              		.cfi_offset 5, -8
+ 563              		.cfi_offset 14, -4
+ 224:../drivers/Logging.c ****     if (IsFileHandleValid(&l_fh) == false)
+ 564              		.loc 3 224 0
+ 565 0002 2748     		ldr	r0, .L68
+ 566 0004 FFF7FEFF 		bl	IsFileHandleValid
+ 567              	.LVL60:
+ 568 0008 0028     		cmp	r0, #0
+ 569 000a 46D0     		beq	.L50
+ 228:../drivers/Logging.c ****     MICROSD_PowerOn();
+ 570              		.loc 3 228 0
+ 571 000c FFF7FEFF 		bl	MICROSD_PowerOn
+ 572              	.LVL61:
+ 231:../drivers/Logging.c ****     if (disk_initialize(0) != 0)
+ 573              		.loc 3 231 0
+ 574 0010 0020     		movs	r0, #0
+ 575 0012 FFF7FEFF 		bl	disk_initialize
+ 576              	.LVL62:
+ 577 0016 58B1     		cbz	r0, .L53
+ 233:../drivers/Logging.c **** 	if (--l_ErrMsgCnt >= 0)
+ 578              		.loc 3 233 0
+ 579 0018 224A     		ldr	r2, .L68+4
+ 580 001a 1368     		ldr	r3, [r2]
+ 581 001c 013B     		subs	r3, r3, #1
+ 582 001e 002B     		cmp	r3, #0
+ 583 0020 1360     		str	r3, [r2]
+ 584 0022 38DB     		blt	.L54
+ 234:../drivers/Logging.c **** 	    LogError ("LogFlush: Init Failed");
+ 585              		.loc 3 234 0
+ 586 0024 2048     		ldr	r0, .L68+8
+ 587 0026 26E0     		b	.L65
+ 588              	.LVL63:
+ 589              	.L59:
+ 266:../drivers/Logging.c **** 	    idxLogGet += (cnt + 2);
+ 590              		.loc 3 266 0
+ 591 0028 2B68     		ldr	r3, [r5]
+ 592 002a 0234     		adds	r4, r4, #2
+ 593              	.LVL64:
+ 594 002c 2344     		add	r3, r3, r4
+ 595 002e 2B60     		str	r3, [r5]
+ 596              	.LVL65:
+ 597              	.L53:
+ 239:../drivers/Logging.c **** 	while (idxLogGet != idxLogPut)
+ 598              		.loc 3 239 0 discriminator 1
+ 599 0030 1E4B     		ldr	r3, .L68+12
+ARM GAS  /tmp/cciG9ks9.s 			page 27
+
+
+ 600 0032 1F4A     		ldr	r2, .L68+16
+ 601 0034 1968     		ldr	r1, [r3]
+ 602 0036 1268     		ldr	r2, [r2]
+ 603 0038 9142     		cmp	r1, r2
+ 604 003a 29D0     		beq	.L66
+ 241:../drivers/Logging.c **** 	    cnt = l_LogBuf[idxLogGet];	// get string length
+ 605              		.loc 3 241 0
+ 606 003c 1D4A     		ldr	r2, .L68+20
+ 607 003e 545C     		ldrb	r4, [r2, r1]	@ zero_extendqisi2
+ 608              	.LVL66:
+ 609 0040 1146     		mov	r1, r2
+ 242:../drivers/Logging.c **** 	    if (cnt == 0)
+ 610              		.loc 3 242 0
+ 611 0042 0CB9     		cbnz	r4, .L55
+ 244:../drivers/Logging.c **** 		idxLogGet = 0;		// length of 0 indicates wrap-around
+ 612              		.loc 3 244 0
+ 613 0044 1C60     		str	r4, [r3]
+ 245:../drivers/Logging.c **** 		cnt = l_LogBuf[idxLogGet];
+ 614              		.loc 3 245 0
+ 615 0046 1478     		ldrb	r4, [r2]	@ zero_extendqisi2
+ 616              	.LVL67:
+ 617              	.L55:
+ 249:../drivers/Logging.c **** 	    res = f_write (&l_fh, l_LogBuf + idxLogGet + 1, cnt, &bytesWr);
+ 618              		.loc 3 249 0
+ 619 0048 1B68     		ldr	r3, [r3]
+ 620 004a 1548     		ldr	r0, .L68
+ 621 004c 0133     		adds	r3, r3, #1
+ 622 004e 1944     		add	r1, r1, r3
+ 623 0050 2246     		mov	r2, r4
+ 624 0052 0DF10603 		add	r3, sp, #6
+ 625 0056 FFF7FEFF 		bl	f_write
+ 626              	.LVL68:
+ 627 005a 144D     		ldr	r5, .L68+12
+ 250:../drivers/Logging.c **** 	    if (res != FR_OK)
+ 628              		.loc 3 250 0
+ 629 005c 0146     		mov	r1, r0
+ 630 005e 68B9     		cbnz	r0, .L67
+ 257:../drivers/Logging.c **** 	    if (bytesWr < cnt)
+ 631              		.loc 3 257 0
+ 632 0060 BDF80630 		ldrh	r3, [sp, #6]
+ 633 0064 A342     		cmp	r3, r4
+ 634 0066 DFDA     		bge	.L59
+ 259:../drivers/Logging.c **** 		if (--l_ErrMsgCnt >= 0)
+ 635              		.loc 3 259 0
+ 636 0068 0E4A     		ldr	r2, .L68+4
+ 637 006a 1368     		ldr	r3, [r2]
+ 638 006c 013B     		subs	r3, r3, #1
+ 639 006e 002B     		cmp	r3, #0
+ 640 0070 1360     		str	r3, [r2]
+ 641 0072 10DB     		blt	.L54
+ 260:../drivers/Logging.c **** 		    LogError ("LogFlush: Disk Full");
+ 642              		.loc 3 260 0
+ 643 0074 1048     		ldr	r0, .L68+24
+ 644              	.LVL69:
+ 645              	.L65:
+ 646 0076 FFF7FEFF 		bl	LogError
+ 647              	.LVL70:
+ARM GAS  /tmp/cciG9ks9.s 			page 28
+
+
+ 648 007a 0CE0     		b	.L54
+ 649              	.LVL71:
+ 650              	.L67:
+ 252:../drivers/Logging.c **** 		if (--l_ErrMsgCnt >= 0)
+ 651              		.loc 3 252 0
+ 652 007c 094A     		ldr	r2, .L68+4
+ 653 007e 1368     		ldr	r3, [r2]
+ 654 0080 013B     		subs	r3, r3, #1
+ 655 0082 002B     		cmp	r3, #0
+ 656 0084 1360     		str	r3, [r2]
+ 657 0086 06DB     		blt	.L54
+ 253:../drivers/Logging.c **** 		    LogError ("LogFlush: Error Code %d", res);
+ 658              		.loc 3 253 0
+ 659 0088 0C48     		ldr	r0, .L68+28
+ 660              	.LVL72:
+ 661 008a FFF7FEFF 		bl	LogError
+ 662              	.LVL73:
+ 663 008e 02E0     		b	.L54
+ 664              	.LVL74:
+ 665              	.L66:
+ 271:../drivers/Logging.c **** 	    f_sync (&l_fh);
+ 666              		.loc 3 271 0
+ 667 0090 0348     		ldr	r0, .L68
+ 668 0092 FFF7FEFF 		bl	f_sync
+ 669              	.LVL75:
+ 670              	.L54:
+ 275:../drivers/Logging.c ****     MICROSD_PowerOff();
+ 671              		.loc 3 275 0 discriminator 1
+ 672 0096 FFF7FEFF 		bl	MICROSD_PowerOff
+ 673              	.LVL76:
+ 674              	.L50:
+ 276:../drivers/Logging.c **** }
+ 675              		.loc 3 276 0
+ 676 009a 03B0     		add	sp, sp, #12
+ 677              		@ sp needed
+ 678 009c 30BD     		pop	{r4, r5, pc}
+ 679              	.L69:
+ 680 009e 00BF     		.align	2
+ 681              	.L68:
+ 682 00a0 00000000 		.word	.LANCHOR4
+ 683 00a4 00000000 		.word	.LANCHOR5
+ 684 00a8 71000000 		.word	.LC6
+ 685 00ac 00000000 		.word	.LANCHOR1
+ 686 00b0 00000000 		.word	.LANCHOR0
+ 687 00b4 00000000 		.word	.LANCHOR3
+ 688 00b8 9F000000 		.word	.LC8
+ 689 00bc 87000000 		.word	.LC7
+ 690              		.cfi_endproc
+ 691              	.LFE90:
+ 693              		.section	.text.LogFlushCheck,"ax",%progbits
+ 694              		.align	1
+ 695              		.global	LogFlushCheck
+ 696              		.thumb
+ 697              		.thumb_func
+ 699              	LogFlushCheck:
+ 700              	.LFB91:
+ 289:../drivers/Logging.c **** {
+ARM GAS  /tmp/cciG9ks9.s 			page 29
+
+
+ 701              		.loc 3 289 0
+ 702              		.cfi_startproc
+ 703              		@ args = 0, pretend = 0, frame = 0
+ 704              		@ frame_needed = 0, uses_anonymous_args = 0
+ 705              		@ link register save eliminated.
+ 292:../drivers/Logging.c ****     cnt = idxLogPut - idxLogGet;	// calculate allocated space
+ 706              		.loc 3 292 0
+ 707 0000 094B     		ldr	r3, .L74
+ 708 0002 1A68     		ldr	r2, [r3]
+ 709 0004 094B     		ldr	r3, .L74+4
+ 710 0006 1B68     		ldr	r3, [r3]
+ 711              	.LVL77:
+ 293:../drivers/Logging.c ****     if (cnt < 0)
+ 712              		.loc 3 293 0
+ 713 0008 D31A     		subs	r3, r2, r3
+ 714              	.LVL78:
+ 294:../drivers/Logging.c **** 	cnt += LOG_BUF_SIZE;		// wrap around
+ 715              		.loc 3 294 0
+ 716 000a 48BF     		it	mi
+ 717 000c 03F58053 		addmi	r3, r3, #4096
+ 718              	.LVL79:
+ 296:../drivers/Logging.c ****     if (cnt > LOG_SAMPLE_MAX_SIZE  ||  l_flgLogFlushTrigger)
+ 719              		.loc 3 296 0
+ 720 0010 B3F5806F 		cmp	r3, #1024
+ 721 0014 064B     		ldr	r3, .L74+8
+ 722              	.LVL80:
+ 723 0016 01DC     		bgt	.L72
+ 296:../drivers/Logging.c ****     if (cnt > LOG_SAMPLE_MAX_SIZE  ||  l_flgLogFlushTrigger)
+ 724              		.loc 3 296 0 is_stmt 0 discriminator 1
+ 725 0018 1A78     		ldrb	r2, [r3]	@ zero_extendqisi2
+ 726              	.LVL81:
+ 727 001a 1AB1     		cbz	r2, .L70
+ 728              	.L72:
+ 298:../drivers/Logging.c **** 	l_flgLogFlushTrigger = false;
+ 729              		.loc 3 298 0 is_stmt 1
+ 730 001c 0022     		movs	r2, #0
+ 731 001e 1A70     		strb	r2, [r3]
+ 300:../drivers/Logging.c **** 	LogFlush();
+ 732              		.loc 3 300 0
+ 733 0020 FFF7FEBF 		b	LogFlush
+ 734              	.LVL82:
+ 735              	.L70:
+ 736 0024 7047     		bx	lr
+ 737              	.L75:
+ 738 0026 00BF     		.align	2
+ 739              	.L74:
+ 740 0028 00000000 		.word	.LANCHOR0
+ 741 002c 00000000 		.word	.LANCHOR1
+ 742 0030 00000000 		.word	.LANCHOR6
+ 743              		.cfi_endproc
+ 744              	.LFE91:
+ 746              		.section	.bss.l_ErrMsgCnt,"aw",%nobits
+ 747              		.align	2
+ 748              		.set	.LANCHOR5,. + 0
+ 751              	l_ErrMsgCnt:
+ 752 0000 00000000 		.space	4
+ 753              		.section	.bss.l_flgLogFlushTrigger,"aw",%nobits
+ARM GAS  /tmp/cciG9ks9.s 			page 30
+
+
+ 754              		.set	.LANCHOR6,. + 0
+ 757              	l_flgLogFlushTrigger:
+ 758 0000 00       		.space	1
+ 759              		.section	.bss.l_fh,"aw",%nobits
+ 760              		.align	2
+ 761              		.set	.LANCHOR4,. + 0
+ 764              	l_fh:
+ 765 0000 00000000 		.space	548
+ 765      00000000 
+ 765      00000000 
+ 765      00000000 
+ 765      00000000 
+ 766              		.section	.rodata.str1.1,"aMS",%progbits,1
+ 767              	.LC0:
+ 768 0000 4552524F 		.ascii	"ERROR: Log Buffer Out of Memory - lost %ld Messages"
+ 768      523A204C 
+ 768      6F672042 
+ 768      75666665 
+ 768      72204F75 
+ 769 0033 0A00     		.ascii	"\012\000"
+ 770              	.LC1:
+ 771 0035 0D0A00   		.ascii	"\015\012\000"
+ 772              	.LC2:
+ 773 0038 2E2E2F64 		.ascii	"../drivers/Logging.c\000"
+ 773      72697665 
+ 773      72732F4C 
+ 773      6F676769 
+ 773      6E672E63 
+ 774              	.LC3:
+ 775 004d 4552524F 		.ascii	"ERROR \000"
+ 775      522000
+ 776              	.LC4:
+ 777 0054 2F00     		.ascii	"/\000"
+ 778              	.LC5:
+ 779 0056 4C6F6746 		.ascii	"LogFileOpen: Error Code %d\000"
+ 779      696C654F 
+ 779      70656E3A 
+ 779      20457272 
+ 779      6F722043 
+ 780              	.LC6:
+ 781 0071 4C6F6746 		.ascii	"LogFlush: Init Failed\000"
+ 781      6C757368 
+ 781      3A20496E 
+ 781      69742046 
+ 781      61696C65 
+ 782              	.LC7:
+ 783 0087 4C6F6746 		.ascii	"LogFlush: Error Code %d\000"
+ 783      6C757368 
+ 783      3A204572 
+ 783      726F7220 
+ 783      436F6465 
+ 784              	.LC8:
+ 785 009f 4C6F6746 		.ascii	"LogFlush: Disk Full\000"
+ 785      6C757368 
+ 785      3A204469 
+ 785      736B2046 
+ 785      756C6C00 
+ARM GAS  /tmp/cciG9ks9.s 			page 31
+
+
+ 786              		.section	.bss.l_LostEntryCnt,"aw",%nobits
+ 787              		.align	2
+ 788              		.set	.LANCHOR2,. + 0
+ 791              	l_LostEntryCnt:
+ 792 0000 00000000 		.space	4
+ 793              		.section	.bss.idxLogPut,"aw",%nobits
+ 794              		.align	2
+ 795              		.set	.LANCHOR0,. + 0
+ 798              	idxLogPut:
+ 799 0000 00000000 		.space	4
+ 800              		.section	.bss.l_LogFlushLED_FlashCnt,"aw",%nobits
+ 803              	l_LogFlushLED_FlashCnt:
+ 804 0000 00       		.space	1
+ 805              		.section	.bss.idxLogGet,"aw",%nobits
+ 806              		.align	2
+ 807              		.set	.LANCHOR1,. + 0
+ 810              	idxLogGet:
+ 811 0000 00000000 		.space	4
+ 812              		.section	.bss.l_LogBuf,"aw",%nobits
+ 813              		.set	.LANCHOR3,. + 0
+ 816              	l_LogBuf:
+ 817 0000 00000000 		.space	4096
+ 817      00000000 
+ 817      00000000 
+ 817      00000000 
+ 817      00000000 
+ 818              		.text
+ 819              	.Letext0:
+ 820              		.file 4 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/lib/gcc/arm-none-eabi/4.8.4/include/stddef.h"
+ 821              		.file 5 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/lib/gcc/arm-none-eabi/4.8.4/include/stdarg.h"
+ 822              		.file 6 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/machine/_default_types.h"
+ 823              		.file 7 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdint.h"
+ 824              		.file 8 "../fatfs/inc/integer.h"
+ 825              		.file 9 "../fatfs/inc/ff.h"
+ 826              		.file 10 "../fatfs/inc/diskio.h"
+ 827              		.file 11 "../CMSIS/Include/core_cm3.h"
+ 828              		.file 12 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdio.h"
+ 829              		.file 13 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/string.h"
+ 830              		.file 14 "../config.h"
+ 831              		.file 15 "../emlib/inc/em_assert.h"
+ 832              		.file 16 "../drivers/microsd.h"
+ 833              		.file 17 "<built-in>"

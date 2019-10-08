@@ -1,0 +1,279 @@
+ARM GAS  /tmp/ccMrp8oT.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"debug.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.dbgInit,"ax",%progbits
+  19              		.align	1
+  20              		.global	dbgInit
+  21              		.thumb
+  22              		.thumb_func
+  24              	dbgInit:
+  25              	.LFB84:
+  26              		.file 1 "../debug.c"
+   1:../debug.c    **** #ifdef DEBUG	/*##################### ONLY FOR DEBUGGING ###################*/
+   2:../debug.c    **** #include "config.h"
+   3:../debug.c    **** #include "em_gpio.h"
+   4:../debug.c    **** 
+   5:../debug.c    **** #if DEBUG_VIA_ITM
+   6:../debug.c    **** void setupSWOForPrint(void);
+   7:../debug.c    **** #endif
+   8:../debug.c    **** 
+   9:../debug.c    **** /*================RAGE-DEBUG===============*/
+  10:../debug.c    **** void dbgInit(void)
+  11:../debug.c    **** {
+  27              		.loc 1 11 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+  32 0000 7047     		bx	lr
+  33              		.cfi_endproc
+  34              	.LFE84:
+  36              		.global	_pTPI
+  37              		.global	_pCoreDebug
+  38              		.global	_pMPU
+  39              		.global	_pSCB
+  40              		.global	_pNVIC
+  41              		.global	_pSysTick
+  42              		.global	_pSCnSCB
+  43              		.global	_pROMTABLE
+  44              		.global	_pDEVINFO
+  45              		.global	_pCALIBRATE
+  46              		.global	_pWDOG
+  47              		.global	_pI2C0
+  48              		.global	_pADC0
+ARM GAS  /tmp/ccMrp8oT.s 			page 2
+
+
+  49              		.global	_pVCMP
+  50              		.global	_pGPIO
+  51              		.global	_pDAC0
+  52              		.global	_pPRS
+  53              		.global	_pACMP1
+  54              		.global	_pACMP0
+  55              		.global	_pPCNT2
+  56              		.global	_pPCNT1
+  57              		.global	_pPCNT0
+  58              		.global	_pLETIMER0
+  59              		.global	_pRTC
+  60              		.global	_pLEUART1
+  61              		.global	_pLEUART0
+  62              		.global	_pUSART2
+  63              		.global	_pUSART1
+  64              		.global	_pUSART0
+  65              		.global	_pTIMER2
+  66              		.global	_pTIMER1
+  67              		.global	_pTIMER0
+  68              		.global	_pCMU
+  69              		.global	_pRMU
+  70              		.global	_pEMU
+  71              		.global	_pMSC
+  72              		.global	_pDMA
+  73              		.global	_pAES
+  74              		.section	.rodata._pTIMER0,"a",%progbits
+  75              		.align	2
+  78              	_pTIMER0:
+  79 0000 00000140 		.word	1073807360
+  80              		.section	.rodata._pVCMP,"a",%progbits
+  81              		.align	2
+  84              	_pVCMP:
+  85 0000 00000040 		.word	1073741824
+  86              		.section	.rodata._pDAC0,"a",%progbits
+  87              		.align	2
+  90              	_pDAC0:
+  91 0000 00400040 		.word	1073758208
+  92              		.section	.rodata._pSysTick,"a",%progbits
+  93              		.align	2
+  96              	_pSysTick:
+  97 0000 10E000E0 		.word	-536813552
+  98              		.section	.rodata._pDEVINFO,"a",%progbits
+  99              		.align	2
+ 102              	_pDEVINFO:
+ 103 0000 B081E00F 		.word	266371504
+ 104              		.section	.rodata._pAES,"a",%progbits
+ 105              		.align	2
+ 108              	_pAES:
+ 109 0000 00000E40 		.word	1074659328
+ 110              		.section	.rodata._pSCnSCB,"a",%progbits
+ 111              		.align	2
+ 114              	_pSCnSCB:
+ 115 0000 00E000E0 		.word	-536813568
+ 116              		.section	.rodata._pI2C0,"a",%progbits
+ 117              		.align	2
+ 120              	_pI2C0:
+ 121 0000 00A00040 		.word	1073782784
+ARM GAS  /tmp/ccMrp8oT.s 			page 3
+
+
+ 122              		.section	.rodata._pTIMER1,"a",%progbits
+ 123              		.align	2
+ 126              	_pTIMER1:
+ 127 0000 00040140 		.word	1073808384
+ 128              		.section	.rodata._pTIMER2,"a",%progbits
+ 129              		.align	2
+ 132              	_pTIMER2:
+ 133 0000 00080140 		.word	1073809408
+ 134              		.section	.rodata._pADC0,"a",%progbits
+ 135              		.align	2
+ 138              	_pADC0:
+ 139 0000 00200040 		.word	1073750016
+ 140              		.section	.rodata._pACMP0,"a",%progbits
+ 141              		.align	2
+ 144              	_pACMP0:
+ 145 0000 00100040 		.word	1073745920
+ 146              		.section	.rodata._pACMP1,"a",%progbits
+ 147              		.align	2
+ 150              	_pACMP1:
+ 151 0000 00140040 		.word	1073746944
+ 152              		.section	.rodata._pGPIO,"a",%progbits
+ 153              		.align	2
+ 156              	_pGPIO:
+ 157 0000 00600040 		.word	1073766400
+ 158              		.section	.rodata._pMSC,"a",%progbits
+ 159              		.align	2
+ 162              	_pMSC:
+ 163 0000 00000C40 		.word	1074528256
+ 164              		.section	.rodata._pRMU,"a",%progbits
+ 165              		.align	2
+ 168              	_pRMU:
+ 169 0000 00A00C40 		.word	1074569216
+ 170              		.section	.rodata._pDMA,"a",%progbits
+ 171              		.align	2
+ 174              	_pDMA:
+ 175 0000 00200C40 		.word	1074536448
+ 176              		.section	.rodata._pROMTABLE,"a",%progbits
+ 177              		.align	2
+ 180              	_pROMTABLE:
+ 181 0000 D0FF0FE0 		.word	-535822384
+ 182              		.section	.rodata._pUSART2,"a",%progbits
+ 183              		.align	2
+ 186              	_pUSART2:
+ 187 0000 00C80040 		.word	1073793024
+ 188              		.section	.rodata._pTPI,"a",%progbits
+ 189              		.align	2
+ 192              	_pTPI:
+ 193 0000 000004E0 		.word	-536608768
+ 194              		.section	.rodata._pLETIMER0,"a",%progbits
+ 195              		.align	2
+ 198              	_pLETIMER0:
+ 199 0000 00200840 		.word	1074274304
+ 200              		.section	.rodata._pCoreDebug,"a",%progbits
+ 201              		.align	2
+ 204              	_pCoreDebug:
+ 205 0000 F0ED00E0 		.word	-536810000
+ 206              		.section	.rodata._pCMU,"a",%progbits
+ARM GAS  /tmp/ccMrp8oT.s 			page 4
+
+
+ 207              		.align	2
+ 210              	_pCMU:
+ 211 0000 00800C40 		.word	1074561024
+ 212              		.section	.rodata._pUSART0,"a",%progbits
+ 213              		.align	2
+ 216              	_pUSART0:
+ 217 0000 00C00040 		.word	1073790976
+ 218              		.section	.rodata._pUSART1,"a",%progbits
+ 219              		.align	2
+ 222              	_pUSART1:
+ 223 0000 00C40040 		.word	1073792000
+ 224              		.section	.rodata._pLEUART0,"a",%progbits
+ 225              		.align	2
+ 228              	_pLEUART0:
+ 229 0000 00400840 		.word	1074282496
+ 230              		.section	.rodata._pLEUART1,"a",%progbits
+ 231              		.align	2
+ 234              	_pLEUART1:
+ 235 0000 00440840 		.word	1074283520
+ 236              		.section	.rodata._pPRS,"a",%progbits
+ 237              		.align	2
+ 240              	_pPRS:
+ 241 0000 00C00C40 		.word	1074577408
+ 242              		.section	.rodata._pSCB,"a",%progbits
+ 243              		.align	2
+ 246              	_pSCB:
+ 247 0000 00ED00E0 		.word	-536810240
+ 248              		.section	.rodata._pWDOG,"a",%progbits
+ 249              		.align	2
+ 252              	_pWDOG:
+ 253 0000 00800840 		.word	1074298880
+ 254              		.section	.rodata._pEMU,"a",%progbits
+ 255              		.align	2
+ 258              	_pEMU:
+ 259 0000 00600C40 		.word	1074552832
+ 260              		.section	.rodata._pMPU,"a",%progbits
+ 261              		.align	2
+ 264              	_pMPU:
+ 265 0000 90ED00E0 		.word	-536810096
+ 266              		.section	.rodata._pRTC,"a",%progbits
+ 267              		.align	2
+ 270              	_pRTC:
+ 271 0000 00000840 		.word	1074266112
+ 272              		.section	.rodata._pNVIC,"a",%progbits
+ 273              		.align	2
+ 276              	_pNVIC:
+ 277 0000 00E100E0 		.word	-536813312
+ 278              		.section	.rodata._pCALIBRATE,"a",%progbits
+ 279              		.align	2
+ 282              	_pCALIBRATE:
+ 283 0000 0080E00F 		.word	266371072
+ 284              		.section	.rodata._pPCNT0,"a",%progbits
+ 285              		.align	2
+ 288              	_pPCNT0:
+ 289 0000 00600840 		.word	1074290688
+ 290              		.section	.rodata._pPCNT1,"a",%progbits
+ 291              		.align	2
+ARM GAS  /tmp/ccMrp8oT.s 			page 5
+
+
+ 294              	_pPCNT1:
+ 295 0000 00640840 		.word	1074291712
+ 296              		.section	.rodata._pPCNT2,"a",%progbits
+ 297              		.align	2
+ 300              	_pPCNT2:
+ 301 0000 00680840 		.word	1074292736
+ 302              		.text
+ 303              	.Letext0:
+ 304              		.file 2 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/machine/_default_types.h"
+ 305              		.file 3 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdint.h"
+ 306              		.file 4 "../CMSIS/Include/core_cm3.h"
+ 307              		.file 5 "../Device/EnergyMicro/EFM32G/Include/efm32g_aes.h"
+ 308              		.file 6 "../Device/EnergyMicro/EFM32G/Include/efm32g_dma_ch.h"
+ 309              		.file 7 "../Device/EnergyMicro/EFM32G/Include/efm32g230f128.h"
+ 310              		.file 8 "../Device/EnergyMicro/EFM32G/Include/efm32g_msc.h"
+ 311              		.file 9 "../Device/EnergyMicro/EFM32G/Include/efm32g_emu.h"
+ 312              		.file 10 "../Device/EnergyMicro/EFM32G/Include/efm32g_rmu.h"
+ 313              		.file 11 "../Device/EnergyMicro/EFM32G/Include/efm32g_timer_cc.h"
+ 314              		.file 12 "../Device/EnergyMicro/EFM32G/Include/efm32g_timer.h"
+ 315              		.file 13 "../Device/EnergyMicro/EFM32G/Include/efm32g_usart.h"
+ 316              		.file 14 "../Device/EnergyMicro/EFM32G/Include/efm32g_leuart.h"
+ 317              		.file 15 "../Device/EnergyMicro/EFM32G/Include/efm32g_rtc.h"
+ 318              		.file 16 "../Device/EnergyMicro/EFM32G/Include/efm32g_letimer.h"
+ 319              		.file 17 "../Device/EnergyMicro/EFM32G/Include/efm32g_pcnt.h"
+ 320              		.file 18 "../Device/EnergyMicro/EFM32G/Include/efm32g_acmp.h"
+ 321              		.file 19 "../Device/EnergyMicro/EFM32G/Include/efm32g_prs_ch.h"
+ 322              		.file 20 "../Device/EnergyMicro/EFM32G/Include/efm32g_dac.h"
+ 323              		.file 21 "../Device/EnergyMicro/EFM32G/Include/efm32g_gpio_p.h"
+ 324              		.file 22 "../Device/EnergyMicro/EFM32G/Include/efm32g_gpio.h"
+ 325              		.file 23 "../Device/EnergyMicro/EFM32G/Include/efm32g_vcmp.h"
+ 326              		.file 24 "../Device/EnergyMicro/EFM32G/Include/efm32g_adc.h"
+ 327              		.file 25 "../Device/EnergyMicro/EFM32G/Include/efm32g_i2c.h"
+ 328              		.file 26 "../Device/EnergyMicro/EFM32G/Include/efm32g_wdog.h"
+ 329              		.file 27 "../Device/EnergyMicro/EFM32G/Include/efm32g_devinfo.h"
+ 330              		.file 28 "../Device/EnergyMicro/EFM32G/Include/efm32g_romtable.h"
+ 331              		.file 29 "../Device/EnergyMicro/EFM32G/Include/efm32g_calibrate.h"

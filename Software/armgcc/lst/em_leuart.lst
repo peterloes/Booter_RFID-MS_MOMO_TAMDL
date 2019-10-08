@@ -1,0 +1,1588 @@
+ARM GAS  /tmp/ccibbwao.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"em_leuart.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.LEUART_Sync,"ax",%progbits
+  19              		.align	1
+  20              		.thumb
+  21              		.thumb_func
+  23              	LEUART_Sync:
+  24              	.LFB76:
+  25              		.file 1 "../emlib/src/em_leuart.c"
+   1:../emlib/src/em_leuart.c **** /***************************************************************************//**
+   2:../emlib/src/em_leuart.c ****  * @file
+   3:../emlib/src/em_leuart.c ****  * @brief Low Energy Universal Asynchronous Receiver/Transmitter (LEUART)
+   4:../emlib/src/em_leuart.c ****  *   Peripheral API
+   5:../emlib/src/em_leuart.c ****  * @author Energy Micro AS
+   6:../emlib/src/em_leuart.c ****  * @version 3.20.2
+   7:../emlib/src/em_leuart.c ****  *******************************************************************************
+   8:../emlib/src/em_leuart.c ****  * @section License
+   9:../emlib/src/em_leuart.c ****  * <b>(C) Copyright 2012 Energy Micro AS, http://www.energymicro.com</b>
+  10:../emlib/src/em_leuart.c ****  *******************************************************************************
+  11:../emlib/src/em_leuart.c ****  *
+  12:../emlib/src/em_leuart.c ****  * Permission is granted to anyone to use this software for any purpose,
+  13:../emlib/src/em_leuart.c ****  * including commercial applications, and to alter it and redistribute it
+  14:../emlib/src/em_leuart.c ****  * freely, subject to the following restrictions:
+  15:../emlib/src/em_leuart.c ****  *
+  16:../emlib/src/em_leuart.c ****  * 1. The origin of this software must not be misrepresented; you must not
+  17:../emlib/src/em_leuart.c ****  *    claim that you wrote the original software.
+  18:../emlib/src/em_leuart.c ****  * 2. Altered source versions must be plainly marked as such, and must not be
+  19:../emlib/src/em_leuart.c ****  *    misrepresented as being the original software.
+  20:../emlib/src/em_leuart.c ****  * 3. This notice may not be removed or altered from any source distribution.
+  21:../emlib/src/em_leuart.c ****  *
+  22:../emlib/src/em_leuart.c ****  * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Energy Micro AS has no
+  23:../emlib/src/em_leuart.c ****  * obligation to support this Software. Energy Micro AS is providing the
+  24:../emlib/src/em_leuart.c ****  * Software "AS IS", with no express or implied warranties of any kind,
+  25:../emlib/src/em_leuart.c ****  * including, but not limited to, any implied warranties of merchantability
+  26:../emlib/src/em_leuart.c ****  * or fitness for any particular purpose or warranties against infringement
+  27:../emlib/src/em_leuart.c ****  * of any proprietary rights of a third party.
+  28:../emlib/src/em_leuart.c ****  *
+  29:../emlib/src/em_leuart.c ****  * Energy Micro AS will not be liable for any consequential, incidental, or
+  30:../emlib/src/em_leuart.c ****  * special damages, or any other relief, or for any claim by any third party,
+  31:../emlib/src/em_leuart.c ****  * arising from your use of this Software.
+  32:../emlib/src/em_leuart.c ****  *
+  33:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ARM GAS  /tmp/ccibbwao.s 			page 2
+
+
+  34:../emlib/src/em_leuart.c **** #include "em_leuart.h"
+  35:../emlib/src/em_leuart.c **** #if defined(LEUART_COUNT) && (LEUART_COUNT > 0)
+  36:../emlib/src/em_leuart.c **** 
+  37:../emlib/src/em_leuart.c **** #include "em_cmu.h"
+  38:../emlib/src/em_leuart.c **** #include "em_assert.h"
+  39:../emlib/src/em_leuart.c **** 
+  40:../emlib/src/em_leuart.c **** /***************************************************************************//**
+  41:../emlib/src/em_leuart.c ****  * @addtogroup EM_Library
+  42:../emlib/src/em_leuart.c ****  * @{
+  43:../emlib/src/em_leuart.c ****  ******************************************************************************/
+  44:../emlib/src/em_leuart.c **** 
+  45:../emlib/src/em_leuart.c **** /***************************************************************************//**
+  46:../emlib/src/em_leuart.c ****  * @addtogroup LEUART
+  47:../emlib/src/em_leuart.c ****  * @brief Low Energy Universal Asynchronous Receiver/Transmitter (LEUART)
+  48:../emlib/src/em_leuart.c ****  *        Peripheral API
+  49:../emlib/src/em_leuart.c ****  * @{
+  50:../emlib/src/em_leuart.c ****  ******************************************************************************/
+  51:../emlib/src/em_leuart.c **** 
+  52:../emlib/src/em_leuart.c **** /*******************************************************************************
+  53:../emlib/src/em_leuart.c ****  *******************************   DEFINES   ***********************************
+  54:../emlib/src/em_leuart.c ****  ******************************************************************************/
+  55:../emlib/src/em_leuart.c **** 
+  56:../emlib/src/em_leuart.c **** /** @cond DO_NOT_INCLUDE_WITH_DOXYGEN */
+  57:../emlib/src/em_leuart.c **** 
+  58:../emlib/src/em_leuart.c **** 
+  59:../emlib/src/em_leuart.c **** /** Validation of LEUART register block pointer reference
+  60:../emlib/src/em_leuart.c ****  *  for assert statements. */
+  61:../emlib/src/em_leuart.c **** #if (LEUART_COUNT == 1)
+  62:../emlib/src/em_leuart.c **** #define LEUART_REF_VALID(ref)    ((ref) == LEUART0)
+  63:../emlib/src/em_leuart.c **** #elif (LEUART_COUNT == 2)
+  64:../emlib/src/em_leuart.c **** #define LEUART_REF_VALID(ref)    (((ref) == LEUART0) || ((ref) == LEUART1))
+  65:../emlib/src/em_leuart.c **** #else
+  66:../emlib/src/em_leuart.c **** #error Undefined number of low energy UARTs (LEUART).
+  67:../emlib/src/em_leuart.c **** #endif
+  68:../emlib/src/em_leuart.c **** 
+  69:../emlib/src/em_leuart.c **** /** @endcond */
+  70:../emlib/src/em_leuart.c **** 
+  71:../emlib/src/em_leuart.c **** /*******************************************************************************
+  72:../emlib/src/em_leuart.c ****  **************************   LOCAL FUNCTIONS   ********************************
+  73:../emlib/src/em_leuart.c ****  ******************************************************************************/
+  74:../emlib/src/em_leuart.c **** 
+  75:../emlib/src/em_leuart.c **** /** @cond DO_NOT_INCLUDE_WITH_DOXYGEN */
+  76:../emlib/src/em_leuart.c **** 
+  77:../emlib/src/em_leuart.c **** /***************************************************************************//**
+  78:../emlib/src/em_leuart.c ****  * @brief
+  79:../emlib/src/em_leuart.c ****  *   Wait for ongoing sync of register(s) to low frequency domain to complete.
+  80:../emlib/src/em_leuart.c ****  *
+  81:../emlib/src/em_leuart.c ****  * @param[in] leuart
+  82:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block
+  83:../emlib/src/em_leuart.c ****  *
+  84:../emlib/src/em_leuart.c ****  * @param[in] mask
+  85:../emlib/src/em_leuart.c ****  *   Bitmask corresponding to SYNCBUSY register defined bits, indicating
+  86:../emlib/src/em_leuart.c ****  *   registers that must complete any ongoing synchronization.
+  87:../emlib/src/em_leuart.c ****  ******************************************************************************/
+  88:../emlib/src/em_leuart.c **** __STATIC_INLINE void LEUART_Sync(LEUART_TypeDef *leuart, uint32_t mask)
+  89:../emlib/src/em_leuart.c **** {
+  26              		.loc 1 89 0
+ARM GAS  /tmp/ccibbwao.s 			page 3
+
+
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 0
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30              		@ link register save eliminated.
+  31              	.LVL0:
+  90:../emlib/src/em_leuart.c ****   /* Avoid deadlock if modifying the same register twice when freeze mode is */
+  91:../emlib/src/em_leuart.c ****   /* activated. */
+  92:../emlib/src/em_leuart.c ****   if (leuart->FREEZE & LEUART_FREEZE_REGFREEZE)
+  32              		.loc 1 92 0
+  33 0000 036C     		ldr	r3, [r0, #64]
+  34 0002 DB07     		lsls	r3, r3, #31
+  35 0004 02D4     		bmi	.L1
+  36              	.L3:
+  93:../emlib/src/em_leuart.c ****   {
+  94:../emlib/src/em_leuart.c ****     return;
+  95:../emlib/src/em_leuart.c ****   }
+  96:../emlib/src/em_leuart.c **** 
+  97:../emlib/src/em_leuart.c ****   /* Wait for any pending previous write operation to have been completed */
+  98:../emlib/src/em_leuart.c ****   /* in low frequency domain */
+  99:../emlib/src/em_leuart.c ****   while (leuart->SYNCBUSY & mask)
+  37              		.loc 1 99 0
+  38 0006 436C     		ldr	r3, [r0, #68]
+  39 0008 1942     		tst	r1, r3
+  40 000a FCD1     		bne	.L3
+  41              	.L1:
+  42 000c 7047     		bx	lr
+  43              		.cfi_endproc
+  44              	.LFE76:
+  46              		.section	.text.LEUART_BaudrateCalc,"ax",%progbits
+  47              		.align	1
+  48              		.global	LEUART_BaudrateCalc
+  49              		.thumb
+  50              		.thumb_func
+  52              	LEUART_BaudrateCalc:
+  53              	.LFB77:
+ 100:../emlib/src/em_leuart.c ****     ;
+ 101:../emlib/src/em_leuart.c **** }
+ 102:../emlib/src/em_leuart.c **** 
+ 103:../emlib/src/em_leuart.c **** /** @endcond */
+ 104:../emlib/src/em_leuart.c **** 
+ 105:../emlib/src/em_leuart.c **** /*******************************************************************************
+ 106:../emlib/src/em_leuart.c ****  **************************   GLOBAL FUNCTIONS   *******************************
+ 107:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 108:../emlib/src/em_leuart.c **** 
+ 109:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 110:../emlib/src/em_leuart.c ****  * @brief
+ 111:../emlib/src/em_leuart.c ****  *   Calculate baudrate for LEUART given reference frequency and clock division.
+ 112:../emlib/src/em_leuart.c ****  *
+ 113:../emlib/src/em_leuart.c ****  * @details
+ 114:../emlib/src/em_leuart.c ****  *   This function returns the baudrate that a LEUART module will use if
+ 115:../emlib/src/em_leuart.c ****  *   configured with the given frequency and clock divisor. Notice that
+ 116:../emlib/src/em_leuart.c ****  *   this function will not use actual HW configuration. It can be used
+ 117:../emlib/src/em_leuart.c ****  *   to determinate if a given configuration is sufficiently accurate for the
+ 118:../emlib/src/em_leuart.c ****  *   application.
+ 119:../emlib/src/em_leuart.c ****  *
+ 120:../emlib/src/em_leuart.c ****  * @param[in] refFreq
+ 121:../emlib/src/em_leuart.c ****  *   LEUART peripheral frequency used.
+ARM GAS  /tmp/ccibbwao.s 			page 4
+
+
+ 122:../emlib/src/em_leuart.c ****  *
+ 123:../emlib/src/em_leuart.c ****  * @param[in] clkdiv
+ 124:../emlib/src/em_leuart.c ****  *   Clock division factor to be used.
+ 125:../emlib/src/em_leuart.c ****  *
+ 126:../emlib/src/em_leuart.c ****  * @return
+ 127:../emlib/src/em_leuart.c ****  *   Baudrate with given settings.
+ 128:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 129:../emlib/src/em_leuart.c **** uint32_t LEUART_BaudrateCalc(uint32_t refFreq, uint32_t clkdiv)
+ 130:../emlib/src/em_leuart.c **** {
+  54              		.loc 1 130 0
+  55              		.cfi_startproc
+  56              		@ args = 0, pretend = 0, frame = 0
+  57              		@ frame_needed = 0, uses_anonymous_args = 0
+  58              		@ link register save eliminated.
+  59              	.LVL1:
+ 131:../emlib/src/em_leuart.c ****   uint32_t divisor;
+ 132:../emlib/src/em_leuart.c ****   uint32_t remainder;
+ 133:../emlib/src/em_leuart.c ****   uint32_t quotient;
+ 134:../emlib/src/em_leuart.c ****   uint32_t br;
+ 135:../emlib/src/em_leuart.c **** 
+ 136:../emlib/src/em_leuart.c ****   /* Mask out unused bits */
+ 137:../emlib/src/em_leuart.c ****   clkdiv &= _LEUART_CLKDIV_MASK;
+  60              		.loc 1 137 0
+  61 0000 21F00701 		bic	r1, r1, #7
+  62              	.LVL2:
+  63 0004 4904     		lsls	r1, r1, #17
+  64 0006 490C     		lsrs	r1, r1, #17
+ 138:../emlib/src/em_leuart.c **** 
+ 139:../emlib/src/em_leuart.c ****   /* We want to use integer division to avoid forcing in float division */
+ 140:../emlib/src/em_leuart.c ****   /* utils, and yet keep rounding effect errors to a minimum. */
+ 141:../emlib/src/em_leuart.c **** 
+ 142:../emlib/src/em_leuart.c ****   /*
+ 143:../emlib/src/em_leuart.c ****    * Baudrate is given by:
+ 144:../emlib/src/em_leuart.c ****    *
+ 145:../emlib/src/em_leuart.c ****    * br = fLEUARTn/(1 + (CLKDIV / 256))
+ 146:../emlib/src/em_leuart.c ****    *
+ 147:../emlib/src/em_leuart.c ****    * which can be rewritten to
+ 148:../emlib/src/em_leuart.c ****    *
+ 149:../emlib/src/em_leuart.c ****    * br = (256 * fLEUARTn)/(256 + CLKDIV)
+ 150:../emlib/src/em_leuart.c ****    *
+ 151:../emlib/src/em_leuart.c ****    * Normally, with fLEUARTn appr 32768Hz, there is no problem with overflow
+ 152:../emlib/src/em_leuart.c ****    * if using 32 bit arithmetic. However, since fLEUARTn may be derived from
+ 153:../emlib/src/em_leuart.c ****    * HFCORECLK as well, we must consider overflow when using integer arithmetic.
+ 154:../emlib/src/em_leuart.c ****    */
+ 155:../emlib/src/em_leuart.c **** 
+ 156:../emlib/src/em_leuart.c ****   /*
+ 157:../emlib/src/em_leuart.c ****    * The basic problem with integer division in the above formula is that
+ 158:../emlib/src/em_leuart.c ****    * the dividend (256 * fLEUARTn) may become higher than max 32 bit
+ 159:../emlib/src/em_leuart.c ****    * integer. Yet we want to evaluate dividend first before dividing in
+ 160:../emlib/src/em_leuart.c ****    * order to get as small rounding effects as possible. We do not want
+ 161:../emlib/src/em_leuart.c ****    * to make too harsh restrictions on max fLEUARTn value either.
+ 162:../emlib/src/em_leuart.c ****    *
+ 163:../emlib/src/em_leuart.c ****    * For division a/b, we can write
+ 164:../emlib/src/em_leuart.c ****    *
+ 165:../emlib/src/em_leuart.c ****    * a = qb + r
+ 166:../emlib/src/em_leuart.c ****    *
+ 167:../emlib/src/em_leuart.c ****    * where q is the quotient and r is the remainder, both integers.
+ARM GAS  /tmp/ccibbwao.s 			page 5
+
+
+ 168:../emlib/src/em_leuart.c ****    *
+ 169:../emlib/src/em_leuart.c ****    * The orignal baudrate formula can be rewritten as
+ 170:../emlib/src/em_leuart.c ****    *
+ 171:../emlib/src/em_leuart.c ****    * br = 256a / b = 256(qb + r)/b = 256q + 256r/b
+ 172:../emlib/src/em_leuart.c ****    *
+ 173:../emlib/src/em_leuart.c ****    * where a is 'refFreq' and b is 'divisor', referring to variable names.
+ 174:../emlib/src/em_leuart.c ****    */
+ 175:../emlib/src/em_leuart.c **** 
+ 176:../emlib/src/em_leuart.c ****   divisor = 256 + clkdiv;
+  65              		.loc 1 176 0
+  66 0008 01F58071 		add	r1, r1, #256
+  67              	.LVL3:
+ 177:../emlib/src/em_leuart.c **** 
+ 178:../emlib/src/em_leuart.c ****   quotient  = refFreq / divisor;
+  68              		.loc 1 178 0
+  69 000c B0FBF1F3 		udiv	r3, r0, r1
+  70              	.LVL4:
+ 179:../emlib/src/em_leuart.c ****   remainder = refFreq % divisor;
+  71              		.loc 1 179 0
+  72 0010 01FB1300 		mls	r0, r1, r3, r0
+  73              	.LVL5:
+ 180:../emlib/src/em_leuart.c **** 
+ 181:../emlib/src/em_leuart.c ****   /* Since divisor >= 256, the below cannot exceed max 32 bit value. */
+ 182:../emlib/src/em_leuart.c ****   br = 256 * quotient;
+ 183:../emlib/src/em_leuart.c **** 
+ 184:../emlib/src/em_leuart.c ****   /*
+ 185:../emlib/src/em_leuart.c ****    * Remainder < (256 + clkdiv), which means dividend (256 * remainder) worst case is
+ 186:../emlib/src/em_leuart.c ****    * 256*(256 + 0x7ff8) = 0x80F800.
+ 187:../emlib/src/em_leuart.c ****    */
+ 188:../emlib/src/em_leuart.c ****   br += (256 * remainder) / divisor;
+  74              		.loc 1 188 0
+  75 0014 0002     		lsls	r0, r0, #8
+  76 0016 B0FBF1F0 		udiv	r0, r0, r1
+ 189:../emlib/src/em_leuart.c **** 
+ 190:../emlib/src/em_leuart.c ****   return br;
+ 191:../emlib/src/em_leuart.c **** }
+  77              		.loc 1 191 0
+  78 001a 00EB0320 		add	r0, r0, r3, lsl #8
+  79 001e 7047     		bx	lr
+  80              		.cfi_endproc
+  81              	.LFE77:
+  83              		.section	.text.LEUART_BaudrateGet,"ax",%progbits
+  84              		.align	1
+  85              		.global	LEUART_BaudrateGet
+  86              		.thumb
+  87              		.thumb_func
+  89              	LEUART_BaudrateGet:
+  90              	.LFB78:
+ 192:../emlib/src/em_leuart.c **** 
+ 193:../emlib/src/em_leuart.c **** 
+ 194:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 195:../emlib/src/em_leuart.c ****  * @brief
+ 196:../emlib/src/em_leuart.c ****  *   Get current baudrate for LEUART.
+ 197:../emlib/src/em_leuart.c ****  *
+ 198:../emlib/src/em_leuart.c ****  * @details
+ 199:../emlib/src/em_leuart.c ****  *   This function returns the actual baudrate (not considering oscillator
+ 200:../emlib/src/em_leuart.c ****  *   inaccuracies) used by a LEUART peripheral.
+ARM GAS  /tmp/ccibbwao.s 			page 6
+
+
+ 201:../emlib/src/em_leuart.c ****  *
+ 202:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 203:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 204:../emlib/src/em_leuart.c ****  *
+ 205:../emlib/src/em_leuart.c ****  * @return
+ 206:../emlib/src/em_leuart.c ****  *   Current baudrate.
+ 207:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 208:../emlib/src/em_leuart.c **** uint32_t LEUART_BaudrateGet(LEUART_TypeDef *leuart)
+ 209:../emlib/src/em_leuart.c **** {
+  91              		.loc 1 209 0
+  92              		.cfi_startproc
+  93              		@ args = 0, pretend = 0, frame = 0
+  94              		@ frame_needed = 0, uses_anonymous_args = 0
+  95              	.LVL6:
+ 210:../emlib/src/em_leuart.c ****   uint32_t          freq;
+ 211:../emlib/src/em_leuart.c ****   CMU_Clock_TypeDef clock;
+ 212:../emlib/src/em_leuart.c **** 
+ 213:../emlib/src/em_leuart.c ****   /* Get current frequency */
+ 214:../emlib/src/em_leuart.c ****   if (leuart == LEUART0)
+  96              		.loc 1 214 0
+  97 0000 0C4B     		ldr	r3, .L17
+ 209:../emlib/src/em_leuart.c **** {
+  98              		.loc 1 209 0
+  99 0002 10B5     		push	{r4, lr}
+ 100              		.cfi_def_cfa_offset 8
+ 101              		.cfi_offset 4, -8
+ 102              		.cfi_offset 14, -4
+ 103              		.loc 1 214 0
+ 104 0004 9842     		cmp	r0, r3
+ 209:../emlib/src/em_leuart.c **** {
+ 105              		.loc 1 209 0
+ 106 0006 0446     		mov	r4, r0
+ 107              		.loc 1 214 0
+ 108 0008 05D0     		beq	.L12
+ 215:../emlib/src/em_leuart.c ****   {
+ 216:../emlib/src/em_leuart.c ****     clock = cmuClock_LEUART0;
+ 217:../emlib/src/em_leuart.c ****   }
+ 218:../emlib/src/em_leuart.c **** #if (LEUART_COUNT > 1)
+ 219:../emlib/src/em_leuart.c ****   else if (leuart == LEUART1)
+ 109              		.loc 1 219 0
+ 110 000a 03F58063 		add	r3, r3, #1024
+ 111 000e 9842     		cmp	r0, r3
+ 112 0010 09D1     		bne	.L16
+ 220:../emlib/src/em_leuart.c ****   {
+ 221:../emlib/src/em_leuart.c ****     clock = cmuClock_LEUART1;
+ 113              		.loc 1 221 0
+ 114 0012 0948     		ldr	r0, .L17+4
+ 115              	.LVL7:
+ 116 0014 00E0     		b	.L10
+ 117              	.LVL8:
+ 118              	.L12:
+ 216:../emlib/src/em_leuart.c ****     clock = cmuClock_LEUART0;
+ 119              		.loc 1 216 0
+ 120 0016 0948     		ldr	r0, .L17+8
+ 121              	.LVL9:
+ 122              	.L10:
+ 222:../emlib/src/em_leuart.c ****   }
+ARM GAS  /tmp/ccibbwao.s 			page 7
+
+
+ 223:../emlib/src/em_leuart.c **** #endif
+ 224:../emlib/src/em_leuart.c ****   else
+ 225:../emlib/src/em_leuart.c ****   {
+ 226:../emlib/src/em_leuart.c ****     EFM_ASSERT(0);
+ 227:../emlib/src/em_leuart.c ****     return 0;
+ 228:../emlib/src/em_leuart.c ****   }
+ 229:../emlib/src/em_leuart.c **** 
+ 230:../emlib/src/em_leuart.c ****   freq = CMU_ClockFreqGet(clock);
+ 123              		.loc 1 230 0
+ 124 0018 FFF7FEFF 		bl	CMU_ClockFreqGet
+ 125              	.LVL10:
+ 231:../emlib/src/em_leuart.c **** 
+ 232:../emlib/src/em_leuart.c ****   return LEUART_BaudrateCalc(freq, leuart->CLKDIV);
+ 126              		.loc 1 232 0
+ 127 001c E168     		ldr	r1, [r4, #12]
+ 233:../emlib/src/em_leuart.c **** }
+ 128              		.loc 1 233 0
+ 129 001e BDE81040 		pop	{r4, lr}
+ 130              	.LVL11:
+ 232:../emlib/src/em_leuart.c ****   return LEUART_BaudrateCalc(freq, leuart->CLKDIV);
+ 131              		.loc 1 232 0
+ 132 0022 FFF7FEBF 		b	LEUART_BaudrateCalc
+ 133              	.LVL12:
+ 134              	.L16:
+ 226:../emlib/src/em_leuart.c ****     EFM_ASSERT(0);
+ 135              		.loc 1 226 0
+ 136 0026 0648     		ldr	r0, .L17+12
+ 137              	.LVL13:
+ 138 0028 E221     		movs	r1, #226
+ 139 002a FFF7FEFF 		bl	assertEFM
+ 140              	.LVL14:
+ 141              		.loc 1 233 0
+ 142 002e 0020     		movs	r0, #0
+ 143 0030 10BD     		pop	{r4, pc}
+ 144              	.LVL15:
+ 145              	.L18:
+ 146 0032 00BF     		.align	2
+ 147              	.L17:
+ 148 0034 00400840 		.word	1074282496
+ 149 0038 40151600 		.word	1447232
+ 150 003c 40051400 		.word	1312064
+ 151 0040 00000000 		.word	.LC0
+ 152              		.cfi_endproc
+ 153              	.LFE78:
+ 155              		.section	.text.LEUART_BaudrateSet,"ax",%progbits
+ 156              		.align	1
+ 157              		.global	LEUART_BaudrateSet
+ 158              		.thumb
+ 159              		.thumb_func
+ 161              	LEUART_BaudrateSet:
+ 162              	.LFB79:
+ 234:../emlib/src/em_leuart.c **** 
+ 235:../emlib/src/em_leuart.c **** 
+ 236:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 237:../emlib/src/em_leuart.c ****  * @brief
+ 238:../emlib/src/em_leuart.c ****  *   Configure baudrate (or as close as possible to specified baudrate).
+ 239:../emlib/src/em_leuart.c ****  *
+ARM GAS  /tmp/ccibbwao.s 			page 8
+
+
+ 240:../emlib/src/em_leuart.c ****  * @note
+ 241:../emlib/src/em_leuart.c ****  *   The setting of a baudrate requires synchronization into the
+ 242:../emlib/src/em_leuart.c ****  *   low frequency domain. If the same register is modified before a previous
+ 243:../emlib/src/em_leuart.c ****  *   update has completed, this function will stall until the previous
+ 244:../emlib/src/em_leuart.c ****  *   synchronization has completed.
+ 245:../emlib/src/em_leuart.c ****  *
+ 246:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 247:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 248:../emlib/src/em_leuart.c ****  *
+ 249:../emlib/src/em_leuart.c ****  * @param[in] refFreq
+ 250:../emlib/src/em_leuart.c ****  *   LEUART reference clock frequency in Hz that will be used. If set to 0,
+ 251:../emlib/src/em_leuart.c ****  *   the currently configured reference clock is assumed.
+ 252:../emlib/src/em_leuart.c ****  *
+ 253:../emlib/src/em_leuart.c ****  * @param[in] baudrate
+ 254:../emlib/src/em_leuart.c ****  *   Baudrate to try to achieve for LEUART.
+ 255:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 256:../emlib/src/em_leuart.c **** void LEUART_BaudrateSet(LEUART_TypeDef *leuart,
+ 257:../emlib/src/em_leuart.c ****                         uint32_t refFreq,
+ 258:../emlib/src/em_leuart.c ****                         uint32_t baudrate)
+ 259:../emlib/src/em_leuart.c **** {
+ 163              		.loc 1 259 0
+ 164              		.cfi_startproc
+ 165              		@ args = 0, pretend = 0, frame = 0
+ 166              		@ frame_needed = 0, uses_anonymous_args = 0
+ 167              	.LVL16:
+ 168 0000 70B5     		push	{r4, r5, r6, lr}
+ 169              		.cfi_def_cfa_offset 16
+ 170              		.cfi_offset 4, -16
+ 171              		.cfi_offset 5, -12
+ 172              		.cfi_offset 6, -8
+ 173              		.cfi_offset 14, -4
+ 174              		.loc 1 259 0
+ 175 0002 0446     		mov	r4, r0
+ 176 0004 0D46     		mov	r5, r1
+ 260:../emlib/src/em_leuart.c ****   uint32_t          clkdiv;
+ 261:../emlib/src/em_leuart.c ****   CMU_Clock_TypeDef clock;
+ 262:../emlib/src/em_leuart.c **** 
+ 263:../emlib/src/em_leuart.c ****   /* Inhibit divide by 0 */
+ 264:../emlib/src/em_leuart.c ****   EFM_ASSERT(baudrate);
+ 177              		.loc 1 264 0
+ 178 0006 1646     		mov	r6, r2
+ 179 0008 22B9     		cbnz	r2, .L20
+ 180              		.loc 1 264 0 is_stmt 0 discriminator 1
+ 181 000a 1848     		ldr	r0, .L26
+ 182              	.LVL17:
+ 183 000c 4FF48471 		mov	r1, #264
+ 184              	.LVL18:
+ 185 0010 FFF7FEFF 		bl	assertEFM
+ 186              	.LVL19:
+ 187              	.L20:
+ 265:../emlib/src/em_leuart.c **** 
+ 266:../emlib/src/em_leuart.c ****   /*
+ 267:../emlib/src/em_leuart.c ****    * We want to use integer division to avoid forcing in float division
+ 268:../emlib/src/em_leuart.c ****    * utils, and yet keep rounding effect errors to a minimum.
+ 269:../emlib/src/em_leuart.c ****    *
+ 270:../emlib/src/em_leuart.c ****    * CLKDIV in asynchronous mode is given by:
+ 271:../emlib/src/em_leuart.c ****    *
+ARM GAS  /tmp/ccibbwao.s 			page 9
+
+
+ 272:../emlib/src/em_leuart.c ****    * CLKDIV = 256*(fLEUARTn/br - 1) = ((256*fLEUARTn)/br) - 256
+ 273:../emlib/src/em_leuart.c ****    *
+ 274:../emlib/src/em_leuart.c ****    * Normally, with fLEUARTn appr 32768Hz, there is no problem with overflow
+ 275:../emlib/src/em_leuart.c ****    * if using 32 bit arithmetic. However, since fLEUARTn may be derived from
+ 276:../emlib/src/em_leuart.c ****    * HFCORECLK as well, we must consider overflow when using integer arithmetic.
+ 277:../emlib/src/em_leuart.c ****    *
+ 278:../emlib/src/em_leuart.c ****    * The basic problem with integer division in the above formula is that
+ 279:../emlib/src/em_leuart.c ****    * the dividend (256 * fLEUARTn) may become higher than max 32 bit
+ 280:../emlib/src/em_leuart.c ****    * integer. Yet, we want to evaluate dividend first before dividing in
+ 281:../emlib/src/em_leuart.c ****    * order to get as small rounding effects as possible. We do not want
+ 282:../emlib/src/em_leuart.c ****    * to make too harsh restrictions on max fLEUARTn value either.
+ 283:../emlib/src/em_leuart.c ****    *
+ 284:../emlib/src/em_leuart.c ****    * Since the last 3 bits of CLKDIV are don't care, we can base our
+ 285:../emlib/src/em_leuart.c ****    * integer arithmetic on the below formula
+ 286:../emlib/src/em_leuart.c ****    *
+ 287:../emlib/src/em_leuart.c ****    * CLKDIV/8 = ((32*fLEUARTn)/br) - 32
+ 288:../emlib/src/em_leuart.c ****    *
+ 289:../emlib/src/em_leuart.c ****    * and calculate 1/8 of CLKDIV first. This allows for fLEUARTn
+ 290:../emlib/src/em_leuart.c ****    * up to 128MHz without overflowing a 32 bit value!
+ 291:../emlib/src/em_leuart.c ****    */
+ 292:../emlib/src/em_leuart.c **** 
+ 293:../emlib/src/em_leuart.c ****   /* Get current frequency? */
+ 294:../emlib/src/em_leuart.c ****   if (!refFreq)
+ 188              		.loc 1 294 0 is_stmt 1
+ 189 0014 9DB9     		cbnz	r5, .L21
+ 295:../emlib/src/em_leuart.c ****   {
+ 296:../emlib/src/em_leuart.c ****     if (leuart == LEUART0)
+ 190              		.loc 1 296 0
+ 191 0016 164B     		ldr	r3, .L26+4
+ 192 0018 9C42     		cmp	r4, r3
+ 193 001a 0AD0     		beq	.L24
+ 297:../emlib/src/em_leuart.c ****     {
+ 298:../emlib/src/em_leuart.c ****       clock = cmuClock_LEUART0;
+ 299:../emlib/src/em_leuart.c ****     }
+ 300:../emlib/src/em_leuart.c **** #if (LEUART_COUNT > 1)
+ 301:../emlib/src/em_leuart.c ****     else if (leuart == LEUART1)
+ 194              		.loc 1 301 0
+ 195 001c 03F58063 		add	r3, r3, #1024
+ 196 0020 9C42     		cmp	r4, r3
+ 197 0022 08D0     		beq	.L25
+ 302:../emlib/src/em_leuart.c ****     {
+ 303:../emlib/src/em_leuart.c ****       clock = cmuClock_LEUART1;
+ 304:../emlib/src/em_leuart.c ****     }
+ 305:../emlib/src/em_leuart.c **** #endif
+ 306:../emlib/src/em_leuart.c ****     else
+ 307:../emlib/src/em_leuart.c ****     {
+ 308:../emlib/src/em_leuart.c ****       EFM_ASSERT(0);
+ 309:../emlib/src/em_leuart.c ****       return;
+ 310:../emlib/src/em_leuart.c ****     }
+ 311:../emlib/src/em_leuart.c **** 
+ 312:../emlib/src/em_leuart.c ****     refFreq = CMU_ClockFreqGet(clock);
+ 313:../emlib/src/em_leuart.c ****   }
+ 314:../emlib/src/em_leuart.c **** 
+ 315:../emlib/src/em_leuart.c ****   /* Calculate and set CLKDIV with fractional bits */
+ 316:../emlib/src/em_leuart.c ****   clkdiv  = (32 * refFreq) / baudrate;
+ 317:../emlib/src/em_leuart.c ****   clkdiv -= 32;
+ 318:../emlib/src/em_leuart.c ****   clkdiv *= 8;
+ARM GAS  /tmp/ccibbwao.s 			page 10
+
+
+ 319:../emlib/src/em_leuart.c **** 
+ 320:../emlib/src/em_leuart.c ****   /* Verify that resulting clock divider is within limits */
+ 321:../emlib/src/em_leuart.c ****   EFM_ASSERT(clkdiv <= _LEUART_CLKDIV_MASK);
+ 322:../emlib/src/em_leuart.c **** 
+ 323:../emlib/src/em_leuart.c ****   /* If EFM_ASSERT is not enabled, make sure we don't write to reserved bits */
+ 324:../emlib/src/em_leuart.c ****   clkdiv &= _LEUART_CLKDIV_MASK;
+ 325:../emlib/src/em_leuart.c **** 
+ 326:../emlib/src/em_leuart.c ****   /* LF register about to be modified require sync. busy check */
+ 327:../emlib/src/em_leuart.c ****   LEUART_Sync(leuart, LEUART_SYNCBUSY_CLKDIV);
+ 328:../emlib/src/em_leuart.c **** 
+ 329:../emlib/src/em_leuart.c ****   leuart->CLKDIV = clkdiv;
+ 330:../emlib/src/em_leuart.c **** }
+ 198              		.loc 1 330 0
+ 199 0024 BDE87040 		pop	{r4, r5, r6, lr}
+ 200              	.LVL20:
+ 308:../emlib/src/em_leuart.c ****       EFM_ASSERT(0);
+ 201              		.loc 1 308 0
+ 202 0028 1048     		ldr	r0, .L26
+ 203 002a 4FF49A71 		mov	r1, #308
+ 204 002e FFF7FEBF 		b	assertEFM
+ 205              	.LVL21:
+ 206              	.L24:
+ 298:../emlib/src/em_leuart.c ****       clock = cmuClock_LEUART0;
+ 207              		.loc 1 298 0
+ 208 0032 1048     		ldr	r0, .L26+8
+ 209 0034 00E0     		b	.L22
+ 210              	.L25:
+ 303:../emlib/src/em_leuart.c ****       clock = cmuClock_LEUART1;
+ 211              		.loc 1 303 0
+ 212 0036 1048     		ldr	r0, .L26+12
+ 213              	.L22:
+ 214              	.LVL22:
+ 312:../emlib/src/em_leuart.c ****     refFreq = CMU_ClockFreqGet(clock);
+ 215              		.loc 1 312 0
+ 216 0038 FFF7FEFF 		bl	CMU_ClockFreqGet
+ 217              	.LVL23:
+ 218 003c 0546     		mov	r5, r0
+ 219              	.LVL24:
+ 220              	.L21:
+ 316:../emlib/src/em_leuart.c ****   clkdiv  = (32 * refFreq) / baudrate;
+ 221              		.loc 1 316 0
+ 222 003e 6D01     		lsls	r5, r5, #5
+ 223              	.LVL25:
+ 224 0040 B5FBF6F5 		udiv	r5, r5, r6
+ 225              	.LVL26:
+ 317:../emlib/src/em_leuart.c ****   clkdiv -= 32;
+ 226              		.loc 1 317 0
+ 227 0044 203D     		subs	r5, r5, #32
+ 228              	.LVL27:
+ 318:../emlib/src/em_leuart.c ****   clkdiv *= 8;
+ 229              		.loc 1 318 0
+ 230 0046 ED00     		lsls	r5, r5, #3
+ 231              	.LVL28:
+ 321:../emlib/src/em_leuart.c ****   EFM_ASSERT(clkdiv <= _LEUART_CLKDIV_MASK);
+ 232              		.loc 1 321 0
+ 233 0048 47F6F873 		movw	r3, #32760
+ 234 004c 9D42     		cmp	r5, r3
+ARM GAS  /tmp/ccibbwao.s 			page 11
+
+
+ 235 004e 04D9     		bls	.L23
+ 321:../emlib/src/em_leuart.c ****   EFM_ASSERT(clkdiv <= _LEUART_CLKDIV_MASK);
+ 236              		.loc 1 321 0 is_stmt 0 discriminator 1
+ 237 0050 0648     		ldr	r0, .L26
+ 238 0052 40F24111 		movw	r1, #321
+ 239 0056 FFF7FEFF 		bl	assertEFM
+ 240              	.LVL29:
+ 241              	.L23:
+ 324:../emlib/src/em_leuart.c ****   clkdiv &= _LEUART_CLKDIV_MASK;
+ 242              		.loc 1 324 0 is_stmt 1
+ 243 005a 47F6F876 		movw	r6, #32760
+ 244              	.LVL30:
+ 245 005e 2E40     		ands	r6, r6, r5
+ 246              	.LVL31:
+ 327:../emlib/src/em_leuart.c ****   LEUART_Sync(leuart, LEUART_SYNCBUSY_CLKDIV);
+ 247              		.loc 1 327 0
+ 248 0060 2046     		mov	r0, r4
+ 249 0062 0421     		movs	r1, #4
+ 250 0064 FFF7FEFF 		bl	LEUART_Sync
+ 251              	.LVL32:
+ 329:../emlib/src/em_leuart.c ****   leuart->CLKDIV = clkdiv;
+ 252              		.loc 1 329 0
+ 253 0068 E660     		str	r6, [r4, #12]
+ 254 006a 70BD     		pop	{r4, r5, r6, pc}
+ 255              	.LVL33:
+ 256              	.L27:
+ 257              		.align	2
+ 258              	.L26:
+ 259 006c 00000000 		.word	.LC0
+ 260 0070 00400840 		.word	1074282496
+ 261 0074 40051400 		.word	1312064
+ 262 0078 40151600 		.word	1447232
+ 263              		.cfi_endproc
+ 264              	.LFE79:
+ 266              		.section	.text.LEUART_Enable,"ax",%progbits
+ 267              		.align	1
+ 268              		.global	LEUART_Enable
+ 269              		.thumb
+ 270              		.thumb_func
+ 272              	LEUART_Enable:
+ 273              	.LFB80:
+ 331:../emlib/src/em_leuart.c **** 
+ 332:../emlib/src/em_leuart.c **** 
+ 333:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 334:../emlib/src/em_leuart.c ****  * @brief
+ 335:../emlib/src/em_leuart.c ****  *   Enable/disable LEUART receiver and/or transmitter.
+ 336:../emlib/src/em_leuart.c ****  *
+ 337:../emlib/src/em_leuart.c ****  * @details
+ 338:../emlib/src/em_leuart.c ****  *   Notice that this function does not do any configuration. Enabling should
+ 339:../emlib/src/em_leuart.c ****  *   normally be done after initialization is done (if not enabled as part
+ 340:../emlib/src/em_leuart.c ****  *   of init).
+ 341:../emlib/src/em_leuart.c ****  *
+ 342:../emlib/src/em_leuart.c ****  * @note
+ 343:../emlib/src/em_leuart.c ****  *   Enabling/disabling requires synchronization into the low frequency domain.
+ 344:../emlib/src/em_leuart.c ****  *   If the same register is modified before a previous update has completed,
+ 345:../emlib/src/em_leuart.c ****  *   this function will stall until the previous synchronization has completed.
+ 346:../emlib/src/em_leuart.c ****  *
+ARM GAS  /tmp/ccibbwao.s 			page 12
+
+
+ 347:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 348:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 349:../emlib/src/em_leuart.c ****  *
+ 350:../emlib/src/em_leuart.c ****  * @param[in] enable
+ 351:../emlib/src/em_leuart.c ****  *   Select status for receiver/transmitter.
+ 352:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 353:../emlib/src/em_leuart.c **** void LEUART_Enable(LEUART_TypeDef *leuart, LEUART_Enable_TypeDef enable)
+ 354:../emlib/src/em_leuart.c **** {
+ 274              		.loc 1 354 0
+ 275              		.cfi_startproc
+ 276              		@ args = 0, pretend = 0, frame = 0
+ 277              		@ frame_needed = 0, uses_anonymous_args = 0
+ 278              	.LVL34:
+ 279 0000 38B5     		push	{r3, r4, r5, lr}
+ 280              		.cfi_def_cfa_offset 16
+ 281              		.cfi_offset 3, -16
+ 282              		.cfi_offset 4, -12
+ 283              		.cfi_offset 5, -8
+ 284              		.cfi_offset 14, -4
+ 355:../emlib/src/em_leuart.c ****   uint32_t tmp;
+ 356:../emlib/src/em_leuart.c **** 
+ 357:../emlib/src/em_leuart.c ****   /* Make sure the module exists on the selected chip */
+ 358:../emlib/src/em_leuart.c ****   EFM_ASSERT(LEUART_REF_VALID(leuart));
+ 285              		.loc 1 358 0
+ 286 0002 0C4B     		ldr	r3, .L30
+ 354:../emlib/src/em_leuart.c **** {
+ 287              		.loc 1 354 0
+ 288 0004 0446     		mov	r4, r0
+ 289              		.loc 1 358 0
+ 290 0006 9842     		cmp	r0, r3
+ 354:../emlib/src/em_leuart.c **** {
+ 291              		.loc 1 354 0
+ 292 0008 0D46     		mov	r5, r1
+ 293              		.loc 1 358 0
+ 294 000a 08D0     		beq	.L29
+ 295              		.loc 1 358 0 is_stmt 0 discriminator 1
+ 296 000c 03F58063 		add	r3, r3, #1024
+ 297 0010 9842     		cmp	r0, r3
+ 298 0012 04D0     		beq	.L29
+ 299 0014 0848     		ldr	r0, .L30+4
+ 300              	.LVL35:
+ 301 0016 4FF4B371 		mov	r1, #358
+ 302              	.LVL36:
+ 303 001a FFF7FEFF 		bl	assertEFM
+ 304              	.LVL37:
+ 305              	.L29:
+ 359:../emlib/src/em_leuart.c **** 
+ 360:../emlib/src/em_leuart.c ****   /* Disable as specified */
+ 361:../emlib/src/em_leuart.c ****   tmp   = ~((uint32_t)(enable));
+ 306              		.loc 1 361 0 is_stmt 1
+ 307 001e EB43     		mvns	r3, r5
+ 308              	.LVL38:
+ 362:../emlib/src/em_leuart.c ****   tmp  &= (_LEUART_CMD_RXEN_MASK | _LEUART_CMD_TXEN_MASK);
+ 309              		.loc 1 362 0
+ 310 0020 03F00503 		and	r3, r3, #5
+ 311              	.LVL39:
+ 363:../emlib/src/em_leuart.c ****   tmp <<= 1;
+ARM GAS  /tmp/ccibbwao.s 			page 13
+
+
+ 364:../emlib/src/em_leuart.c ****   /* Enable as specified */
+ 365:../emlib/src/em_leuart.c ****   tmp |= (uint32_t)(enable);
+ 312              		.loc 1 365 0
+ 313 0024 45EA4305 		orr	r5, r5, r3, lsl #1
+ 314              	.LVL40:
+ 366:../emlib/src/em_leuart.c **** 
+ 367:../emlib/src/em_leuart.c ****   /* LF register about to be modified require sync. busy check */
+ 368:../emlib/src/em_leuart.c ****   LEUART_Sync(leuart, LEUART_SYNCBUSY_CMD);
+ 315              		.loc 1 368 0
+ 316 0028 2046     		mov	r0, r4
+ 317 002a 0221     		movs	r1, #2
+ 318 002c FFF7FEFF 		bl	LEUART_Sync
+ 319              	.LVL41:
+ 369:../emlib/src/em_leuart.c **** 
+ 370:../emlib/src/em_leuart.c ****   leuart->CMD = tmp;
+ 320              		.loc 1 370 0
+ 321 0030 6560     		str	r5, [r4, #4]
+ 322 0032 38BD     		pop	{r3, r4, r5, pc}
+ 323              	.LVL42:
+ 324              	.L31:
+ 325              		.align	2
+ 326              	.L30:
+ 327 0034 00400840 		.word	1074282496
+ 328 0038 00000000 		.word	.LC0
+ 329              		.cfi_endproc
+ 330              	.LFE80:
+ 332              		.section	.text.LEUART_FreezeEnable,"ax",%progbits
+ 333              		.align	1
+ 334              		.global	LEUART_FreezeEnable
+ 335              		.thumb
+ 336              		.thumb_func
+ 338              	LEUART_FreezeEnable:
+ 339              	.LFB81:
+ 371:../emlib/src/em_leuart.c **** }
+ 372:../emlib/src/em_leuart.c **** 
+ 373:../emlib/src/em_leuart.c **** 
+ 374:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 375:../emlib/src/em_leuart.c ****  * @brief
+ 376:../emlib/src/em_leuart.c ****  *   LEUART register synchronization freeze control.
+ 377:../emlib/src/em_leuart.c ****  *
+ 378:../emlib/src/em_leuart.c ****  * @details
+ 379:../emlib/src/em_leuart.c ****  *   Some LEUART registers require synchronization into the low frequency (LF)
+ 380:../emlib/src/em_leuart.c ****  *   domain. The freeze feature allows for several such registers to be
+ 381:../emlib/src/em_leuart.c ****  *   modified before passing them to the LF domain simultaneously (which
+ 382:../emlib/src/em_leuart.c ****  *   takes place when the freeze mode is disabled).
+ 383:../emlib/src/em_leuart.c ****  *
+ 384:../emlib/src/em_leuart.c ****  * @note
+ 385:../emlib/src/em_leuart.c ****  *   When enabling freeze mode, this function will wait for all current
+ 386:../emlib/src/em_leuart.c ****  *   ongoing LEUART synchronization to LF domain to complete (Normally
+ 387:../emlib/src/em_leuart.c ****  *   synchronization will not be in progress.) However for this reason, when
+ 388:../emlib/src/em_leuart.c ****  *   using freeze mode, modifications of registers requiring LF synchronization
+ 389:../emlib/src/em_leuart.c ****  *   should be done within one freeze enable/disable block to avoid unecessary
+ 390:../emlib/src/em_leuart.c ****  *   stalling.
+ 391:../emlib/src/em_leuart.c ****  *
+ 392:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 393:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 394:../emlib/src/em_leuart.c ****  *
+ARM GAS  /tmp/ccibbwao.s 			page 14
+
+
+ 395:../emlib/src/em_leuart.c ****  * @param[in] enable
+ 396:../emlib/src/em_leuart.c ****  *   @li true - enable freeze, modified registers are not propagated to the
+ 397:../emlib/src/em_leuart.c ****  *       LF domain
+ 398:../emlib/src/em_leuart.c ****  *   @li false - disables freeze, modified registers are propagated to LF
+ 399:../emlib/src/em_leuart.c ****  *       domain
+ 400:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 401:../emlib/src/em_leuart.c **** void LEUART_FreezeEnable(LEUART_TypeDef *leuart, bool enable)
+ 402:../emlib/src/em_leuart.c **** {
+ 340              		.loc 1 402 0
+ 341              		.cfi_startproc
+ 342              		@ args = 0, pretend = 0, frame = 0
+ 343              		@ frame_needed = 0, uses_anonymous_args = 0
+ 344              		@ link register save eliminated.
+ 345              	.LVL43:
+ 403:../emlib/src/em_leuart.c ****   if (enable)
+ 346              		.loc 1 403 0
+ 347 0000 29B1     		cbz	r1, .L33
+ 348              	.L35:
+ 349              	.LBB4:
+ 350              	.LBB5:
+ 404:../emlib/src/em_leuart.c ****   {
+ 405:../emlib/src/em_leuart.c ****     /*
+ 406:../emlib/src/em_leuart.c ****      * Wait for any ongoing LF synchronization to complete. This is just to
+ 407:../emlib/src/em_leuart.c ****      * protect against the rare case when a user
+ 408:../emlib/src/em_leuart.c ****      * - modifies a register requiring LF sync
+ 409:../emlib/src/em_leuart.c ****      * - then enables freeze before LF sync completed
+ 410:../emlib/src/em_leuart.c ****      * - then modifies the same register again
+ 411:../emlib/src/em_leuart.c ****      * since modifying a register while it is in sync progress should be
+ 412:../emlib/src/em_leuart.c ****      * avoided.
+ 413:../emlib/src/em_leuart.c ****      */
+ 414:../emlib/src/em_leuart.c ****     while (leuart->SYNCBUSY)
+ 351              		.loc 1 414 0
+ 352 0002 436C     		ldr	r3, [r0, #68]
+ 353 0004 002B     		cmp	r3, #0
+ 354 0006 FCD1     		bne	.L35
+ 415:../emlib/src/em_leuart.c ****       ;
+ 416:../emlib/src/em_leuart.c **** 
+ 417:../emlib/src/em_leuart.c ****     leuart->FREEZE = LEUART_FREEZE_REGFREEZE;
+ 355              		.loc 1 417 0
+ 356 0008 0123     		movs	r3, #1
+ 357 000a 0364     		str	r3, [r0, #64]
+ 358 000c 7047     		bx	lr
+ 359              	.L33:
+ 360              	.LBE5:
+ 361              	.LBE4:
+ 418:../emlib/src/em_leuart.c ****   }
+ 419:../emlib/src/em_leuart.c ****   else
+ 420:../emlib/src/em_leuart.c ****   {
+ 421:../emlib/src/em_leuart.c ****     leuart->FREEZE = 0;
+ 362              		.loc 1 421 0
+ 363 000e 0164     		str	r1, [r0, #64]
+ 364 0010 7047     		bx	lr
+ 365              		.cfi_endproc
+ 366              	.LFE81:
+ 368              		.section	.text.LEUART_Init,"ax",%progbits
+ 369              		.align	1
+ 370              		.global	LEUART_Init
+ARM GAS  /tmp/ccibbwao.s 			page 15
+
+
+ 371              		.thumb
+ 372              		.thumb_func
+ 374              	LEUART_Init:
+ 375              	.LFB82:
+ 422:../emlib/src/em_leuart.c ****   }
+ 423:../emlib/src/em_leuart.c **** }
+ 424:../emlib/src/em_leuart.c **** 
+ 425:../emlib/src/em_leuart.c **** 
+ 426:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 427:../emlib/src/em_leuart.c ****  * @brief
+ 428:../emlib/src/em_leuart.c ****  *   Init LEUART.
+ 429:../emlib/src/em_leuart.c ****  *
+ 430:../emlib/src/em_leuart.c ****  * @details
+ 431:../emlib/src/em_leuart.c ****  *   This function will configure basic settings in order to operate in normal
+ 432:../emlib/src/em_leuart.c ****  *   asynchronous mode. Consider using LEUART_Reset() prior to this function if
+ 433:../emlib/src/em_leuart.c ****  *   state of configuration is not known, since only configuration settings
+ 434:../emlib/src/em_leuart.c ****  *   specified by @p init are set.
+ 435:../emlib/src/em_leuart.c ****  *
+ 436:../emlib/src/em_leuart.c ****  *   Special control setup not covered by this function may be done either
+ 437:../emlib/src/em_leuart.c ****  *   before or after using this function (but normally before enabling)
+ 438:../emlib/src/em_leuart.c ****  *   by direct modification of the CTRL register.
+ 439:../emlib/src/em_leuart.c ****  *
+ 440:../emlib/src/em_leuart.c ****  *   Notice that pins used by the LEUART module must be properly configured
+ 441:../emlib/src/em_leuart.c ****  *   by the user explicitly, in order for the LEUART to work as intended.
+ 442:../emlib/src/em_leuart.c ****  *   (When configuring pins, one should remember to consider the sequence of
+ 443:../emlib/src/em_leuart.c ****  *   configuration, in order to avoid unintended pulses/glitches on output
+ 444:../emlib/src/em_leuart.c ****  *   pins.)
+ 445:../emlib/src/em_leuart.c ****  *
+ 446:../emlib/src/em_leuart.c ****  * @note
+ 447:../emlib/src/em_leuart.c ****  *   Initializing requires synchronization into the low frequency domain.
+ 448:../emlib/src/em_leuart.c ****  *   If the same register is modified before a previous update has completed,
+ 449:../emlib/src/em_leuart.c ****  *   this function will stall until the previous synchronization has completed.
+ 450:../emlib/src/em_leuart.c ****  *
+ 451:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 452:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 453:../emlib/src/em_leuart.c ****  *
+ 454:../emlib/src/em_leuart.c ****  * @param[in] init
+ 455:../emlib/src/em_leuart.c ****  *   Pointer to initialization structure used to configure basic async setup.
+ 456:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 457:../emlib/src/em_leuart.c **** void LEUART_Init(LEUART_TypeDef *leuart, LEUART_Init_TypeDef const *init)
+ 458:../emlib/src/em_leuart.c **** {
+ 376              		.loc 1 458 0
+ 377              		.cfi_startproc
+ 378              		@ args = 0, pretend = 0, frame = 0
+ 379              		@ frame_needed = 0, uses_anonymous_args = 0
+ 380              	.LVL44:
+ 459:../emlib/src/em_leuart.c ****   /* Make sure the module exists on the selected chip */
+ 460:../emlib/src/em_leuart.c ****   EFM_ASSERT(LEUART_REF_VALID(leuart));
+ 381              		.loc 1 460 0
+ 382 0000 164B     		ldr	r3, .L41
+ 458:../emlib/src/em_leuart.c **** {
+ 383              		.loc 1 458 0
+ 384 0002 70B5     		push	{r4, r5, r6, lr}
+ 385              		.cfi_def_cfa_offset 16
+ 386              		.cfi_offset 4, -16
+ 387              		.cfi_offset 5, -12
+ 388              		.cfi_offset 6, -8
+ARM GAS  /tmp/ccibbwao.s 			page 16
+
+
+ 389              		.cfi_offset 14, -4
+ 390              		.loc 1 460 0
+ 391 0004 9842     		cmp	r0, r3
+ 458:../emlib/src/em_leuart.c **** {
+ 392              		.loc 1 458 0
+ 393 0006 0446     		mov	r4, r0
+ 394 0008 0D46     		mov	r5, r1
+ 395              		.loc 1 460 0
+ 396 000a 08D0     		beq	.L38
+ 397              		.loc 1 460 0 is_stmt 0 discriminator 1
+ 398 000c 03F58063 		add	r3, r3, #1024
+ 399 0010 9842     		cmp	r0, r3
+ 400 0012 04D0     		beq	.L38
+ 401 0014 1248     		ldr	r0, .L41+4
+ 402              	.LVL45:
+ 403 0016 4FF4E671 		mov	r1, #460
+ 404              	.LVL46:
+ 405 001a FFF7FEFF 		bl	assertEFM
+ 406              	.LVL47:
+ 407              	.L38:
+ 461:../emlib/src/em_leuart.c **** 
+ 462:../emlib/src/em_leuart.c ****   /* LF register about to be modified require sync. busy check */
+ 463:../emlib/src/em_leuart.c ****   LEUART_Sync(leuart, LEUART_SYNCBUSY_CMD);
+ 408              		.loc 1 463 0 is_stmt 1
+ 409 001e 2046     		mov	r0, r4
+ 410 0020 0221     		movs	r1, #2
+ 411 0022 FFF7FEFF 		bl	LEUART_Sync
+ 412              	.LVL48:
+ 464:../emlib/src/em_leuart.c **** 
+ 465:../emlib/src/em_leuart.c ****   /* Ensure disabled while doing config */
+ 466:../emlib/src/em_leuart.c ****   leuart->CMD = LEUART_CMD_RXDIS | LEUART_CMD_TXDIS;
+ 413              		.loc 1 466 0
+ 414 0026 0A23     		movs	r3, #10
+ 415 0028 6360     		str	r3, [r4, #4]
+ 416              	.LVL49:
+ 417              	.L40:
+ 418              	.LBB14:
+ 419              	.LBB15:
+ 420              	.LBB16:
+ 414:../emlib/src/em_leuart.c ****     while (leuart->SYNCBUSY)
+ 421              		.loc 1 414 0
+ 422 002a 666C     		ldr	r6, [r4, #68]
+ 423 002c 002E     		cmp	r6, #0
+ 424 002e FCD1     		bne	.L40
+ 417:../emlib/src/em_leuart.c ****     leuart->FREEZE = LEUART_FREEZE_REGFREEZE;
+ 425              		.loc 1 417 0
+ 426 0030 0123     		movs	r3, #1
+ 427 0032 2364     		str	r3, [r4, #64]
+ 428              	.LBE16:
+ 429              	.LBE15:
+ 430              	.LBE14:
+ 467:../emlib/src/em_leuart.c **** 
+ 468:../emlib/src/em_leuart.c ****   /* Freeze registers to avoid stalling for LF synchronization */
+ 469:../emlib/src/em_leuart.c ****   LEUART_FreezeEnable(leuart, true);
+ 470:../emlib/src/em_leuart.c **** 
+ 471:../emlib/src/em_leuart.c ****   /* Configure databits and stopbits */
+ 472:../emlib/src/em_leuart.c ****   leuart->CTRL = (leuart->CTRL & ~(_LEUART_CTRL_PARITY_MASK |
+ARM GAS  /tmp/ccibbwao.s 			page 17
+
+
+ 431              		.loc 1 472 0
+ 432 0034 2368     		ldr	r3, [r4]
+ 473:../emlib/src/em_leuart.c ****                                    _LEUART_CTRL_STOPBITS_MASK)) |
+ 474:../emlib/src/em_leuart.c ****                  (uint32_t)(init->databits) |
+ 433              		.loc 1 474 0
+ 434 0036 2A7B     		ldrb	r2, [r5, #12]	@ zero_extendqisi2
+ 472:../emlib/src/em_leuart.c ****   leuart->CTRL = (leuart->CTRL & ~(_LEUART_CTRL_PARITY_MASK |
+ 435              		.loc 1 472 0
+ 436 0038 23F01C03 		bic	r3, r3, #28
+ 473:../emlib/src/em_leuart.c ****                                    _LEUART_CTRL_STOPBITS_MASK)) |
+ 437              		.loc 1 473 0
+ 438 003c 1343     		orrs	r3, r3, r2
+ 475:../emlib/src/em_leuart.c ****                  (uint32_t)(init->parity) |
+ 439              		.loc 1 475 0
+ 440 003e 6A7B     		ldrb	r2, [r5, #13]	@ zero_extendqisi2
+ 476:../emlib/src/em_leuart.c ****                  (uint32_t)(init->stopbits);
+ 477:../emlib/src/em_leuart.c **** 
+ 478:../emlib/src/em_leuart.c ****   /* Configure baudrate */
+ 479:../emlib/src/em_leuart.c ****   LEUART_BaudrateSet(leuart, init->refFreq, init->baudrate);
+ 441              		.loc 1 479 0
+ 442 0040 2046     		mov	r0, r4
+ 474:../emlib/src/em_leuart.c ****                  (uint32_t)(init->databits) |
+ 443              		.loc 1 474 0
+ 444 0042 1343     		orrs	r3, r3, r2
+ 476:../emlib/src/em_leuart.c ****                  (uint32_t)(init->stopbits);
+ 445              		.loc 1 476 0
+ 446 0044 AA7B     		ldrb	r2, [r5, #14]	@ zero_extendqisi2
+ 447              		.loc 1 479 0
+ 448 0046 6968     		ldr	r1, [r5, #4]
+ 475:../emlib/src/em_leuart.c ****                  (uint32_t)(init->parity) |
+ 449              		.loc 1 475 0
+ 450 0048 1343     		orrs	r3, r3, r2
+ 472:../emlib/src/em_leuart.c ****   leuart->CTRL = (leuart->CTRL & ~(_LEUART_CTRL_PARITY_MASK |
+ 451              		.loc 1 472 0
+ 452 004a 2360     		str	r3, [r4]
+ 453              		.loc 1 479 0
+ 454 004c AA68     		ldr	r2, [r5, #8]
+ 455 004e FFF7FEFF 		bl	LEUART_BaudrateSet
+ 456              	.LVL50:
+ 480:../emlib/src/em_leuart.c **** 
+ 481:../emlib/src/em_leuart.c ****   /* Finally enable (as specified) */
+ 482:../emlib/src/em_leuart.c ****   leuart->CMD = (uint32_t)(init->enable);
+ 457              		.loc 1 482 0
+ 458 0052 2B78     		ldrb	r3, [r5]	@ zero_extendqisi2
+ 459 0054 6360     		str	r3, [r4, #4]
+ 460              	.LVL51:
+ 461              	.LBB17:
+ 462              	.LBB18:
+ 421:../emlib/src/em_leuart.c ****     leuart->FREEZE = 0;
+ 463              		.loc 1 421 0
+ 464 0056 2664     		str	r6, [r4, #64]
+ 465 0058 70BD     		pop	{r4, r5, r6, pc}
+ 466              	.LVL52:
+ 467              	.L42:
+ 468 005a 00BF     		.align	2
+ 469              	.L41:
+ 470 005c 00400840 		.word	1074282496
+ARM GAS  /tmp/ccibbwao.s 			page 18
+
+
+ 471 0060 00000000 		.word	.LC0
+ 472              	.LBE18:
+ 473              	.LBE17:
+ 474              		.cfi_endproc
+ 475              	.LFE82:
+ 477              		.section	.text.LEUART_Reset,"ax",%progbits
+ 478              		.align	1
+ 479              		.global	LEUART_Reset
+ 480              		.thumb
+ 481              		.thumb_func
+ 483              	LEUART_Reset:
+ 484              	.LFB83:
+ 483:../emlib/src/em_leuart.c **** 
+ 484:../emlib/src/em_leuart.c ****   /* Unfreeze registers, pass new settings on to LEUART */
+ 485:../emlib/src/em_leuart.c ****   LEUART_FreezeEnable(leuart, false);
+ 486:../emlib/src/em_leuart.c **** }
+ 487:../emlib/src/em_leuart.c **** 
+ 488:../emlib/src/em_leuart.c **** 
+ 489:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 490:../emlib/src/em_leuart.c ****  * @brief
+ 491:../emlib/src/em_leuart.c ****  *   Reset LEUART to same state as after a HW reset.
+ 492:../emlib/src/em_leuart.c ****  *
+ 493:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 494:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 495:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 496:../emlib/src/em_leuart.c **** void LEUART_Reset(LEUART_TypeDef *leuart)
+ 497:../emlib/src/em_leuart.c **** {
+ 485              		.loc 1 497 0
+ 486              		.cfi_startproc
+ 487              		@ args = 0, pretend = 0, frame = 0
+ 488              		@ frame_needed = 0, uses_anonymous_args = 0
+ 489              	.LVL53:
+ 498:../emlib/src/em_leuart.c ****   /* Make sure the module exists on the selected chip */
+ 499:../emlib/src/em_leuart.c ****   EFM_ASSERT(LEUART_REF_VALID(leuart));
+ 490              		.loc 1 499 0
+ 491 0000 104B     		ldr	r3, .L47
+ 497:../emlib/src/em_leuart.c **** {
+ 492              		.loc 1 497 0
+ 493 0002 10B5     		push	{r4, lr}
+ 494              		.cfi_def_cfa_offset 8
+ 495              		.cfi_offset 4, -8
+ 496              		.cfi_offset 14, -4
+ 497              		.loc 1 499 0
+ 498 0004 9842     		cmp	r0, r3
+ 497:../emlib/src/em_leuart.c **** {
+ 499              		.loc 1 497 0
+ 500 0006 0446     		mov	r4, r0
+ 501              		.loc 1 499 0
+ 502 0008 08D0     		beq	.L46
+ 503              		.loc 1 499 0 is_stmt 0 discriminator 1
+ 504 000a 03F58063 		add	r3, r3, #1024
+ 505 000e 9842     		cmp	r0, r3
+ 506 0010 04D0     		beq	.L46
+ 507 0012 0D48     		ldr	r0, .L47+4
+ 508              	.LVL54:
+ 509 0014 40F2F311 		movw	r1, #499
+ 510 0018 FFF7FEFF 		bl	assertEFM
+ARM GAS  /tmp/ccibbwao.s 			page 19
+
+
+ 511              	.LVL55:
+ 512              	.L46:
+ 513              	.LBB27:
+ 514              	.LBB28:
+ 515              	.LBB29:
+ 414:../emlib/src/em_leuart.c ****     while (leuart->SYNCBUSY)
+ 516              		.loc 1 414 0 is_stmt 1
+ 517 001c 636C     		ldr	r3, [r4, #68]
+ 518 001e 002B     		cmp	r3, #0
+ 519 0020 FCD1     		bne	.L46
+ 417:../emlib/src/em_leuart.c ****     leuart->FREEZE = LEUART_FREEZE_REGFREEZE;
+ 520              		.loc 1 417 0
+ 521 0022 0122     		movs	r2, #1
+ 522 0024 2264     		str	r2, [r4, #64]
+ 523              	.LBE29:
+ 524              	.LBE28:
+ 525              	.LBE27:
+ 500:../emlib/src/em_leuart.c **** 
+ 501:../emlib/src/em_leuart.c ****   /* Freeze registers to avoid stalling for LF synchronization */
+ 502:../emlib/src/em_leuart.c ****   LEUART_FreezeEnable(leuart, true);
+ 503:../emlib/src/em_leuart.c **** 
+ 504:../emlib/src/em_leuart.c ****   /* Make sure disabled first, before resetting other registers */
+ 505:../emlib/src/em_leuart.c ****   leuart->CMD = LEUART_CMD_RXDIS | LEUART_CMD_TXDIS | LEUART_CMD_RXBLOCKDIS |
+ 526              		.loc 1 505 0
+ 527 0026 EA22     		movs	r2, #234
+ 528 0028 6260     		str	r2, [r4, #4]
+ 506:../emlib/src/em_leuart.c ****                 LEUART_CMD_CLEARTX | LEUART_CMD_CLEARRX;
+ 507:../emlib/src/em_leuart.c ****   leuart->CTRL       = _LEUART_CTRL_RESETVALUE;
+ 508:../emlib/src/em_leuart.c ****   leuart->CLKDIV     = _LEUART_CLKDIV_RESETVALUE;
+ 509:../emlib/src/em_leuart.c ****   leuart->STARTFRAME = _LEUART_STARTFRAME_RESETVALUE;
+ 510:../emlib/src/em_leuart.c ****   leuart->SIGFRAME   = _LEUART_SIGFRAME_RESETVALUE;
+ 511:../emlib/src/em_leuart.c ****   leuart->IEN        = _LEUART_IEN_RESETVALUE;
+ 512:../emlib/src/em_leuart.c ****   leuart->IFC        = _LEUART_IFC_MASK;
+ 529              		.loc 1 512 0
+ 530 002a 40F2F972 		movw	r2, #2041
+ 507:../emlib/src/em_leuart.c ****   leuart->CTRL       = _LEUART_CTRL_RESETVALUE;
+ 531              		.loc 1 507 0
+ 532 002e 2360     		str	r3, [r4]
+ 508:../emlib/src/em_leuart.c ****   leuart->CLKDIV     = _LEUART_CLKDIV_RESETVALUE;
+ 533              		.loc 1 508 0
+ 534 0030 E360     		str	r3, [r4, #12]
+ 509:../emlib/src/em_leuart.c ****   leuart->STARTFRAME = _LEUART_STARTFRAME_RESETVALUE;
+ 535              		.loc 1 509 0
+ 536 0032 2361     		str	r3, [r4, #16]
+ 510:../emlib/src/em_leuart.c ****   leuart->SIGFRAME   = _LEUART_SIGFRAME_RESETVALUE;
+ 537              		.loc 1 510 0
+ 538 0034 6361     		str	r3, [r4, #20]
+ 511:../emlib/src/em_leuart.c ****   leuart->IEN        = _LEUART_IEN_RESETVALUE;
+ 539              		.loc 1 511 0
+ 540 0036 A363     		str	r3, [r4, #56]
+ 541              		.loc 1 512 0
+ 542 0038 6263     		str	r2, [r4, #52]
+ 513:../emlib/src/em_leuart.c ****   leuart->PULSECTRL  = _LEUART_PULSECTRL_RESETVALUE;
+ 543              		.loc 1 513 0
+ 544 003a E363     		str	r3, [r4, #60]
+ 514:../emlib/src/em_leuart.c ****   leuart->ROUTE      = _LEUART_ROUTE_RESETVALUE;
+ 545              		.loc 1 514 0
+ARM GAS  /tmp/ccibbwao.s 			page 20
+
+
+ 546 003c 6365     		str	r3, [r4, #84]
+ 547              	.LVL56:
+ 548              	.LBB30:
+ 549              	.LBB31:
+ 421:../emlib/src/em_leuart.c ****     leuart->FREEZE = 0;
+ 550              		.loc 1 421 0
+ 551 003e 2364     		str	r3, [r4, #64]
+ 552 0040 10BD     		pop	{r4, pc}
+ 553              	.LVL57:
+ 554              	.L48:
+ 555 0042 00BF     		.align	2
+ 556              	.L47:
+ 557 0044 00400840 		.word	1074282496
+ 558 0048 00000000 		.word	.LC0
+ 559              	.LBE31:
+ 560              	.LBE30:
+ 561              		.cfi_endproc
+ 562              	.LFE83:
+ 564              		.section	.text.LEUART_Rx,"ax",%progbits
+ 565              		.align	1
+ 566              		.global	LEUART_Rx
+ 567              		.thumb
+ 568              		.thumb_func
+ 570              	LEUART_Rx:
+ 571              	.LFB84:
+ 515:../emlib/src/em_leuart.c **** 
+ 516:../emlib/src/em_leuart.c ****   /* Unfreeze registers, pass new settings on to LEUART */
+ 517:../emlib/src/em_leuart.c ****   LEUART_FreezeEnable(leuart, false);
+ 518:../emlib/src/em_leuart.c **** }
+ 519:../emlib/src/em_leuart.c **** 
+ 520:../emlib/src/em_leuart.c **** 
+ 521:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 522:../emlib/src/em_leuart.c ****  * @brief
+ 523:../emlib/src/em_leuart.c ****  *   Receive one 8 bit frame, (or part of 9 bit frame).
+ 524:../emlib/src/em_leuart.c ****  *
+ 525:../emlib/src/em_leuart.c ****  * @details
+ 526:../emlib/src/em_leuart.c ****  *   This function is normally used to receive one frame when operating with
+ 527:../emlib/src/em_leuart.c ****  *   frame length 8 bits. Please refer to LEUART_RxExt() for reception of
+ 528:../emlib/src/em_leuart.c ****  *   9 bit frames.
+ 529:../emlib/src/em_leuart.c ****  *
+ 530:../emlib/src/em_leuart.c ****  *   Notice that possible parity/stop bits are not considered part of specified
+ 531:../emlib/src/em_leuart.c ****  *   frame bit length.
+ 532:../emlib/src/em_leuart.c ****  *
+ 533:../emlib/src/em_leuart.c ****  * @note
+ 534:../emlib/src/em_leuart.c ****  *   This function will stall if buffer is empty, until data is received.
+ 535:../emlib/src/em_leuart.c ****  *
+ 536:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 537:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 538:../emlib/src/em_leuart.c ****  *
+ 539:../emlib/src/em_leuart.c ****  * @return
+ 540:../emlib/src/em_leuart.c ****  *   Data received.
+ 541:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 542:../emlib/src/em_leuart.c **** uint8_t LEUART_Rx(LEUART_TypeDef *leuart)
+ 543:../emlib/src/em_leuart.c **** {
+ 572              		.loc 1 543 0
+ 573              		.cfi_startproc
+ 574              		@ args = 0, pretend = 0, frame = 0
+ARM GAS  /tmp/ccibbwao.s 			page 21
+
+
+ 575              		@ frame_needed = 0, uses_anonymous_args = 0
+ 576              		@ link register save eliminated.
+ 577              	.LVL58:
+ 578              	.L51:
+ 544:../emlib/src/em_leuart.c ****   while (!(leuart->STATUS & LEUART_STATUS_RXDATAV))
+ 579              		.loc 1 544 0 discriminator 1
+ 580 0000 8368     		ldr	r3, [r0, #8]
+ 581 0002 9B06     		lsls	r3, r3, #26
+ 582 0004 FCD5     		bpl	.L51
+ 545:../emlib/src/em_leuart.c ****     ;
+ 546:../emlib/src/em_leuart.c **** 
+ 547:../emlib/src/em_leuart.c ****   return (uint8_t)(leuart->RXDATA);
+ 583              		.loc 1 547 0
+ 584 0006 C069     		ldr	r0, [r0, #28]
+ 585              	.LVL59:
+ 548:../emlib/src/em_leuart.c **** }
+ 586              		.loc 1 548 0
+ 587 0008 C0B2     		uxtb	r0, r0
+ 588 000a 7047     		bx	lr
+ 589              		.cfi_endproc
+ 590              	.LFE84:
+ 592              		.section	.text.LEUART_RxExt,"ax",%progbits
+ 593              		.align	1
+ 594              		.global	LEUART_RxExt
+ 595              		.thumb
+ 596              		.thumb_func
+ 598              	LEUART_RxExt:
+ 599              	.LFB85:
+ 549:../emlib/src/em_leuart.c **** 
+ 550:../emlib/src/em_leuart.c **** 
+ 551:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 552:../emlib/src/em_leuart.c ****  * @brief
+ 553:../emlib/src/em_leuart.c ****  *   Receive one 8-9 bit frame, with extended information.
+ 554:../emlib/src/em_leuart.c ****  *
+ 555:../emlib/src/em_leuart.c ****  * @details
+ 556:../emlib/src/em_leuart.c ****  *   This function is normally used to receive one frame and additional RX
+ 557:../emlib/src/em_leuart.c ****  *   status information is required.
+ 558:../emlib/src/em_leuart.c ****  *
+ 559:../emlib/src/em_leuart.c ****  * @note
+ 560:../emlib/src/em_leuart.c ****  *   This function will stall if buffer is empty, until data is received.
+ 561:../emlib/src/em_leuart.c ****  *
+ 562:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 563:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 564:../emlib/src/em_leuart.c ****  *
+ 565:../emlib/src/em_leuart.c ****  * @return
+ 566:../emlib/src/em_leuart.c ****  *   Data received.
+ 567:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 568:../emlib/src/em_leuart.c **** uint16_t LEUART_RxExt(LEUART_TypeDef *leuart)
+ 569:../emlib/src/em_leuart.c **** {
+ 600              		.loc 1 569 0
+ 601              		.cfi_startproc
+ 602              		@ args = 0, pretend = 0, frame = 0
+ 603              		@ frame_needed = 0, uses_anonymous_args = 0
+ 604              		@ link register save eliminated.
+ 605              	.LVL60:
+ 606              	.L54:
+ 570:../emlib/src/em_leuart.c ****   while (!(leuart->STATUS & LEUART_STATUS_RXDATAV))
+ARM GAS  /tmp/ccibbwao.s 			page 22
+
+
+ 607              		.loc 1 570 0 discriminator 1
+ 608 0000 8368     		ldr	r3, [r0, #8]
+ 609 0002 9B06     		lsls	r3, r3, #26
+ 610 0004 FCD5     		bpl	.L54
+ 571:../emlib/src/em_leuart.c ****     ;
+ 572:../emlib/src/em_leuart.c **** 
+ 573:../emlib/src/em_leuart.c ****   return (uint16_t)(leuart->RXDATAX);
+ 611              		.loc 1 573 0
+ 612 0006 8069     		ldr	r0, [r0, #24]
+ 613              	.LVL61:
+ 574:../emlib/src/em_leuart.c **** }
+ 614              		.loc 1 574 0
+ 615 0008 80B2     		uxth	r0, r0
+ 616 000a 7047     		bx	lr
+ 617              		.cfi_endproc
+ 618              	.LFE85:
+ 620              		.section	.text.LEUART_Tx,"ax",%progbits
+ 621              		.align	1
+ 622              		.global	LEUART_Tx
+ 623              		.thumb
+ 624              		.thumb_func
+ 626              	LEUART_Tx:
+ 627              	.LFB86:
+ 575:../emlib/src/em_leuart.c **** 
+ 576:../emlib/src/em_leuart.c **** 
+ 577:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 578:../emlib/src/em_leuart.c ****  * @brief
+ 579:../emlib/src/em_leuart.c ****  *   Transmit one frame.
+ 580:../emlib/src/em_leuart.c ****  *
+ 581:../emlib/src/em_leuart.c ****  * @details
+ 582:../emlib/src/em_leuart.c ****  *   Depending on frame length configuration, 8 (least significant) bits from
+ 583:../emlib/src/em_leuart.c ****  *   @p data are transmitted. If frame length is 9, 8 bits are transmitted from
+ 584:../emlib/src/em_leuart.c ****  *   @p data and one bit as specified by CTRL register, BIT8DV field. Please
+ 585:../emlib/src/em_leuart.c ****  *   refer to LEUART_TxExt() for transmitting 9 bit frame with full control of
+ 586:../emlib/src/em_leuart.c ****  *   all 9 bits.
+ 587:../emlib/src/em_leuart.c ****  *
+ 588:../emlib/src/em_leuart.c ****  *   Notice that possible parity/stop bits in asynchronous mode are not
+ 589:../emlib/src/em_leuart.c ****  *   considered part of specified frame bit length.
+ 590:../emlib/src/em_leuart.c ****  *
+ 591:../emlib/src/em_leuart.c ****  * @note
+ 592:../emlib/src/em_leuart.c ****  *   This function will stall if buffer is full, until buffer becomes available.
+ 593:../emlib/src/em_leuart.c ****  *
+ 594:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 595:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 596:../emlib/src/em_leuart.c ****  *
+ 597:../emlib/src/em_leuart.c ****  * @param[in] data
+ 598:../emlib/src/em_leuart.c ****  *   Data to transmit. See details above for further info.
+ 599:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 600:../emlib/src/em_leuart.c **** void LEUART_Tx(LEUART_TypeDef *leuart, uint8_t data)
+ 601:../emlib/src/em_leuart.c **** {
+ 628              		.loc 1 601 0
+ 629              		.cfi_startproc
+ 630              		@ args = 0, pretend = 0, frame = 0
+ 631              		@ frame_needed = 0, uses_anonymous_args = 0
+ 632              	.LVL62:
+ 633 0000 38B5     		push	{r3, r4, r5, lr}
+ 634              		.cfi_def_cfa_offset 16
+ARM GAS  /tmp/ccibbwao.s 			page 23
+
+
+ 635              		.cfi_offset 3, -16
+ 636              		.cfi_offset 4, -12
+ 637              		.cfi_offset 5, -8
+ 638              		.cfi_offset 14, -4
+ 639 0002 0446     		mov	r4, r0
+ 640 0004 0D46     		mov	r5, r1
+ 641              	.L57:
+ 602:../emlib/src/em_leuart.c ****   /* Check that transmit buffer is empty */
+ 603:../emlib/src/em_leuart.c ****   while (!(leuart->STATUS & LEUART_STATUS_TXBL))
+ 642              		.loc 1 603 0 discriminator 1
+ 643 0006 A368     		ldr	r3, [r4, #8]
+ 644 0008 DB06     		lsls	r3, r3, #27
+ 645 000a FCD5     		bpl	.L57
+ 604:../emlib/src/em_leuart.c ****     ;
+ 605:../emlib/src/em_leuart.c **** 
+ 606:../emlib/src/em_leuart.c ****   /* LF register about to be modified require sync. busy check */
+ 607:../emlib/src/em_leuart.c ****   LEUART_Sync(leuart, LEUART_SYNCBUSY_TXDATA);
+ 646              		.loc 1 607 0
+ 647 000c 2046     		mov	r0, r4
+ 648              	.LVL63:
+ 649 000e 4021     		movs	r1, #64
+ 650              	.LVL64:
+ 651 0010 FFF7FEFF 		bl	LEUART_Sync
+ 652              	.LVL65:
+ 608:../emlib/src/em_leuart.c **** 
+ 609:../emlib/src/em_leuart.c ****   leuart->TXDATA = (uint32_t)data;
+ 653              		.loc 1 609 0
+ 654 0014 A562     		str	r5, [r4, #40]
+ 655 0016 38BD     		pop	{r3, r4, r5, pc}
+ 656              		.cfi_endproc
+ 657              	.LFE86:
+ 659              		.section	.text.LEUART_TxExt,"ax",%progbits
+ 660              		.align	1
+ 661              		.global	LEUART_TxExt
+ 662              		.thumb
+ 663              		.thumb_func
+ 665              	LEUART_TxExt:
+ 666              	.LFB87:
+ 610:../emlib/src/em_leuart.c **** }
+ 611:../emlib/src/em_leuart.c **** 
+ 612:../emlib/src/em_leuart.c **** 
+ 613:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 614:../emlib/src/em_leuart.c ****  * @brief
+ 615:../emlib/src/em_leuart.c ****  *   Transmit one 8-9 bit frame with extended control.
+ 616:../emlib/src/em_leuart.c ****  *
+ 617:../emlib/src/em_leuart.c ****  * @details
+ 618:../emlib/src/em_leuart.c ****  *   Notice that possible parity/stop bits in asynchronous mode are not
+ 619:../emlib/src/em_leuart.c ****  *   considered part of specified frame bit length.
+ 620:../emlib/src/em_leuart.c ****  *
+ 621:../emlib/src/em_leuart.c ****  * @note
+ 622:../emlib/src/em_leuart.c ****  *   This function will stall if buffer is full, until buffer becomes available.
+ 623:../emlib/src/em_leuart.c ****  *
+ 624:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 625:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 626:../emlib/src/em_leuart.c ****  *
+ 627:../emlib/src/em_leuart.c ****  * @param[in] data
+ 628:../emlib/src/em_leuart.c ****  *   Data to transmit with extended control. Least significant bits contains
+ARM GAS  /tmp/ccibbwao.s 			page 24
+
+
+ 629:../emlib/src/em_leuart.c ****  *   frame bits, and additional control bits are available as documented in
+ 630:../emlib/src/em_leuart.c ****  *   the EFM32 reference manual (set to 0 if not used).
+ 631:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 632:../emlib/src/em_leuart.c **** void LEUART_TxExt(LEUART_TypeDef *leuart, uint16_t data)
+ 633:../emlib/src/em_leuart.c **** {
+ 667              		.loc 1 633 0
+ 668              		.cfi_startproc
+ 669              		@ args = 0, pretend = 0, frame = 0
+ 670              		@ frame_needed = 0, uses_anonymous_args = 0
+ 671              	.LVL66:
+ 672 0000 38B5     		push	{r3, r4, r5, lr}
+ 673              		.cfi_def_cfa_offset 16
+ 674              		.cfi_offset 3, -16
+ 675              		.cfi_offset 4, -12
+ 676              		.cfi_offset 5, -8
+ 677              		.cfi_offset 14, -4
+ 678 0002 0446     		mov	r4, r0
+ 679 0004 0D46     		mov	r5, r1
+ 680              	.L60:
+ 634:../emlib/src/em_leuart.c ****   /* Check that transmit buffer is empty */
+ 635:../emlib/src/em_leuart.c ****   while (!(leuart->STATUS & LEUART_STATUS_TXBL))
+ 681              		.loc 1 635 0 discriminator 1
+ 682 0006 A368     		ldr	r3, [r4, #8]
+ 683 0008 DB06     		lsls	r3, r3, #27
+ 684 000a FCD5     		bpl	.L60
+ 636:../emlib/src/em_leuart.c ****     ;
+ 637:../emlib/src/em_leuart.c **** 
+ 638:../emlib/src/em_leuart.c ****   /* LF register about to be modified require sync. busy check */
+ 639:../emlib/src/em_leuart.c ****   LEUART_Sync(leuart, LEUART_SYNCBUSY_TXDATAX);
+ 685              		.loc 1 639 0
+ 686 000c 2046     		mov	r0, r4
+ 687              	.LVL67:
+ 688 000e 2021     		movs	r1, #32
+ 689              	.LVL68:
+ 690 0010 FFF7FEFF 		bl	LEUART_Sync
+ 691              	.LVL69:
+ 640:../emlib/src/em_leuart.c **** 
+ 641:../emlib/src/em_leuart.c ****   leuart->TXDATAX = (uint32_t)data;
+ 692              		.loc 1 641 0
+ 693 0014 6562     		str	r5, [r4, #36]
+ 694 0016 38BD     		pop	{r3, r4, r5, pc}
+ 695              		.cfi_endproc
+ 696              	.LFE87:
+ 698              		.section	.text.LEUART_TxDmaInEM2Enable,"ax",%progbits
+ 699              		.align	1
+ 700              		.global	LEUART_TxDmaInEM2Enable
+ 701              		.thumb
+ 702              		.thumb_func
+ 704              	LEUART_TxDmaInEM2Enable:
+ 705              	.LFB88:
+ 642:../emlib/src/em_leuart.c **** }
+ 643:../emlib/src/em_leuart.c **** 
+ 644:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 645:../emlib/src/em_leuart.c ****  * @brief
+ 646:../emlib/src/em_leuart.c ****  *   Enables handling of LEUART TX by DMA in EM2
+ 647:../emlib/src/em_leuart.c ****  *
+ 648:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ARM GAS  /tmp/ccibbwao.s 			page 25
+
+
+ 649:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 650:../emlib/src/em_leuart.c ****  *
+ 651:../emlib/src/em_leuart.c ****  * @param[in] enable
+ 652:../emlib/src/em_leuart.c ****  *   true - enables functionality
+ 653:../emlib/src/em_leuart.c ****  *   false - disables functionality
+ 654:../emlib/src/em_leuart.c ****  *
+ 655:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 656:../emlib/src/em_leuart.c **** void LEUART_TxDmaInEM2Enable(LEUART_TypeDef *leuart, bool enable)
+ 657:../emlib/src/em_leuart.c **** {
+ 706              		.loc 1 657 0
+ 707              		.cfi_startproc
+ 708              		@ args = 0, pretend = 0, frame = 0
+ 709              		@ frame_needed = 0, uses_anonymous_args = 0
+ 710              	.LVL70:
+ 711 0000 38B5     		push	{r3, r4, r5, lr}
+ 712              		.cfi_def_cfa_offset 16
+ 713              		.cfi_offset 3, -16
+ 714              		.cfi_offset 4, -12
+ 715              		.cfi_offset 5, -8
+ 716              		.cfi_offset 14, -4
+ 717              		.loc 1 657 0
+ 718 0002 0446     		mov	r4, r0
+ 719 0004 0D46     		mov	r5, r1
+ 658:../emlib/src/em_leuart.c ****   /* LF register about to be modified require sync. busy check */
+ 659:../emlib/src/em_leuart.c ****   LEUART_Sync(leuart, LEUART_SYNCBUSY_CTRL);
+ 720              		.loc 1 659 0
+ 721 0006 0121     		movs	r1, #1
+ 722              	.LVL71:
+ 723 0008 FFF7FEFF 		bl	LEUART_Sync
+ 724              	.LVL72:
+ 660:../emlib/src/em_leuart.c **** 
+ 661:../emlib/src/em_leuart.c ****   if (enable)
+ 662:../emlib/src/em_leuart.c ****   {
+ 663:../emlib/src/em_leuart.c ****     leuart->CTRL |= LEUART_CTRL_TXDMAWU;
+ 725              		.loc 1 663 0
+ 726 000c 2368     		ldr	r3, [r4]
+ 661:../emlib/src/em_leuart.c ****   if (enable)
+ 727              		.loc 1 661 0
+ 728 000e 15B1     		cbz	r5, .L62
+ 729              		.loc 1 663 0
+ 730 0010 43F40053 		orr	r3, r3, #8192
+ 731 0014 01E0     		b	.L64
+ 732              	.L62:
+ 664:../emlib/src/em_leuart.c ****   }
+ 665:../emlib/src/em_leuart.c ****   else
+ 666:../emlib/src/em_leuart.c ****   {
+ 667:../emlib/src/em_leuart.c ****     leuart->CTRL &= ~LEUART_CTRL_TXDMAWU;
+ 733              		.loc 1 667 0
+ 734 0016 23F40053 		bic	r3, r3, #8192
+ 735              	.L64:
+ 736 001a 2360     		str	r3, [r4]
+ 737 001c 38BD     		pop	{r3, r4, r5, pc}
+ 738              		.cfi_endproc
+ 739              	.LFE88:
+ 741              		.section	.text.LEUART_RxDmaInEM2Enable,"ax",%progbits
+ 742              		.align	1
+ 743              		.global	LEUART_RxDmaInEM2Enable
+ARM GAS  /tmp/ccibbwao.s 			page 26
+
+
+ 744              		.thumb
+ 745              		.thumb_func
+ 747              	LEUART_RxDmaInEM2Enable:
+ 748              	.LFB89:
+ 668:../emlib/src/em_leuart.c ****   }
+ 669:../emlib/src/em_leuart.c **** }
+ 670:../emlib/src/em_leuart.c **** 
+ 671:../emlib/src/em_leuart.c **** /***************************************************************************//**
+ 672:../emlib/src/em_leuart.c ****  * @brief
+ 673:../emlib/src/em_leuart.c ****  *   Enables handling of LEUART RX by DMA in EM2
+ 674:../emlib/src/em_leuart.c ****  *
+ 675:../emlib/src/em_leuart.c ****  * @param[in] leuart
+ 676:../emlib/src/em_leuart.c ****  *   Pointer to LEUART peripheral register block.
+ 677:../emlib/src/em_leuart.c ****  *
+ 678:../emlib/src/em_leuart.c ****  * @param[in] enable
+ 679:../emlib/src/em_leuart.c ****  *   true - enables functionality
+ 680:../emlib/src/em_leuart.c ****  *   false - disables functionality
+ 681:../emlib/src/em_leuart.c ****  *
+ 682:../emlib/src/em_leuart.c ****  ******************************************************************************/
+ 683:../emlib/src/em_leuart.c **** void LEUART_RxDmaInEM2Enable(LEUART_TypeDef *leuart, bool enable)
+ 684:../emlib/src/em_leuart.c **** {
+ 749              		.loc 1 684 0
+ 750              		.cfi_startproc
+ 751              		@ args = 0, pretend = 0, frame = 0
+ 752              		@ frame_needed = 0, uses_anonymous_args = 0
+ 753              	.LVL73:
+ 754 0000 38B5     		push	{r3, r4, r5, lr}
+ 755              		.cfi_def_cfa_offset 16
+ 756              		.cfi_offset 3, -16
+ 757              		.cfi_offset 4, -12
+ 758              		.cfi_offset 5, -8
+ 759              		.cfi_offset 14, -4
+ 760              		.loc 1 684 0
+ 761 0002 0446     		mov	r4, r0
+ 762 0004 0D46     		mov	r5, r1
+ 685:../emlib/src/em_leuart.c ****   /* LF register about to be modified require sync. busy check */
+ 686:../emlib/src/em_leuart.c ****   LEUART_Sync(leuart, LEUART_SYNCBUSY_CTRL);
+ 763              		.loc 1 686 0
+ 764 0006 0121     		movs	r1, #1
+ 765              	.LVL74:
+ 766 0008 FFF7FEFF 		bl	LEUART_Sync
+ 767              	.LVL75:
+ 687:../emlib/src/em_leuart.c **** 
+ 688:../emlib/src/em_leuart.c ****   if (enable)
+ 689:../emlib/src/em_leuart.c ****   {
+ 690:../emlib/src/em_leuart.c ****     leuart->CTRL |= LEUART_CTRL_RXDMAWU;
+ 768              		.loc 1 690 0
+ 769 000c 2368     		ldr	r3, [r4]
+ 688:../emlib/src/em_leuart.c ****   if (enable)
+ 770              		.loc 1 688 0
+ 771 000e 15B1     		cbz	r5, .L66
+ 772              		.loc 1 690 0
+ 773 0010 43F48053 		orr	r3, r3, #4096
+ 774 0014 01E0     		b	.L68
+ 775              	.L66:
+ 691:../emlib/src/em_leuart.c ****   }
+ 692:../emlib/src/em_leuart.c ****   else
+ARM GAS  /tmp/ccibbwao.s 			page 27
+
+
+ 693:../emlib/src/em_leuart.c ****   {
+ 694:../emlib/src/em_leuart.c ****     leuart->CTRL &= ~LEUART_CTRL_RXDMAWU;
+ 776              		.loc 1 694 0
+ 777 0016 23F48053 		bic	r3, r3, #4096
+ 778              	.L68:
+ 779 001a 2360     		str	r3, [r4]
+ 780 001c 38BD     		pop	{r3, r4, r5, pc}
+ 781              		.cfi_endproc
+ 782              	.LFE89:
+ 784              		.section	.rodata.str1.1,"aMS",%progbits,1
+ 785              	.LC0:
+ 786 0000 2E2E2F65 		.ascii	"../emlib/src/em_leuart.c\000"
+ 786      6D6C6962 
+ 786      2F737263 
+ 786      2F656D5F 
+ 786      6C657561 
+ 787              		.text
+ 788              	.Letext0:
+ 789              		.file 2 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/machine/_default_types.h"
+ 790              		.file 3 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdint.h"
+ 791              		.file 4 "../Device/EnergyMicro/EFM32G/Include/efm32g_leuart.h"
+ 792              		.file 5 "../emlib/inc/em_leuart.h"
+ 793              		.file 6 "../emlib/inc/em_cmu.h"
+ 794              		.file 7 "../emlib/inc/em_assert.h"
+ 795              		.file 8 "../CMSIS/Include/core_cm3.h"

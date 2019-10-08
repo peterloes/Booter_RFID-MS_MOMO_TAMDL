@@ -1,0 +1,764 @@
+ARM GAS  /tmp/cc8b5XEh.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"em_gpio.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.GPIO_DbgLocationSet,"ax",%progbits
+  19              		.align	1
+  20              		.global	GPIO_DbgLocationSet
+  21              		.thumb
+  22              		.thumb_func
+  24              	GPIO_DbgLocationSet:
+  25              	.LFB84:
+  26              		.file 1 "../emlib/src/em_gpio.c"
+   1:../emlib/src/em_gpio.c **** /***************************************************************************//**
+   2:../emlib/src/em_gpio.c ****  * @file
+   3:../emlib/src/em_gpio.c ****  * @brief General Purpose IO (GPIO) peripheral API
+   4:../emlib/src/em_gpio.c ****  *   devices.
+   5:../emlib/src/em_gpio.c ****  * @author Energy Micro AS
+   6:../emlib/src/em_gpio.c ****  * @version 3.20.2
+   7:../emlib/src/em_gpio.c ****  *******************************************************************************
+   8:../emlib/src/em_gpio.c ****  * @section License
+   9:../emlib/src/em_gpio.c ****  * <b>(C) Copyright 2012 Energy Micro AS, http://www.energymicro.com</b>
+  10:../emlib/src/em_gpio.c ****  *******************************************************************************
+  11:../emlib/src/em_gpio.c ****  *
+  12:../emlib/src/em_gpio.c ****  * Permission is granted to anyone to use this software for any purpose,
+  13:../emlib/src/em_gpio.c ****  * including commercial applications, and to alter it and redistribute it
+  14:../emlib/src/em_gpio.c ****  * freely, subject to the following restrictions:
+  15:../emlib/src/em_gpio.c ****  *
+  16:../emlib/src/em_gpio.c ****  * 1. The origin of this software must not be misrepresented; you must not
+  17:../emlib/src/em_gpio.c ****  *    claim that you wrote the original software.
+  18:../emlib/src/em_gpio.c ****  * 2. Altered source versions must be plainly marked as such, and must not be
+  19:../emlib/src/em_gpio.c ****  *    misrepresented as being the original software.
+  20:../emlib/src/em_gpio.c ****  * 3. This notice may not be removed or altered from any source distribution.
+  21:../emlib/src/em_gpio.c ****  *
+  22:../emlib/src/em_gpio.c ****  * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Energy Micro AS has no
+  23:../emlib/src/em_gpio.c ****  * obligation to support this Software. Energy Micro AS is providing the
+  24:../emlib/src/em_gpio.c ****  * Software "AS IS", with no express or implied warranties of any kind,
+  25:../emlib/src/em_gpio.c ****  * including, but not limited to, any implied warranties of merchantability
+  26:../emlib/src/em_gpio.c ****  * or fitness for any particular purpose or warranties against infringement
+  27:../emlib/src/em_gpio.c ****  * of any proprietary rights of a third party.
+  28:../emlib/src/em_gpio.c ****  *
+  29:../emlib/src/em_gpio.c ****  * Energy Micro AS will not be liable for any consequential, incidental, or
+  30:../emlib/src/em_gpio.c ****  * special damages, or any other relief, or for any claim by any third party,
+  31:../emlib/src/em_gpio.c ****  * arising from your use of this Software.
+  32:../emlib/src/em_gpio.c ****  *
+ARM GAS  /tmp/cc8b5XEh.s 			page 2
+
+
+  33:../emlib/src/em_gpio.c ****  ******************************************************************************/
+  34:../emlib/src/em_gpio.c **** #include "em_gpio.h"
+  35:../emlib/src/em_gpio.c **** 
+  36:../emlib/src/em_gpio.c **** #if defined(GPIO_COUNT) && (GPIO_COUNT > 0)
+  37:../emlib/src/em_gpio.c **** /***************************************************************************//**
+  38:../emlib/src/em_gpio.c ****  * @addtogroup EM_Library
+  39:../emlib/src/em_gpio.c ****  * @{
+  40:../emlib/src/em_gpio.c ****  ******************************************************************************/
+  41:../emlib/src/em_gpio.c **** 
+  42:../emlib/src/em_gpio.c **** /***************************************************************************//**
+  43:../emlib/src/em_gpio.c ****  * @addtogroup GPIO
+  44:../emlib/src/em_gpio.c ****  * @brief General Purpose Input/Output (GPIO) API
+  45:../emlib/src/em_gpio.c ****  * @{
+  46:../emlib/src/em_gpio.c ****  ******************************************************************************/
+  47:../emlib/src/em_gpio.c **** 
+  48:../emlib/src/em_gpio.c **** /*******************************************************************************
+  49:../emlib/src/em_gpio.c ****  *******************************   DEFINES   ***********************************
+  50:../emlib/src/em_gpio.c ****  ******************************************************************************/
+  51:../emlib/src/em_gpio.c **** 
+  52:../emlib/src/em_gpio.c **** /** @cond DO_NOT_INCLUDE_WITH_DOXYGEN */
+  53:../emlib/src/em_gpio.c **** 
+  54:../emlib/src/em_gpio.c **** /** Validation of pin typically usable in assert statements. */
+  55:../emlib/src/em_gpio.c **** #define GPIO_DRIVEMODE_VALID(mode)    ((mode) <= 3)
+  56:../emlib/src/em_gpio.c **** 
+  57:../emlib/src/em_gpio.c **** /** @endcond */
+  58:../emlib/src/em_gpio.c **** 
+  59:../emlib/src/em_gpio.c **** 
+  60:../emlib/src/em_gpio.c **** /*******************************************************************************
+  61:../emlib/src/em_gpio.c ****  **************************   GLOBAL FUNCTIONS   *******************************
+  62:../emlib/src/em_gpio.c ****  ******************************************************************************/
+  63:../emlib/src/em_gpio.c **** 
+  64:../emlib/src/em_gpio.c **** /***************************************************************************//**
+  65:../emlib/src/em_gpio.c ****  * @brief
+  66:../emlib/src/em_gpio.c ****  *   Sets the pin location of the debug pins (Serial Wire interface).
+  67:../emlib/src/em_gpio.c ****  *
+  68:../emlib/src/em_gpio.c ****  * @note
+  69:../emlib/src/em_gpio.c ****  *   Changing the pins used for debugging uncontrolled, may result in a lockout.
+  70:../emlib/src/em_gpio.c ****  *
+  71:../emlib/src/em_gpio.c ****  * @param[in] location
+  72:../emlib/src/em_gpio.c ****  *   The debug pin location to use (0-3).
+  73:../emlib/src/em_gpio.c ****  ******************************************************************************/
+  74:../emlib/src/em_gpio.c **** void GPIO_DbgLocationSet(unsigned int location)
+  75:../emlib/src/em_gpio.c **** {
+  27              		.loc 1 75 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              	.LVL0:
+  76:../emlib/src/em_gpio.c **** #if defined ( _GPIO_ROUTE_SWLOCATION_MASK )
+  77:../emlib/src/em_gpio.c ****   EFM_ASSERT(location < AFCHANLOC_MAX);
+  32              		.loc 1 77 0
+  33 0000 0328     		cmp	r0, #3
+  75:../emlib/src/em_gpio.c **** {
+  34              		.loc 1 75 0
+  35 0002 10B5     		push	{r4, lr}
+  36              		.cfi_def_cfa_offset 8
+  37              		.cfi_offset 4, -8
+ARM GAS  /tmp/cc8b5XEh.s 			page 3
+
+
+  38              		.cfi_offset 14, -4
+  75:../emlib/src/em_gpio.c **** {
+  39              		.loc 1 75 0
+  40 0004 0446     		mov	r4, r0
+  41              		.loc 1 77 0
+  42 0006 03D9     		bls	.L2
+  43              		.loc 1 77 0 is_stmt 0 discriminator 1
+  44 0008 0648     		ldr	r0, .L4
+  45              	.LVL1:
+  46 000a 4D21     		movs	r1, #77
+  47 000c FFF7FEFF 		bl	assertEFM
+  48              	.LVL2:
+  49              	.L2:
+  78:../emlib/src/em_gpio.c **** 
+  79:../emlib/src/em_gpio.c ****   GPIO->ROUTE = (GPIO->ROUTE & ~_GPIO_ROUTE_SWLOCATION_MASK) |
+  50              		.loc 1 79 0 is_stmt 1
+  51 0010 054B     		ldr	r3, .L4+4
+  52 0012 D3F82021 		ldr	r2, [r3, #288]
+  53 0016 22F44072 		bic	r2, r2, #768
+  54 001a 42EA0424 		orr	r4, r2, r4, lsl #8
+  55              	.LVL3:
+  56 001e C3F82041 		str	r4, [r3, #288]
+  57 0022 10BD     		pop	{r4, pc}
+  58              	.L5:
+  59              		.align	2
+  60              	.L4:
+  61 0024 00000000 		.word	.LC0
+  62 0028 00600040 		.word	1073766400
+  63              		.cfi_endproc
+  64              	.LFE84:
+  66              		.section	.text.GPIO_DriveModeSet,"ax",%progbits
+  67              		.align	1
+  68              		.global	GPIO_DriveModeSet
+  69              		.thumb
+  70              		.thumb_func
+  72              	GPIO_DriveModeSet:
+  73              	.LFB85:
+  80:../emlib/src/em_gpio.c ****                 (location << _GPIO_ROUTE_SWLOCATION_SHIFT);
+  81:../emlib/src/em_gpio.c **** #else
+  82:../emlib/src/em_gpio.c ****   (void)location;
+  83:../emlib/src/em_gpio.c **** #endif
+  84:../emlib/src/em_gpio.c **** }
+  85:../emlib/src/em_gpio.c **** 
+  86:../emlib/src/em_gpio.c **** 
+  87:../emlib/src/em_gpio.c **** /***************************************************************************//**
+  88:../emlib/src/em_gpio.c ****  * @brief
+  89:../emlib/src/em_gpio.c ****  *   Sets the drive mode for a GPIO port.
+  90:../emlib/src/em_gpio.c ****  *
+  91:../emlib/src/em_gpio.c ****  * @param[in] port
+  92:../emlib/src/em_gpio.c ****  *   The GPIO port to access.
+  93:../emlib/src/em_gpio.c ****  *
+  94:../emlib/src/em_gpio.c ****  * @param[in] mode
+  95:../emlib/src/em_gpio.c ****  *   Drive mode to use for port.
+  96:../emlib/src/em_gpio.c ****  ******************************************************************************/
+  97:../emlib/src/em_gpio.c **** void GPIO_DriveModeSet(GPIO_Port_TypeDef port, GPIO_DriveMode_TypeDef mode)
+  98:../emlib/src/em_gpio.c **** {
+  74              		.loc 1 98 0
+ARM GAS  /tmp/cc8b5XEh.s 			page 4
+
+
+  75              		.cfi_startproc
+  76              		@ args = 0, pretend = 0, frame = 0
+  77              		@ frame_needed = 0, uses_anonymous_args = 0
+  78              	.LVL4:
+  99:../emlib/src/em_gpio.c ****   EFM_ASSERT(GPIO_PORT_VALID(port) && GPIO_DRIVEMODE_VALID(mode));
+  79              		.loc 1 99 0
+  80 0000 0528     		cmp	r0, #5
+  98:../emlib/src/em_gpio.c **** {
+  81              		.loc 1 98 0
+  82 0002 38B5     		push	{r3, r4, r5, lr}
+  83              		.cfi_def_cfa_offset 16
+  84              		.cfi_offset 3, -16
+  85              		.cfi_offset 4, -12
+  86              		.cfi_offset 5, -8
+  87              		.cfi_offset 14, -4
+  98:../emlib/src/em_gpio.c **** {
+  88              		.loc 1 98 0
+  89 0004 0546     		mov	r5, r0
+  90 0006 0C46     		mov	r4, r1
+  91              		.loc 1 99 0
+  92 0008 01D8     		bhi	.L7
+  93              		.loc 1 99 0 is_stmt 0 discriminator 2
+  94 000a 0329     		cmp	r1, #3
+  95 000c 03D9     		bls	.L8
+  96              	.L7:
+  97              		.loc 1 99 0 discriminator 1
+  98 000e 0848     		ldr	r0, .L9
+  99              	.LVL5:
+ 100 0010 6321     		movs	r1, #99
+ 101              	.LVL6:
+ 102 0012 FFF7FEFF 		bl	assertEFM
+ 103              	.LVL7:
+ 104              	.L8:
+ 105 0016 2420     		movs	r0, #36
+ 106 0018 6843     		muls	r0, r5, r0
+ 107 001a 00F18040 		add	r0, r0, #1073741824
+ 108 001e 00F5C040 		add	r0, r0, #24576
+ 100:../emlib/src/em_gpio.c **** 
+ 101:../emlib/src/em_gpio.c ****   GPIO->P[port].CTRL = (GPIO->P[port].CTRL & ~(_GPIO_P_CTRL_DRIVEMODE_MASK))
+ 109              		.loc 1 101 0 is_stmt 1
+ 110 0022 0368     		ldr	r3, [r0]
+ 111 0024 23F00303 		bic	r3, r3, #3
+ 102:../emlib/src/em_gpio.c ****                        | (mode << _GPIO_P_CTRL_DRIVEMODE_SHIFT);
+ 112              		.loc 1 102 0
+ 113 0028 1C43     		orrs	r4, r4, r3
+ 101:../emlib/src/em_gpio.c ****   GPIO->P[port].CTRL = (GPIO->P[port].CTRL & ~(_GPIO_P_CTRL_DRIVEMODE_MASK))
+ 114              		.loc 1 101 0
+ 115 002a 0460     		str	r4, [r0]
+ 116 002c 38BD     		pop	{r3, r4, r5, pc}
+ 117              	.L10:
+ 118 002e 00BF     		.align	2
+ 119              	.L9:
+ 120 0030 00000000 		.word	.LC0
+ 121              		.cfi_endproc
+ 122              	.LFE85:
+ 124              		.section	.text.GPIO_IntConfig,"ax",%progbits
+ 125              		.align	1
+ARM GAS  /tmp/cc8b5XEh.s 			page 5
+
+
+ 126              		.global	GPIO_IntConfig
+ 127              		.thumb
+ 128              		.thumb_func
+ 130              	GPIO_IntConfig:
+ 131              	.LFB86:
+ 103:../emlib/src/em_gpio.c **** }
+ 104:../emlib/src/em_gpio.c **** 
+ 105:../emlib/src/em_gpio.c **** 
+ 106:../emlib/src/em_gpio.c **** /***************************************************************************//**
+ 107:../emlib/src/em_gpio.c ****  * @brief
+ 108:../emlib/src/em_gpio.c ****  *   Configure GPIO interrupt.
+ 109:../emlib/src/em_gpio.c ****  *
+ 110:../emlib/src/em_gpio.c ****  * @details
+ 111:../emlib/src/em_gpio.c ****  *   If reconfiguring a GPIO interrupt that is already enabled, it is generally
+ 112:../emlib/src/em_gpio.c ****  *   recommended to disable it first, see GPIO_Disable().
+ 113:../emlib/src/em_gpio.c ****  *
+ 114:../emlib/src/em_gpio.c ****  *   The actual GPIO interrupt handler must be in place before enabling the
+ 115:../emlib/src/em_gpio.c ****  *   interrupt.
+ 116:../emlib/src/em_gpio.c ****  *
+ 117:../emlib/src/em_gpio.c ****  *   Notice that any pending interrupt for the selected pin is cleared by this
+ 118:../emlib/src/em_gpio.c ****  *   function.
+ 119:../emlib/src/em_gpio.c ****  *
+ 120:../emlib/src/em_gpio.c ****  * @note
+ 121:../emlib/src/em_gpio.c ****  *   A certain pin number can only be associated with one port. Ie, if GPIO
+ 122:../emlib/src/em_gpio.c ****  *   interrupt 1 is assigned to port A/pin 1, then it is not possibly to use
+ 123:../emlib/src/em_gpio.c ****  *   pin 1 from any other ports for interrupts. Please refer to the reference
+ 124:../emlib/src/em_gpio.c ****  *   manual.
+ 125:../emlib/src/em_gpio.c ****  *
+ 126:../emlib/src/em_gpio.c ****  * @param[in] port
+ 127:../emlib/src/em_gpio.c ****  *   The port to associate with @p pin.
+ 128:../emlib/src/em_gpio.c ****  *
+ 129:../emlib/src/em_gpio.c ****  * @param[in] pin
+ 130:../emlib/src/em_gpio.c ****  *   The GPIO interrupt number (= port pin).
+ 131:../emlib/src/em_gpio.c ****  *
+ 132:../emlib/src/em_gpio.c ****  * @param[in] risingEdge
+ 133:../emlib/src/em_gpio.c ****  *   Set to true if interrupts shall be enabled on rising edge, otherwise false.
+ 134:../emlib/src/em_gpio.c ****  *
+ 135:../emlib/src/em_gpio.c ****  * @param[in] fallingEdge
+ 136:../emlib/src/em_gpio.c ****  *   Set to true if interrupts shall be enabled on falling edge, otherwise false.
+ 137:../emlib/src/em_gpio.c ****  *
+ 138:../emlib/src/em_gpio.c ****  * @param[in] enable
+ 139:../emlib/src/em_gpio.c ****  *   Set to true if interrupt shall be enabled after configuration completed,
+ 140:../emlib/src/em_gpio.c ****  *   false to leave disabled. See GPIO_IntDisable() and GPIO_IntEnable().
+ 141:../emlib/src/em_gpio.c ****  ******************************************************************************/
+ 142:../emlib/src/em_gpio.c **** void GPIO_IntConfig(GPIO_Port_TypeDef port,
+ 143:../emlib/src/em_gpio.c ****                     unsigned int pin,
+ 144:../emlib/src/em_gpio.c ****                     bool risingEdge,
+ 145:../emlib/src/em_gpio.c ****                     bool fallingEdge,
+ 146:../emlib/src/em_gpio.c ****                     bool enable)
+ 147:../emlib/src/em_gpio.c **** {
+ 132              		.loc 1 147 0
+ 133              		.cfi_startproc
+ 134              		@ args = 4, pretend = 0, frame = 0
+ 135              		@ frame_needed = 0, uses_anonymous_args = 0
+ 136              	.LVL8:
+ 148:../emlib/src/em_gpio.c ****   uint32_t tmp;
+ 149:../emlib/src/em_gpio.c **** 
+ARM GAS  /tmp/cc8b5XEh.s 			page 6
+
+
+ 150:../emlib/src/em_gpio.c ****   EFM_ASSERT(GPIO_PORT_VALID(port) && GPIO_PIN_VALID(pin));
+ 137              		.loc 1 150 0
+ 138 0000 0528     		cmp	r0, #5
+ 147:../emlib/src/em_gpio.c **** {
+ 139              		.loc 1 147 0
+ 140 0002 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 141              		.cfi_def_cfa_offset 24
+ 142              		.cfi_offset 3, -24
+ 143              		.cfi_offset 4, -20
+ 144              		.cfi_offset 5, -16
+ 145              		.cfi_offset 6, -12
+ 146              		.cfi_offset 7, -8
+ 147              		.cfi_offset 14, -4
+ 147:../emlib/src/em_gpio.c **** {
+ 148              		.loc 1 147 0
+ 149 0004 0546     		mov	r5, r0
+ 150 0006 0C46     		mov	r4, r1
+ 151 0008 1646     		mov	r6, r2
+ 152 000a 1F46     		mov	r7, r3
+ 153              		.loc 1 150 0
+ 154 000c 01D8     		bhi	.L12
+ 155              		.loc 1 150 0 is_stmt 0 discriminator 2
+ 156 000e 0F29     		cmp	r1, #15
+ 157 0010 03D9     		bls	.L13
+ 158              	.L12:
+ 159              		.loc 1 150 0 discriminator 1
+ 160 0012 1948     		ldr	r0, .L16
+ 161              	.LVL9:
+ 162 0014 9621     		movs	r1, #150
+ 163              	.LVL10:
+ 164 0016 FFF7FEFF 		bl	assertEFM
+ 165              	.LVL11:
+ 166              	.L13:
+ 151:../emlib/src/em_gpio.c **** 
+ 152:../emlib/src/em_gpio.c ****   /* There are two registers controlling the interrupt configuration:
+ 153:../emlib/src/em_gpio.c ****    * The EXTIPSELL register controls pins 0-7 and EXTIPSELH controls
+ 154:../emlib/src/em_gpio.c ****    * pins 8-15. */
+ 155:../emlib/src/em_gpio.c ****   if (pin < 8)
+ 167              		.loc 1 155 0 is_stmt 1
+ 168 001a 072C     		cmp	r4, #7
+ 169 001c 1749     		ldr	r1, .L16+4
+ 170 001e 0CD8     		bhi	.L14
+ 156:../emlib/src/em_gpio.c ****   {
+ 157:../emlib/src/em_gpio.c ****     GPIO->EXTIPSELL = (GPIO->EXTIPSELL & ~(0xF << (4 * pin))) |
+ 171              		.loc 1 157 0
+ 172 0020 A000     		lsls	r0, r4, #2
+ 173 0022 0F23     		movs	r3, #15
+ 174 0024 8340     		lsls	r3, r3, r0
+ 158:../emlib/src/em_gpio.c ****                       (port << (4 * pin));
+ 175              		.loc 1 158 0
+ 176 0026 8540     		lsls	r5, r5, r0
+ 157:../emlib/src/em_gpio.c ****     GPIO->EXTIPSELL = (GPIO->EXTIPSELL & ~(0xF << (4 * pin))) |
+ 177              		.loc 1 157 0
+ 178 0028 D1F80021 		ldr	r2, [r1, #256]
+ 179 002c 22EA0303 		bic	r3, r2, r3
+ 180 0030 43EA0500 		orr	r0, r3, r5
+ 181 0034 C1F80001 		str	r0, [r1, #256]
+ARM GAS  /tmp/cc8b5XEh.s 			page 7
+
+
+ 182 0038 0DE0     		b	.L15
+ 183              	.L14:
+ 184              	.LVL12:
+ 159:../emlib/src/em_gpio.c ****   }
+ 160:../emlib/src/em_gpio.c ****   else
+ 161:../emlib/src/em_gpio.c ****   {
+ 162:../emlib/src/em_gpio.c ****     tmp             = pin - 8;
+ 185              		.loc 1 162 0
+ 186 003a A4F10800 		sub	r0, r4, #8
+ 163:../emlib/src/em_gpio.c ****     GPIO->EXTIPSELH = (GPIO->EXTIPSELH & ~(0xF << (4 * tmp))) |
+ 187              		.loc 1 163 0
+ 188 003e 8000     		lsls	r0, r0, #2
+ 189 0040 0F23     		movs	r3, #15
+ 190 0042 8340     		lsls	r3, r3, r0
+ 164:../emlib/src/em_gpio.c ****                       (port << (4 * tmp));
+ 191              		.loc 1 164 0
+ 192 0044 8540     		lsls	r5, r5, r0
+ 163:../emlib/src/em_gpio.c ****     GPIO->EXTIPSELH = (GPIO->EXTIPSELH & ~(0xF << (4 * tmp))) |
+ 193              		.loc 1 163 0
+ 194 0046 D1F80421 		ldr	r2, [r1, #260]
+ 195 004a 22EA0303 		bic	r3, r2, r3
+ 196 004e 43EA0500 		orr	r0, r3, r5
+ 197 0052 C1F80401 		str	r0, [r1, #260]
+ 198              	.LVL13:
+ 199              	.L15:
+ 200              	.LBB8:
+ 201              	.LBB9:
+ 202              		.file 2 "../emlib/inc/em_bitband.h"
+   1:../emlib/inc/em_bitband.h **** /***************************************************************************//**
+   2:../emlib/inc/em_bitband.h ****  * @file
+   3:../emlib/inc/em_bitband.h ****  * @brief Bitband Peripheral API
+   4:../emlib/inc/em_bitband.h ****  * @author Energy Micro AS
+   5:../emlib/inc/em_bitband.h ****  * @version 3.20.2
+   6:../emlib/inc/em_bitband.h ****  *******************************************************************************
+   7:../emlib/inc/em_bitband.h ****  * @section License
+   8:../emlib/inc/em_bitband.h ****  * <b>(C) Copyright 2012 Energy Micro AS, http://www.energymicro.com</b>
+   9:../emlib/inc/em_bitband.h ****  *******************************************************************************
+  10:../emlib/inc/em_bitband.h ****  *
+  11:../emlib/inc/em_bitband.h ****  * Permission is granted to anyone to use this software for any purpose,
+  12:../emlib/inc/em_bitband.h ****  * including commercial applications, and to alter it and redistribute it
+  13:../emlib/inc/em_bitband.h ****  * freely, subject to the following restrictions:
+  14:../emlib/inc/em_bitband.h ****  *
+  15:../emlib/inc/em_bitband.h ****  * 1. The origin of this software must not be misrepresented; you must not
+  16:../emlib/inc/em_bitband.h ****  *    claim that you wrote the original software.
+  17:../emlib/inc/em_bitband.h ****  * 2. Altered source versions must be plainly marked as such, and must not be
+  18:../emlib/inc/em_bitband.h ****  *    misrepresented as being the original software.
+  19:../emlib/inc/em_bitband.h ****  * 3. This notice may not be removed or altered from any source distribution.
+  20:../emlib/inc/em_bitband.h ****  *
+  21:../emlib/inc/em_bitband.h ****  * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Energy Micro AS has no
+  22:../emlib/inc/em_bitband.h ****  * obligation to support this Software. Energy Micro AS is providing the
+  23:../emlib/inc/em_bitband.h ****  * Software "AS IS", with no express or implied warranties of any kind,
+  24:../emlib/inc/em_bitband.h ****  * including, but not limited to, any implied warranties of merchantability
+  25:../emlib/inc/em_bitband.h ****  * or fitness for any particular purpose or warranties against infringement
+  26:../emlib/inc/em_bitband.h ****  * of any proprietary rights of a third party.
+  27:../emlib/inc/em_bitband.h ****  *
+  28:../emlib/inc/em_bitband.h ****  * Energy Micro AS will not be liable for any consequential, incidental, or
+  29:../emlib/inc/em_bitband.h ****  * special damages, or any other relief, or for any claim by any third party,
+ARM GAS  /tmp/cc8b5XEh.s 			page 8
+
+
+  30:../emlib/inc/em_bitband.h ****  * arising from your use of this Software.
+  31:../emlib/inc/em_bitband.h ****  *
+  32:../emlib/inc/em_bitband.h ****  ******************************************************************************/
+  33:../emlib/inc/em_bitband.h **** #ifndef __EM_BITBAND_H
+  34:../emlib/inc/em_bitband.h **** #define __EM_BITBAND_H
+  35:../emlib/inc/em_bitband.h **** 
+  36:../emlib/inc/em_bitband.h **** #include "em_device.h"
+  37:../emlib/inc/em_bitband.h **** #ifdef __cplusplus
+  38:../emlib/inc/em_bitband.h **** extern "C" {
+  39:../emlib/inc/em_bitband.h **** #endif
+  40:../emlib/inc/em_bitband.h **** 
+  41:../emlib/inc/em_bitband.h **** /***************************************************************************//**
+  42:../emlib/inc/em_bitband.h ****  * @addtogroup EM_Library
+  43:../emlib/inc/em_bitband.h ****  * @{
+  44:../emlib/inc/em_bitband.h ****  ******************************************************************************/
+  45:../emlib/inc/em_bitband.h **** 
+  46:../emlib/inc/em_bitband.h **** /***************************************************************************//**
+  47:../emlib/inc/em_bitband.h ****  * @addtogroup BITBAND
+  48:../emlib/inc/em_bitband.h ****  * @brief BITBAND Peripheral API
+  49:../emlib/inc/em_bitband.h ****  * @{
+  50:../emlib/inc/em_bitband.h ****  ******************************************************************************/
+  51:../emlib/inc/em_bitband.h **** 
+  52:../emlib/inc/em_bitband.h **** /***************************************************************************//**
+  53:../emlib/inc/em_bitband.h ****  * @brief
+  54:../emlib/inc/em_bitband.h ****  *   Perform bit-band operation on peripheral memory location.
+  55:../emlib/inc/em_bitband.h ****  *
+  56:../emlib/inc/em_bitband.h ****  * @details
+  57:../emlib/inc/em_bitband.h ****  *   Bit-banding provides atomic read-modify-write cycle for single bit
+  58:../emlib/inc/em_bitband.h ****  *   modification. Please refer to the reference manual for further details
+  59:../emlib/inc/em_bitband.h ****  *   about bit-banding.
+  60:../emlib/inc/em_bitband.h ****  *
+  61:../emlib/inc/em_bitband.h ****  * @note
+  62:../emlib/inc/em_bitband.h ****  *   This function is only atomic on cores which fully support bitbanding.
+  63:../emlib/inc/em_bitband.h ****  *
+  64:../emlib/inc/em_bitband.h ****  * @param[in] addr Peripheral address location to modify bit in.
+  65:../emlib/inc/em_bitband.h ****  *
+  66:../emlib/inc/em_bitband.h ****  * @param[in] bit Bit position to modify, 0-31.
+  67:../emlib/inc/em_bitband.h ****  *
+  68:../emlib/inc/em_bitband.h ****  * @param[in] val Value to set bit to, 0 or 1.
+  69:../emlib/inc/em_bitband.h ****  ******************************************************************************/
+  70:../emlib/inc/em_bitband.h **** __STATIC_INLINE void BITBAND_Peripheral(volatile uint32_t *addr,
+  71:../emlib/inc/em_bitband.h ****                                         uint32_t bit,
+  72:../emlib/inc/em_bitband.h ****                                         uint32_t val)
+  73:../emlib/inc/em_bitband.h **** {
+  74:../emlib/inc/em_bitband.h **** #if defined(BITBAND_PER_BASE)
+  75:../emlib/inc/em_bitband.h ****   uint32_t tmp =
+  76:../emlib/inc/em_bitband.h ****     BITBAND_PER_BASE + (((uint32_t)addr - PER_MEM_BASE) * 32) + (bit * 4);
+ 203              		.loc 2 76 0
+ 204 0056 0A49     		ldr	r1, .L16+8
+ 205              	.LBE9:
+ 206              	.LBE8:
+ 165:../emlib/src/em_gpio.c ****   }
+ 166:../emlib/src/em_gpio.c **** 
+ 167:../emlib/src/em_gpio.c ****   /* Enable/disable rising edge */
+ 168:../emlib/src/em_gpio.c ****   BITBAND_Peripheral(&(GPIO->EXTIRISE), pin, (unsigned int)risingEdge);
+ 169:../emlib/src/em_gpio.c **** 
+ 170:../emlib/src/em_gpio.c ****   /* Enable/disable falling edge */
+ARM GAS  /tmp/cc8b5XEh.s 			page 9
+
+
+ 171:../emlib/src/em_gpio.c ****   BITBAND_Peripheral(&(GPIO->EXTIFALL), pin, (unsigned int)fallingEdge);
+ 172:../emlib/src/em_gpio.c **** 
+ 173:../emlib/src/em_gpio.c ****   /* Clear any pending interrupt */
+ 174:../emlib/src/em_gpio.c ****   GPIO->IFC = 1 << pin;
+ 207              		.loc 1 174 0
+ 208 0058 0123     		movs	r3, #1
+ 209              	.LBB12:
+ 210              	.LBB10:
+ 211              		.loc 2 76 0
+ 212 005a 2144     		add	r1, r1, r4
+ 213              	.LBE10:
+ 214              	.LBE12:
+ 215              		.loc 1 174 0
+ 216 005c 03FA04F4 		lsl	r4, r3, r4
+ 217              	.LVL14:
+ 218 0060 064B     		ldr	r3, .L16+4
+ 219              	.LBB13:
+ 220              	.LBB11:
+  75:../emlib/inc/em_bitband.h ****   uint32_t tmp =
+ 221              		.loc 2 75 0
+ 222 0062 8900     		lsls	r1, r1, #2
+ 223              	.LVL15:
+  77:../emlib/inc/em_bitband.h **** 
+  78:../emlib/inc/em_bitband.h ****   *((volatile uint32_t *)tmp) = (uint32_t)val;
+ 224              		.loc 2 78 0
+ 225 0064 0E60     		str	r6, [r1]
+ 226              	.LVL16:
+ 227              	.LBE11:
+ 228              	.LBE13:
+ 229              	.LBB14:
+ 230              	.LBB15:
+ 231 0066 C1F88070 		str	r7, [r1, #128]
+ 232              	.LBE15:
+ 233              	.LBE14:
+ 234              		.loc 1 174 0
+ 235 006a C3F81C41 		str	r4, [r3, #284]
+ 236              	.LVL17:
+ 237              	.LBB16:
+ 238              	.LBB17:
+ 239              		.loc 2 78 0
+ 240 006e 9DF81830 		ldrb	r3, [sp, #24]	@ zero_extendqisi2
+ 241              	.LVL18:
+ 242 0072 C1F80031 		str	r3, [r1, #256]
+ 243 0076 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 244              	.LVL19:
+ 245              	.L17:
+ 246              		.align	2
+ 247              	.L16:
+ 248 0078 00000000 		.word	.LC0
+ 249 007c 00600040 		.word	1073766400
+ 250 0080 40088310 		.word	277022784
+ 251              	.LBE17:
+ 252              	.LBE16:
+ 253              		.cfi_endproc
+ 254              	.LFE86:
+ 256              		.section	.text.GPIO_PinModeSet,"ax",%progbits
+ 257              		.align	1
+ARM GAS  /tmp/cc8b5XEh.s 			page 10
+
+
+ 258              		.global	GPIO_PinModeSet
+ 259              		.thumb
+ 260              		.thumb_func
+ 262              	GPIO_PinModeSet:
+ 263              	.LFB87:
+ 175:../emlib/src/em_gpio.c **** 
+ 176:../emlib/src/em_gpio.c ****   /* Finally enable/disable interrupt */
+ 177:../emlib/src/em_gpio.c ****   BITBAND_Peripheral(&(GPIO->IEN), pin, (unsigned int)enable);
+ 178:../emlib/src/em_gpio.c **** }
+ 179:../emlib/src/em_gpio.c **** 
+ 180:../emlib/src/em_gpio.c **** 
+ 181:../emlib/src/em_gpio.c **** /***************************************************************************//**
+ 182:../emlib/src/em_gpio.c ****  * @brief
+ 183:../emlib/src/em_gpio.c ****  *   Set the mode for a GPIO pin.
+ 184:../emlib/src/em_gpio.c ****  *
+ 185:../emlib/src/em_gpio.c ****  * @param[in] port
+ 186:../emlib/src/em_gpio.c ****  *   The GPIO port to access.
+ 187:../emlib/src/em_gpio.c ****  *
+ 188:../emlib/src/em_gpio.c ****  * @param[in] pin
+ 189:../emlib/src/em_gpio.c ****  *   The pin number in the port.
+ 190:../emlib/src/em_gpio.c ****  *
+ 191:../emlib/src/em_gpio.c ****  * @param[in] mode
+ 192:../emlib/src/em_gpio.c ****  *   The desired pin mode.
+ 193:../emlib/src/em_gpio.c ****  *
+ 194:../emlib/src/em_gpio.c ****  * @param[in] out
+ 195:../emlib/src/em_gpio.c ****  *   Value to set for pin in DOUT register. The DOUT setting is important for
+ 196:../emlib/src/em_gpio.c ****  *   even some input mode configurations, determining pull-up/down direction.
+ 197:../emlib/src/em_gpio.c ****  ******************************************************************************/
+ 198:../emlib/src/em_gpio.c **** void GPIO_PinModeSet(GPIO_Port_TypeDef port,
+ 199:../emlib/src/em_gpio.c ****                      unsigned int pin,
+ 200:../emlib/src/em_gpio.c ****                      GPIO_Mode_TypeDef mode,
+ 201:../emlib/src/em_gpio.c ****                      unsigned int out)
+ 202:../emlib/src/em_gpio.c **** {
+ 264              		.loc 1 202 0
+ 265              		.cfi_startproc
+ 266              		@ args = 0, pretend = 0, frame = 0
+ 267              		@ frame_needed = 0, uses_anonymous_args = 0
+ 268              	.LVL20:
+ 203:../emlib/src/em_gpio.c ****   EFM_ASSERT(GPIO_PORT_VALID(port) && GPIO_PIN_VALID(pin));
+ 269              		.loc 1 203 0
+ 270 0000 0528     		cmp	r0, #5
+ 202:../emlib/src/em_gpio.c **** {
+ 271              		.loc 1 202 0
+ 272 0002 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 273              		.cfi_def_cfa_offset 24
+ 274              		.cfi_offset 3, -24
+ 275              		.cfi_offset 4, -20
+ 276              		.cfi_offset 5, -16
+ 277              		.cfi_offset 6, -12
+ 278              		.cfi_offset 7, -8
+ 279              		.cfi_offset 14, -4
+ 202:../emlib/src/em_gpio.c **** {
+ 280              		.loc 1 202 0
+ 281 0004 0546     		mov	r5, r0
+ 282 0006 0C46     		mov	r4, r1
+ 283 0008 1646     		mov	r6, r2
+ 284 000a 1F46     		mov	r7, r3
+ARM GAS  /tmp/cc8b5XEh.s 			page 11
+
+
+ 285              		.loc 1 203 0
+ 286 000c 01D8     		bhi	.L19
+ 287              		.loc 1 203 0 is_stmt 0 discriminator 2
+ 288 000e 0F29     		cmp	r1, #15
+ 289 0010 03D9     		bls	.L20
+ 290              	.L19:
+ 291              		.loc 1 203 0 discriminator 1
+ 292 0012 2248     		ldr	r0, .L30
+ 293              	.LVL21:
+ 294 0014 CB21     		movs	r1, #203
+ 295              	.LVL22:
+ 296 0016 FFF7FEFF 		bl	assertEFM
+ 297              	.LVL23:
+ 298              	.L20:
+ 204:../emlib/src/em_gpio.c **** 
+ 205:../emlib/src/em_gpio.c ****   /* If disabling pin, do not modify DOUT in order to reduce chance for */
+ 206:../emlib/src/em_gpio.c ****   /* glitch/spike (may not be sufficient precaution in all use cases) */
+ 207:../emlib/src/em_gpio.c ****   if (mode != gpioModeDisabled)
+ 299              		.loc 1 207 0 is_stmt 1
+ 300 001a 76B1     		cbz	r6, .L21
+ 301 001c 0123     		movs	r3, #1
+ 302 001e 2422     		movs	r2, #36
+ 208:../emlib/src/em_gpio.c ****   {
+ 209:../emlib/src/em_gpio.c ****     if (out)
+ 210:../emlib/src/em_gpio.c ****     {
+ 211:../emlib/src/em_gpio.c ****       GPIO->P[port].DOUTSET = 1 << pin;
+ 303              		.loc 1 211 0
+ 304 0020 A340     		lsls	r3, r3, r4
+ 209:../emlib/src/em_gpio.c ****     if (out)
+ 305              		.loc 1 209 0
+ 306 0022 37B1     		cbz	r7, .L22
+ 307              		.loc 1 211 0
+ 308 0024 6A43     		muls	r2, r5, r2
+ 309 0026 02F18042 		add	r2, r2, #1073741824
+ 310 002a 02F5C042 		add	r2, r2, #24576
+ 311 002e 1361     		str	r3, [r2, #16]
+ 312 0030 03E0     		b	.L21
+ 313              	.L22:
+ 212:../emlib/src/em_gpio.c ****     }
+ 213:../emlib/src/em_gpio.c ****     else
+ 214:../emlib/src/em_gpio.c ****     {
+ 215:../emlib/src/em_gpio.c ****       GPIO->P[port].DOUTCLR = 1 << pin;
+ 314              		.loc 1 215 0
+ 315 0032 02FB05F1 		mul	r1, r2, r5
+ 316 0036 1A4A     		ldr	r2, .L30+4
+ 317 0038 5350     		str	r3, [r2, r1]
+ 318              	.L21:
+ 319 003a 2422     		movs	r2, #36
+ 320 003c 6A43     		muls	r2, r5, r2
+ 216:../emlib/src/em_gpio.c ****     }
+ 217:../emlib/src/em_gpio.c ****   }
+ 218:../emlib/src/em_gpio.c **** 
+ 219:../emlib/src/em_gpio.c ****   /* There are two registers controlling the pins for each port. The MODEL
+ 220:../emlib/src/em_gpio.c ****    * register controls pins 0-7 and MODEH controls pins 8-15. */
+ 221:../emlib/src/em_gpio.c ****   if (pin < 8)
+ 321              		.loc 1 221 0
+ 322 003e 072C     		cmp	r4, #7
+ARM GAS  /tmp/cc8b5XEh.s 			page 12
+
+
+ 323 0040 02F18042 		add	r2, r2, #1073741824
+ 324 0044 02F5C042 		add	r2, r2, #24576
+ 325 0048 0AD8     		bhi	.L23
+ 222:../emlib/src/em_gpio.c ****   {
+ 223:../emlib/src/em_gpio.c ****     GPIO->P[port].MODEL = (GPIO->P[port].MODEL & ~(0xF << (pin * 4))) |
+ 326              		.loc 1 223 0
+ 327 004a A300     		lsls	r3, r4, #2
+ 328 004c 0F21     		movs	r1, #15
+ 329 004e 9940     		lsls	r1, r1, r3
+ 224:../emlib/src/em_gpio.c ****                           (mode << (pin * 4));
+ 330              		.loc 1 224 0
+ 331 0050 06FA03F3 		lsl	r3, r6, r3
+ 223:../emlib/src/em_gpio.c ****     GPIO->P[port].MODEL = (GPIO->P[port].MODEL & ~(0xF << (pin * 4))) |
+ 332              		.loc 1 223 0
+ 333 0054 5068     		ldr	r0, [r2, #4]
+ 334 0056 20EA0101 		bic	r1, r0, r1
+ 335 005a 0B43     		orrs	r3, r3, r1
+ 336 005c 5360     		str	r3, [r2, #4]
+ 337 005e 0CE0     		b	.L24
+ 338              	.L23:
+ 225:../emlib/src/em_gpio.c ****   }
+ 226:../emlib/src/em_gpio.c ****   else
+ 227:../emlib/src/em_gpio.c ****   {
+ 228:../emlib/src/em_gpio.c ****     GPIO->P[port].MODEH = (GPIO->P[port].MODEH & ~(0xF << ((pin - 8) * 4))) |
+ 339              		.loc 1 228 0
+ 340 0060 04F18041 		add	r1, r4, #1073741824
+ 341 0064 0839     		subs	r1, r1, #8
+ 342 0066 8900     		lsls	r1, r1, #2
+ 343 0068 0F23     		movs	r3, #15
+ 344 006a 8B40     		lsls	r3, r3, r1
+ 229:../emlib/src/em_gpio.c ****                           (mode << ((pin - 8) * 4));
+ 345              		.loc 1 229 0
+ 346 006c 06FA01F1 		lsl	r1, r6, r1
+ 228:../emlib/src/em_gpio.c ****     GPIO->P[port].MODEH = (GPIO->P[port].MODEH & ~(0xF << ((pin - 8) * 4))) |
+ 347              		.loc 1 228 0
+ 348 0070 9068     		ldr	r0, [r2, #8]
+ 349 0072 20EA0303 		bic	r3, r0, r3
+ 350 0076 1943     		orrs	r1, r1, r3
+ 351 0078 9160     		str	r1, [r2, #8]
+ 352              	.L24:
+ 230:../emlib/src/em_gpio.c ****   }
+ 231:../emlib/src/em_gpio.c **** 
+ 232:../emlib/src/em_gpio.c ****   if (mode == gpioModeDisabled)
+ 353              		.loc 1 232 0
+ 354 007a 6EB9     		cbnz	r6, .L18
+ 355 007c 0122     		movs	r2, #1
+ 356 007e 2423     		movs	r3, #36
+ 233:../emlib/src/em_gpio.c ****   {
+ 234:../emlib/src/em_gpio.c ****     if (out)
+ 235:../emlib/src/em_gpio.c ****     {
+ 236:../emlib/src/em_gpio.c ****       GPIO->P[port].DOUTSET = 1 << pin;
+ 357              		.loc 1 236 0
+ 358 0080 02FA04F4 		lsl	r4, r2, r4
+ 359              	.LVL24:
+ 360 0084 5D43     		muls	r5, r3, r5
+ 234:../emlib/src/em_gpio.c ****     if (out)
+ 361              		.loc 1 234 0
+ARM GAS  /tmp/cc8b5XEh.s 			page 13
+
+
+ 362 0086 2FB1     		cbz	r7, .L26
+ 363              		.loc 1 236 0
+ 364 0088 05F18045 		add	r5, r5, #1073741824
+ 365 008c 05F5C045 		add	r5, r5, #24576
+ 366 0090 2C61     		str	r4, [r5, #16]
+ 367 0092 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 368              	.LVL25:
+ 369              	.L26:
+ 237:../emlib/src/em_gpio.c ****     }
+ 238:../emlib/src/em_gpio.c ****     else
+ 239:../emlib/src/em_gpio.c ****     {
+ 240:../emlib/src/em_gpio.c ****       GPIO->P[port].DOUTCLR = 1 << pin;
+ 370              		.loc 1 240 0
+ 371 0094 024B     		ldr	r3, .L30+4
+ 372 0096 5C51     		str	r4, [r3, r5]
+ 373              	.L18:
+ 374 0098 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 375              	.LVL26:
+ 376              	.L31:
+ 377 009a 00BF     		.align	2
+ 378              	.L30:
+ 379 009c 00000000 		.word	.LC0
+ 380 00a0 14600040 		.word	1073766420
+ 381              		.cfi_endproc
+ 382              	.LFE87:
+ 384              		.section	.rodata.str1.1,"aMS",%progbits,1
+ 385              	.LC0:
+ 386 0000 2E2E2F65 		.ascii	"../emlib/src/em_gpio.c\000"
+ 386      6D6C6962 
+ 386      2F737263 
+ 386      2F656D5F 
+ 386      6770696F 
+ 387              		.text
+ 388              	.Letext0:
+ 389              		.file 3 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/machine/_default_types.h"
+ 390              		.file 4 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdint.h"
+ 391              		.file 5 "../Device/EnergyMicro/EFM32G/Include/efm32g_gpio_p.h"
+ 392              		.file 6 "../Device/EnergyMicro/EFM32G/Include/efm32g_gpio.h"
+ 393              		.file 7 "../emlib/inc/em_gpio.h"
+ 394              		.file 8 "../CMSIS/Include/core_cm3.h"
+ 395              		.file 9 "../emlib/inc/em_assert.h"

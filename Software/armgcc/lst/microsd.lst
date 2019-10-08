@@ -1,0 +1,2906 @@
+ARM GAS  /tmp/ccmooP1h.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"microsd.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.IsDiskRemoved,"ax",%progbits
+  19              		.align	1
+  20              		.global	IsDiskRemoved
+  21              		.thumb
+  22              		.thumb_func
+  24              	IsDiskRemoved:
+  25              	.LFB103:
+  26              		.file 1 "../drivers/microsd.c"
+   1:../drivers/microsd.c **** /***************************************************************************//**
+   2:../drivers/microsd.c ****  * @file
+   3:../drivers/microsd.c ****  * @brief	Driver for the SD-Card interface
+   4:../drivers/microsd.c ****  * @author	Silicon Labs
+   5:../drivers/microsd.c ****  * @author	Ralf Gerhauser
+   6:../drivers/microsd.c ****  * @version	2016-02-21
+   7:../drivers/microsd.c ****  *
+   8:../drivers/microsd.c ****  * This is the driver for the SD-Card interface.  It provides all required
+   9:../drivers/microsd.c ****  * board-specific functionality to access an SD-Card via SPI.
+  10:../drivers/microsd.c ****  * Furthermore this file contains routines for high-level access to the
+  11:../drivers/microsd.c ****  * file system on the SD-Card.
+  12:../drivers/microsd.c ****  *
+  13:../drivers/microsd.c ****  * For a separate documentation of the FAT file system, see
+  14:../drivers/microsd.c ****  * <a href="../../fatfs/doc/00index_e.html">FAT File System Module</a>.
+  15:../drivers/microsd.c ****  *
+  16:../drivers/microsd.c ****  ******************************************************************************
+  17:../drivers/microsd.c ****  * @section License
+  18:../drivers/microsd.c ****  * <b>(C) Copyright 2014 Silicon Labs, http://www.silabs.com</b>
+  19:../drivers/microsd.c ****  *******************************************************************************
+  20:../drivers/microsd.c ****  *
+  21:../drivers/microsd.c ****  * This file is licensensed under the Silabs License Agreement. See the file
+  22:../drivers/microsd.c ****  * "Silabs_License_Agreement.txt" for details. Before using this software for
+  23:../drivers/microsd.c ****  * any purpose, you must agree to the terms of that agreement.
+  24:../drivers/microsd.c ****  *
+  25:../drivers/microsd.c ****  ****************************************************************************//*
+  26:../drivers/microsd.c **** Revision History:
+  27:../drivers/microsd.c **** 2018-02-20,rage	Added global variables g_MicroSD_PwrPort and g_MicroSD_PwrPin,
+  28:../drivers/microsd.c **** 		which can be changed by platform detection logic.
+  29:../drivers/microsd.c **** 2016-02-21,rage	Added IsDiskRemoved() to query CF-Card removal.
+  30:../drivers/microsd.c **** 2015-03-30,rage	Implemented DiskInit(), DiskInfo(), and FileFind().
+  31:../drivers/microsd.c **** 2015-02-18,rage	Adapted board-specific parts for SNB_Heaven.
+  32:../drivers/microsd.c **** */
+ARM GAS  /tmp/ccmooP1h.s 			page 2
+
+
+  33:../drivers/microsd.c **** 
+  34:../drivers/microsd.c **** /*=============================== Header Files ===============================*/
+  35:../drivers/microsd.c **** 
+  36:../drivers/microsd.c **** #include <string.h>
+  37:../drivers/microsd.c **** #include "em_cmu.h"
+  38:../drivers/microsd.c **** #include "em_cmu.h"
+  39:../drivers/microsd.c **** #include "em_usart.h"
+  40:../drivers/microsd.c **** #include "microsd.h"
+  41:../drivers/microsd.c **** #include "Logging.h"
+  42:../drivers/microsd.c **** 
+  43:../drivers/microsd.c **** /*=============================== Definitions ================================*/
+  44:../drivers/microsd.c **** 
+  45:../drivers/microsd.c ****     /*!@brief Display duration in seconds to show info on LCD */
+  46:../drivers/microsd.c **** #define DISP_DUR		10
+  47:../drivers/microsd.c **** 
+  48:../drivers/microsd.c **** /*================================== Macros ==================================*/
+  49:../drivers/microsd.c **** 
+  50:../drivers/microsd.c **** #ifndef LOGGING		// define as empty, if logging is not enabled
+  51:../drivers/microsd.c ****     #define Log(str)
+  52:../drivers/microsd.c ****     #define LogError(str)
+  53:../drivers/microsd.c **** #endif
+  54:../drivers/microsd.c **** 
+  55:../drivers/microsd.c ****     /*!@brief Set the power enable pin. */
+  56:../drivers/microsd.c **** #define SET_MICROSD_PWR_PIN	GPIO->P[g_MicroSD_PwrPort].DOUTSET \
+  57:../drivers/microsd.c **** 					= (1<<g_MicroSD_PwrPin)
+  58:../drivers/microsd.c **** 
+  59:../drivers/microsd.c ****     /*!@brief Clear the power enable pin. */
+  60:../drivers/microsd.c **** #define CLR_MICROSD_PWR_PIN	GPIO->P[g_MicroSD_PwrPort].DOUTCLR \
+  61:../drivers/microsd.c **** 					= (1<<g_MicroSD_PwrPin)
+  62:../drivers/microsd.c **** 
+  63:../drivers/microsd.c ****     /*!@brief Check CD-Pin if Disk (SD-Card) is present. */
+  64:../drivers/microsd.c **** #define IS_DISK_PRESENT		(IO_Bit(GPIO->P[MICROSD_SPI_GPIO_PORT].DIN, \
+  65:../drivers/microsd.c **** 					MICROSD_CD_PIN) == 0)
+  66:../drivers/microsd.c **** 
+  67:../drivers/microsd.c **** /*=========================== Typedefs and Structs ===========================*/
+  68:../drivers/microsd.c **** 
+  69:../drivers/microsd.c **** /*!@brief Enumeration of Disk States
+  70:../drivers/microsd.c ****  *
+  71:../drivers/microsd.c ****  * This is the list of Disk States.  They are used by the state machine in
+  72:../drivers/microsd.c ****  * DiskCheck().
+  73:../drivers/microsd.c ****  */
+  74:../drivers/microsd.c **** typedef enum
+  75:../drivers/microsd.c **** {
+  76:../drivers/microsd.c ****     DS_UNKNOWN,		//!< Unknown State (after Power-Up or Reset)
+  77:../drivers/microsd.c ****     DS_INSERTED,	//!< An SD-Card has been inserted
+  78:../drivers/microsd.c ****     DS_REMOVED,		//!< The SD-Card has been removed
+  79:../drivers/microsd.c ****     DS_INITIALIZED,	//!< The SD-Card is initialized
+  80:../drivers/microsd.c ****     DS_MOUNTED,		//!< The File System on the SD-Card has been mounted
+  81:../drivers/microsd.c ****     DS_MOUNT_FAILED,	//!< Mounting the File System failed
+  82:../drivers/microsd.c ****     END_DISK_STATE
+  83:../drivers/microsd.c **** } DISK_STATE;
+  84:../drivers/microsd.c **** 
+  85:../drivers/microsd.c **** /*================================ Global Data ===============================*/
+  86:../drivers/microsd.c **** 
+  87:../drivers/microsd.c **** /*! @brief Power Enable GPIO Port */
+  88:../drivers/microsd.c **** GPIO_Port_TypeDef	g_MicroSD_PwrPort = DFLT_MICROSD_PWR_GPIO_PORT;
+  89:../drivers/microsd.c **** /*! @brief Power Enable GPIO Pin */
+ARM GAS  /tmp/ccmooP1h.s 			page 3
+
+
+  90:../drivers/microsd.c **** int			g_MicroSD_PwrPin  = DFLT_MICROSD_PWR_PIN;
+  91:../drivers/microsd.c **** 
+  92:../drivers/microsd.c **** /*================================ Local Data ================================*/
+  93:../drivers/microsd.c **** 
+  94:../drivers/microsd.c **** static uint32_t	 timeOut, xfersPrMsec;
+  95:../drivers/microsd.c **** static FATFS	 l_FatFS;
+  96:../drivers/microsd.c **** static DISK_STATE l_DiskState = DS_UNKNOWN;
+  97:../drivers/microsd.c **** static DISK_STATE l_PrevDiskState;
+  98:../drivers/microsd.c **** 
+  99:../drivers/microsd.c **** 
+ 100:../drivers/microsd.c **** //==============================================================================
+ 101:../drivers/microsd.c **** //
+ 102:../drivers/microsd.c **** //		H I G H - L E V E L   R O U T I N E S
+ 103:../drivers/microsd.c **** //
+ 104:../drivers/microsd.c **** //==============================================================================
+ 105:../drivers/microsd.c **** 
+ 106:../drivers/microsd.c **** /***************************************************************************//**
+ 107:../drivers/microsd.c ****  *
+ 108:../drivers/microsd.c ****  * @brief	Initialize SD-Card Interface
+ 109:../drivers/microsd.c ****  *
+ 110:../drivers/microsd.c ****  * This routine must be called once to initialize this module.
+ 111:../drivers/microsd.c ****  *
+ 112:../drivers/microsd.c ****  ******************************************************************************/
+ 113:../drivers/microsd.c **** void	 DiskInit (void)
+ 114:../drivers/microsd.c **** {
+ 115:../drivers/microsd.c ****     /* Initialize the SPI peripheral and GPIOs for microSD card usage */
+ 116:../drivers/microsd.c ****     MICROSD_Init();
+ 117:../drivers/microsd.c **** }
+ 118:../drivers/microsd.c **** 
+ 119:../drivers/microsd.c **** 
+ 120:../drivers/microsd.c **** /***************************************************************************//**
+ 121:../drivers/microsd.c ****  *
+ 122:../drivers/microsd.c ****  * @brief	Disk Check
+ 123:../drivers/microsd.c ****  *
+ 124:../drivers/microsd.c ****  * This routine checks if an SD-Card has been inserted or removed.  This is
+ 125:../drivers/microsd.c ****  * done in polling mode by switching on an external low impedance pull-up
+ 126:../drivers/microsd.c ****  * resistor for the Card-Detect (CD) pin and reading the current state of
+ 127:../drivers/microsd.c ****  * this signal.  It then takes the appropriate action to mount or invalidate
+ 128:../drivers/microsd.c ****  * the file system of the media.  Finally the pull-up resistor is switched
+ 129:../drivers/microsd.c ****  * off again for power saving reasons.
+ 130:../drivers/microsd.c ****  *
+ 131:../drivers/microsd.c ****  * @return
+ 132:../drivers/microsd.c ****  *	Disk state: <b>true</b> if a new file system has been mounted,
+ 133:../drivers/microsd.c ****  *	<b>false</b> otherwise.
+ 134:../drivers/microsd.c ****  *
+ 135:../drivers/microsd.c ****  * @note
+ 136:../drivers/microsd.c ****  * 	This function may be called from standard program, usually the loop
+ 137:../drivers/microsd.c ****  * 	in module "main.c" - it must not be called from interrupt routines!
+ 138:../drivers/microsd.c ****  *
+ 139:../drivers/microsd.c ****  ******************************************************************************/
+ 140:../drivers/microsd.c **** bool	 DiskCheck (void)
+ 141:../drivers/microsd.c **** {
+ 142:../drivers/microsd.c **** bool	 state = false;
+ 143:../drivers/microsd.c **** 
+ 144:../drivers/microsd.c **** 
+ 145:../drivers/microsd.c ****     /* Enable Card Detect (CD) Pin with Pull-Up */
+ 146:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_CD_PULLUP_PIN,
+ARM GAS  /tmp/ccmooP1h.s 			page 4
+
+
+ 147:../drivers/microsd.c ****                     gpioModePushPull, 1);
+ 148:../drivers/microsd.c **** 
+ 149:../drivers/microsd.c ****     /* Save current state for next time */
+ 150:../drivers/microsd.c ****     l_PrevDiskState = l_DiskState;
+ 151:../drivers/microsd.c **** 
+ 152:../drivers/microsd.c ****     /* Always check for card removal */
+ 153:../drivers/microsd.c ****     if (! IS_DISK_PRESENT)
+ 154:../drivers/microsd.c ****     {
+ 155:../drivers/microsd.c **** 	l_DiskState = DS_REMOVED;
+ 156:../drivers/microsd.c ****     }
+ 157:../drivers/microsd.c **** 
+ 158:../drivers/microsd.c ****     /*
+ 159:../drivers/microsd.c ****      * Proceed the current Disk State
+ 160:../drivers/microsd.c ****      */
+ 161:../drivers/microsd.c ****     switch (l_DiskState)
+ 162:../drivers/microsd.c ****     {
+ 163:../drivers/microsd.c **** 	case DS_REMOVED:	// SD-Card has been removed
+ 164:../drivers/microsd.c **** 	    /* Check if state is new or unchanged */
+ 165:../drivers/microsd.c **** 	    if (l_DiskState != l_PrevDiskState)
+ 166:../drivers/microsd.c **** 	    {
+ 167:../drivers/microsd.c **** 		/* State is new, the SD-Card interface must be shut down */
+ 168:../drivers/microsd.c **** 		Log ("SD-Card Removed");
+ 169:../drivers/microsd.c **** 
+ 170:../drivers/microsd.c **** 		/* Invalidate current File System */
+ 171:../drivers/microsd.c **** 		l_FatFS.fs_type = 0;
+ 172:../drivers/microsd.c **** 		disk_ioctl(0, CTRL_INVALIDATE, NULL);
+ 173:../drivers/microsd.c **** 
+ 174:../drivers/microsd.c **** 		/* Shut Down and Power Off the SD-Card */
+ 175:../drivers/microsd.c **** 		MICROSD_Deinit();
+ 176:../drivers/microsd.c **** 	    }
+ 177:../drivers/microsd.c **** 	    /* no break */
+ 178:../drivers/microsd.c **** 
+ 179:../drivers/microsd.c **** 	case DS_UNKNOWN:	// Unknown state after power-up or reset
+ 180:../drivers/microsd.c **** 	    /* Check for card insertion */
+ 181:../drivers/microsd.c **** 	    if (IS_DISK_PRESENT)
+ 182:../drivers/microsd.c **** 	    {
+ 183:../drivers/microsd.c **** 		l_DiskState = DS_INSERTED;
+ 184:../drivers/microsd.c **** 	    }
+ 185:../drivers/microsd.c **** 	    else
+ 186:../drivers/microsd.c **** 	    {
+ 187:../drivers/microsd.c **** 		break;		// still no disk present, leave switch()
+ 188:../drivers/microsd.c **** 	    }
+ 189:../drivers/microsd.c **** 	    /* no break */
+ 190:../drivers/microsd.c **** 
+ 191:../drivers/microsd.c **** 	case DS_INSERTED:	// SD-Card has been inserted
+ 192:../drivers/microsd.c **** 	    /* Check if state is new or unchanged */
+ 193:../drivers/microsd.c **** 	    if (l_DiskState != l_PrevDiskState)
+ 194:../drivers/microsd.c **** 	    {
+ 195:../drivers/microsd.c **** 		/* State is new, the SD-Card interface must be set up */
+ 196:../drivers/microsd.c **** 		Log ("SD-Card Inserted");
+ 197:../drivers/microsd.c **** 		MICROSD_Init();
+ 198:../drivers/microsd.c **** 	    }
+ 199:../drivers/microsd.c **** 	    /* SD-Card is present, try to initialize it */
+ 200:../drivers/microsd.c **** 	    if (disk_initialize(0) == 0)
+ 201:../drivers/microsd.c **** 	    {
+ 202:../drivers/microsd.c **** 		l_DiskState = DS_INITIALIZED;
+ 203:../drivers/microsd.c **** 		Log ("SD-Card Initialized");
+ARM GAS  /tmp/ccmooP1h.s 			page 5
+
+
+ 204:../drivers/microsd.c **** 	    }
+ 205:../drivers/microsd.c **** 	    else
+ 206:../drivers/microsd.c **** 	    {
+ 207:../drivers/microsd.c **** 		break;	// initialization still fails, leave switch()
+ 208:../drivers/microsd.c **** 	    }
+ 209:../drivers/microsd.c **** 	    /* no break */
+ 210:../drivers/microsd.c **** 
+ 211:../drivers/microsd.c **** 	case DS_INITIALIZED:	// The SD-Card is initialized
+ 212:../drivers/microsd.c **** 	    /* Try mounting the File System on the SD-Card */
+ 213:../drivers/microsd.c **** 	    if (f_mount(0, &l_FatFS) == FR_OK)
+ 214:../drivers/microsd.c **** 	    {
+ 215:../drivers/microsd.c **** 	    uint32_t	sizeMB;
+ 216:../drivers/microsd.c **** 
+ 217:../drivers/microsd.c **** 		l_DiskState = DS_MOUNTED;
+ 218:../drivers/microsd.c **** 		Log ("SD-Card File System mounted");
+ 219:../drivers/microsd.c **** 		state = true;	// Inform caller about the new mount
+ 220:../drivers/microsd.c **** 
+ 221:../drivers/microsd.c **** 		/* Log Disk Size and display it on the LCD */
+ 222:../drivers/microsd.c **** 		sizeMB = DiskSize();
+ 223:../drivers/microsd.c **** 		if (sizeMB > 0)
+ 224:../drivers/microsd.c **** 		{
+ 225:../drivers/microsd.c **** 		    Log ("SD-Card %ldMB free", sizeMB);
+ 226:../drivers/microsd.c **** 		}
+ 227:../drivers/microsd.c **** 	    }
+ 228:../drivers/microsd.c **** 	    else
+ 229:../drivers/microsd.c **** 	    {
+ 230:../drivers/microsd.c **** 		l_DiskState = DS_MOUNT_FAILED;
+ 231:../drivers/microsd.c **** 		LogError ("SD-Card Mount Failed");
+ 232:../drivers/microsd.c **** 	    }
+ 233:../drivers/microsd.c **** 	    break;
+ 234:../drivers/microsd.c **** 
+ 235:../drivers/microsd.c **** 	case DS_MOUNTED:	// File System on the SD-Card has been mounted
+ 236:../drivers/microsd.c **** 	    /* Remain in this state until card removal */
+ 237:../drivers/microsd.c **** 	    break;
+ 238:../drivers/microsd.c **** 
+ 239:../drivers/microsd.c **** 	case DS_MOUNT_FAILED:	// Mounting the File System failed
+ 240:../drivers/microsd.c **** 	    /* Remain in this state until card removal */
+ 241:../drivers/microsd.c **** 	    break;
+ 242:../drivers/microsd.c **** 
+ 243:../drivers/microsd.c **** 	default:		// Invalid state code
+ 244:../drivers/microsd.c **** 	    EFM_ASSERT(false);
+ 245:../drivers/microsd.c **** 	    l_DiskState = DS_UNKNOWN;	// try to recover
+ 246:../drivers/microsd.c ****     }
+ 247:../drivers/microsd.c **** 
+ 248:../drivers/microsd.c ****     /* See if Disk State has changed */
+ 249:../drivers/microsd.c ****     if (l_DiskState != l_PrevDiskState)
+ 250:../drivers/microsd.c **** 	g_flgIRQ = true;		// immediately process the new state
+ 251:../drivers/microsd.c **** 
+ 252:../drivers/microsd.c ****     /* Disable Card Detect (CD) Pin again */
+ 253:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_CD_PULLUP_PIN,
+ 254:../drivers/microsd.c ****                     gpioModeDisabled, 0);
+ 255:../drivers/microsd.c **** 
+ 256:../drivers/microsd.c ****     return state;
+ 257:../drivers/microsd.c **** }
+ 258:../drivers/microsd.c **** 
+ 259:../drivers/microsd.c **** 
+ 260:../drivers/microsd.c **** /***************************************************************************//**
+ARM GAS  /tmp/ccmooP1h.s 			page 6
+
+
+ 261:../drivers/microsd.c ****  *
+ 262:../drivers/microsd.c ****  * @brief	Is Disk Removed
+ 263:../drivers/microsd.c ****  *
+ 264:../drivers/microsd.c ****  * This routine returns <b>true</b> if no SD-Card is present.
+ 265:../drivers/microsd.c ****  *
+ 266:../drivers/microsd.c ****  * @return
+ 267:../drivers/microsd.c ****  *	State of the SD-Card, <b>true</b> if none is present, <b>false</b>
+ 268:../drivers/microsd.c ****  *	otherwise.
+ 269:../drivers/microsd.c ****  *
+ 270:../drivers/microsd.c ****  ******************************************************************************/
+ 271:../drivers/microsd.c **** bool	 IsDiskRemoved (void)
+ 272:../drivers/microsd.c **** {
+  27              		.loc 1 272 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+ 273:../drivers/microsd.c ****     return l_DiskState == DS_REMOVED ? true : false;
+  32              		.loc 1 273 0
+  33 0000 024B     		ldr	r3, .L2
+  34 0002 1878     		ldrb	r0, [r3]	@ zero_extendqisi2
+ 274:../drivers/microsd.c **** }
+  35              		.loc 1 274 0
+  36 0004 831E     		subs	r3, r0, #2
+  37 0006 5842     		rsbs	r0, r3, #0
+  38 0008 5841     		adcs	r0, r0, r3
+  39 000a 7047     		bx	lr
+  40              	.L3:
+  41              		.align	2
+  42              	.L2:
+  43 000c 00000000 		.word	.LANCHOR0
+  44              		.cfi_endproc
+  45              	.LFE103:
+  47              		.section	.text.IsFileHandleValid,"ax",%progbits
+  48              		.align	1
+  49              		.global	IsFileHandleValid
+  50              		.thumb
+  51              		.thumb_func
+  53              	IsFileHandleValid:
+  54              	.LFB104:
+ 275:../drivers/microsd.c **** 
+ 276:../drivers/microsd.c **** 
+ 277:../drivers/microsd.c **** /***************************************************************************//**
+ 278:../drivers/microsd.c ****  *
+ 279:../drivers/microsd.c ****  * @brief	Is File Handle Valid
+ 280:../drivers/microsd.c ****  *
+ 281:../drivers/microsd.c ****  * This routine verifies if the specified file handle is valid, i.e. if it
+ 282:../drivers/microsd.c ****  * refers to a valid @ref FATFS structure.
+ 283:../drivers/microsd.c ****  *
+ 284:../drivers/microsd.c ****  * @param[in] pHdl
+ 285:../drivers/microsd.c ****  *	Pointer to file handle structure.
+ 286:../drivers/microsd.c ****  *
+ 287:../drivers/microsd.c ****  * @return
+ 288:../drivers/microsd.c ****  *	State of the file handle, <b>true</b> if valid, <b>false</b> if not.
+ 289:../drivers/microsd.c ****  *
+ 290:../drivers/microsd.c ****  ******************************************************************************/
+ 291:../drivers/microsd.c **** bool	 IsFileHandleValid (FIL *pHdl)
+ARM GAS  /tmp/ccmooP1h.s 			page 7
+
+
+ 292:../drivers/microsd.c **** {
+  55              		.loc 1 292 0
+  56              		.cfi_startproc
+  57              		@ args = 0, pretend = 0, frame = 0
+  58              		@ frame_needed = 0, uses_anonymous_args = 0
+  59              		@ link register save eliminated.
+  60              	.LVL0:
+ 293:../drivers/microsd.c ****     if (pHdl == NULL)
+  61              		.loc 1 293 0
+  62 0000 28B1     		cbz	r0, .L5
+ 294:../drivers/microsd.c **** 	return false;
+ 295:../drivers/microsd.c **** 
+ 296:../drivers/microsd.c ****     if (pHdl->fs == NULL)
+  63              		.loc 1 296 0
+  64 0002 0068     		ldr	r0, [r0]
+  65              	.LVL1:
+  66 0004 18B1     		cbz	r0, .L5
+ 297:../drivers/microsd.c **** 	return false;
+ 298:../drivers/microsd.c **** 
+ 299:../drivers/microsd.c ****     if (pHdl->fs->fs_type == 0)
+  67              		.loc 1 299 0
+  68 0006 0078     		ldrb	r0, [r0]	@ zero_extendqisi2
+  69 0008 0030     		adds	r0, r0, #0
+  70 000a 18BF     		it	ne
+  71 000c 0120     		movne	r0, #1
+  72              	.L5:
+ 300:../drivers/microsd.c **** 	return false;
+ 301:../drivers/microsd.c **** 
+ 302:../drivers/microsd.c ****     return true;
+ 303:../drivers/microsd.c **** }
+  73              		.loc 1 303 0
+  74 000e 7047     		bx	lr
+  75              		.cfi_endproc
+  76              	.LFE104:
+  78              		.section	.text.DiskSize,"ax",%progbits
+  79              		.align	1
+  80              		.global	DiskSize
+  81              		.thumb
+  82              		.thumb_func
+  84              	DiskSize:
+  85              	.LFB105:
+ 304:../drivers/microsd.c **** 
+ 305:../drivers/microsd.c **** 
+ 306:../drivers/microsd.c **** /***************************************************************************//**
+ 307:../drivers/microsd.c ****  *
+ 308:../drivers/microsd.c ****  * @brief	Available Disk Size in MB
+ 309:../drivers/microsd.c ****  *
+ 310:../drivers/microsd.c ****  * This routine returns the free disk space in megabyte.
+ 311:../drivers/microsd.c ****  *
+ 312:../drivers/microsd.c ****  * @return
+ 313:../drivers/microsd.c ****  *	Free disk space in MB.
+ 314:../drivers/microsd.c ****  *
+ 315:../drivers/microsd.c ****  ******************************************************************************/
+ 316:../drivers/microsd.c **** uint32_t	 DiskSize (void)
+ 317:../drivers/microsd.c **** {
+  86              		.loc 1 317 0
+  87              		.cfi_startproc
+ARM GAS  /tmp/ccmooP1h.s 			page 8
+
+
+  88              		@ args = 0, pretend = 0, frame = 8
+  89              		@ frame_needed = 0, uses_anonymous_args = 0
+  90 0000 07B5     		push	{r0, r1, r2, lr}
+  91              		.cfi_def_cfa_offset 16
+  92              		.cfi_offset 0, -16
+  93              		.cfi_offset 1, -12
+  94              		.cfi_offset 2, -8
+  95              		.cfi_offset 14, -4
+ 318:../drivers/microsd.c **** DWORD	 clustCnt;		// Number of available cluster
+ 319:../drivers/microsd.c **** FATFS	*pFAT;			// Pointer to FAT structure currently in use
+ 320:../drivers/microsd.c **** 
+ 321:../drivers/microsd.c **** 
+ 322:../drivers/microsd.c ****     /* Get free space of the whole disk */
+ 323:../drivers/microsd.c ****     if (f_getfree("/", &clustCnt, &pFAT) == FR_OK)
+  96              		.loc 1 323 0
+  97 0002 0848     		ldr	r0, .L12
+  98 0004 6946     		mov	r1, sp
+  99 0006 01AA     		add	r2, sp, #4
+ 100 0008 FFF7FEFF 		bl	f_getfree
+ 101              	.LVL2:
+ 102 000c 30B9     		cbnz	r0, .L11
+ 324:../drivers/microsd.c ****     {
+ 325:../drivers/microsd.c **** 	/*
+ 326:../drivers/microsd.c **** 	 * Calculate free space in MB.
+ 327:../drivers/microsd.c **** 	 * DIV by 2 to get KB, MUL <clustCnt> DIV 1024 to get MB.
+ 328:../drivers/microsd.c **** 	 */
+ 329:../drivers/microsd.c **** 	return (clustCnt / 2 * pFAT->csize / 1024);
+ 103              		.loc 1 329 0
+ 104 000e 019B     		ldr	r3, [sp, #4]
+ 105 0010 9A78     		ldrb	r2, [r3, #2]	@ zero_extendqisi2
+ 106 0012 009B     		ldr	r3, [sp]
+ 107 0014 5808     		lsrs	r0, r3, #1
+ 108 0016 5043     		muls	r0, r2, r0
+ 109 0018 800A     		lsrs	r0, r0, #10
+ 110 001a 00E0     		b	.L10
+ 111              	.L11:
+ 330:../drivers/microsd.c ****     }
+ 331:../drivers/microsd.c **** 
+ 332:../drivers/microsd.c ****     return 0;
+ 112              		.loc 1 332 0
+ 113 001c 0020     		movs	r0, #0
+ 114              	.L10:
+ 333:../drivers/microsd.c **** }
+ 115              		.loc 1 333 0
+ 116 001e 03B0     		add	sp, sp, #12
+ 117              		@ sp needed
+ 118 0020 5DF804FB 		ldr	pc, [sp], #4
+ 119              	.L13:
+ 120              		.align	2
+ 121              	.L12:
+ 122 0024 00000000 		.word	.LC1
+ 123              		.cfi_endproc
+ 124              	.LFE105:
+ 126              		.section	.text.FindFile,"ax",%progbits
+ 127              		.align	1
+ 128              		.global	FindFile
+ 129              		.thumb
+ARM GAS  /tmp/ccmooP1h.s 			page 9
+
+
+ 130              		.thumb_func
+ 132              	FindFile:
+ 133              	.LFB106:
+ 334:../drivers/microsd.c **** 
+ 335:../drivers/microsd.c **** 
+ 336:../drivers/microsd.c **** /***************************************************************************//**
+ 337:../drivers/microsd.c ****  *
+ 338:../drivers/microsd.c ****  * @brief	Find File
+ 339:../drivers/microsd.c ****  *
+ 340:../drivers/microsd.c ****  * This function compares all filenames in the specified @p dirpath with
+ 341:../drivers/microsd.c ****  * the filename pattern specified by parameter @p filepattern.
+ 342:../drivers/microsd.c ****  *
+ 343:../drivers/microsd.c ****  * @param[in] dirpath
+ 344:../drivers/microsd.c ****  *	Directory path to read filenames from.
+ 345:../drivers/microsd.c ****  *
+ 346:../drivers/microsd.c ****  * @param[in] filepattern
+ 347:../drivers/microsd.c ****  *	Filename to compare all file entries of the specified directory path
+ 348:../drivers/microsd.c ****  *	with.  The filename must follow the DOS 8.3 notation, i.e. 8 characters
+ 349:../drivers/microsd.c ****  *	for the basename and 3 characters extension, separated by a dot.
+ 350:../drivers/microsd.c ****  *	An asterisk (*) at the end of the basename or/and extension is treated
+ 351:../drivers/microsd.c ****  *	as wildcard, the further characters will not be compared.
+ 352:../drivers/microsd.c ****  *
+ 353:../drivers/microsd.c ****  * @return
+ 354:../drivers/microsd.c ****  *	String pointer to a static piece of memory where the matching filename
+ 355:../drivers/microsd.c ****  *	is stored, or NULL if file was not found.
+ 356:../drivers/microsd.c ****  *
+ 357:../drivers/microsd.c ****  * @warning
+ 358:../drivers/microsd.c ****  * 	All parameters must be specified in upper case characters!
+ 359:../drivers/microsd.c ****  *
+ 360:../drivers/microsd.c ****  ******************************************************************************/
+ 361:../drivers/microsd.c **** char	*FindFile (char *dirpath, char *filepattern)
+ 362:../drivers/microsd.c **** {
+ 134              		.loc 1 362 0
+ 135              		.cfi_startproc
+ 136              		@ args = 0, pretend = 0, frame = 56
+ 137              		@ frame_needed = 0, uses_anonymous_args = 0
+ 138              	.LVL3:
+ 139 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 140              		.cfi_def_cfa_offset 20
+ 141              		.cfi_offset 4, -20
+ 142              		.cfi_offset 5, -16
+ 143              		.cfi_offset 6, -12
+ 144              		.cfi_offset 7, -8
+ 145              		.cfi_offset 14, -4
+ 146 0002 0D46     		mov	r5, r1
+ 147 0004 8FB0     		sub	sp, sp, #60
+ 148              		.cfi_def_cfa_offset 80
+ 363:../drivers/microsd.c **** static char filefound[13];
+ 364:../drivers/microsd.c **** DIR	 dir;		// File objects
+ 365:../drivers/microsd.c **** FILINFO	 fileinfo;	// File info object
+ 366:../drivers/microsd.c **** int	 i, j;
+ 367:../drivers/microsd.c **** 
+ 368:../drivers/microsd.c **** 
+ 369:../drivers/microsd.c ****     /* check parameters */
+ 370:../drivers/microsd.c ****     EFM_ASSERT (dirpath != NULL);
+ 149              		.loc 1 370 0
+ 150 0006 0446     		mov	r4, r0
+ARM GAS  /tmp/ccmooP1h.s 			page 10
+
+
+ 151 0008 20B9     		cbnz	r0, .L15
+ 152              		.loc 1 370 0 is_stmt 0 discriminator 1
+ 153 000a 3C48     		ldr	r0, .L70
+ 154              	.LVL4:
+ 155 000c 4FF4B971 		mov	r1, #370
+ 156              	.LVL5:
+ 157 0010 FFF7FEFF 		bl	assertEFM
+ 158              	.LVL6:
+ 159              	.L15:
+ 371:../drivers/microsd.c ****     EFM_ASSERT (filepattern != NULL);
+ 160              		.loc 1 371 0 is_stmt 1
+ 161 0014 25B9     		cbnz	r5, .L16
+ 162              		.loc 1 371 0 is_stmt 0 discriminator 1
+ 163 0016 3948     		ldr	r0, .L70
+ 164 0018 40F27311 		movw	r1, #371
+ 165 001c FFF7FEFF 		bl	assertEFM
+ 166              	.LVL7:
+ 167              	.L16:
+ 372:../drivers/microsd.c **** 
+ 373:../drivers/microsd.c ****     /* open the specified directory */
+ 374:../drivers/microsd.c ****     if (f_opendir(&dir, dirpath) != FR_OK)
+ 168              		.loc 1 374 0 is_stmt 1
+ 169 0020 07A8     		add	r0, sp, #28
+ 170 0022 2146     		mov	r1, r4
+ 171 0024 FFF7FEFF 		bl	f_opendir
+ 172              	.LVL8:
+ 173 0028 50B1     		cbz	r0, .L18
+ 174              	.LVL9:
+ 175              	.L17:
+ 375:../drivers/microsd.c **** 	return NULL;	// abort on error
+ 176              		.loc 1 375 0
+ 177 002a 0020     		movs	r0, #0
+ 178 002c 64E0     		b	.L19
+ 179              	.L68:
+ 376:../drivers/microsd.c **** 
+ 377:../drivers/microsd.c ****     /* read directory contents name by name */
+ 378:../drivers/microsd.c ****     while (1)
+ 379:../drivers/microsd.c ****     {
+ 380:../drivers/microsd.c **** 	if (f_readdir(&dir, &fileinfo) != FR_OK)
+ 381:../drivers/microsd.c **** 	    return NULL;	// abort on error
+ 382:../drivers/microsd.c **** 
+ 383:../drivers/microsd.c **** 	if (fileinfo.fname[0] == EOS)
+ 180              		.loc 1 383 0
+ 181 002e 9DF80D30 		ldrb	r3, [sp, #13]	@ zero_extendqisi2
+ 182 0032 002B     		cmp	r3, #0
+ 183 0034 F9D0     		beq	.L17
+ 384:../drivers/microsd.c **** 	    return NULL;	// no  more files in current directory
+ 385:../drivers/microsd.c **** 
+ 386:../drivers/microsd.c **** 	if (fileinfo.fattrib & (AM_DIR | AM_VOL | AM_SYS))
+ 184              		.loc 1 386 0
+ 185 0036 9DF80C40 		ldrb	r4, [sp, #12]	@ zero_extendqisi2
+ 186 003a 14F01C04 		ands	r4, r4, #28
+ 187 003e 0FD0     		beq	.L21
+ 188              	.L18:
+ 380:../drivers/microsd.c **** 	if (f_readdir(&dir, &fileinfo) != FR_OK)
+ 189              		.loc 1 380 0
+ 190 0040 07A8     		add	r0, sp, #28
+ARM GAS  /tmp/ccmooP1h.s 			page 11
+
+
+ 191 0042 01A9     		add	r1, sp, #4
+ 192 0044 FFF7FEFF 		bl	f_readdir
+ 193              	.LVL10:
+ 194 0048 0028     		cmp	r0, #0
+ 195 004a F0D0     		beq	.L68
+ 196 004c EDE7     		b	.L17
+ 197              	.LVL11:
+ 198              	.L69:
+ 387:../drivers/microsd.c **** 	    continue;	// ignore subdirectories, volume labels and system files
+ 388:../drivers/microsd.c **** 
+ 389:../drivers/microsd.c **** 	/* compare basename */
+ 390:../drivers/microsd.c **** 	for (i=j=0;  (i < 8)  &&  fileinfo.fname[i] != '.'
+ 391:../drivers/microsd.c **** 			      &&  fileinfo.fname[i] != EOS;  i++, j++)
+ 199              		.loc 1 391 0
+ 200 004e 63B1     		cbz	r3, .L22
+ 392:../drivers/microsd.c **** 	{
+ 393:../drivers/microsd.c **** 	    if (filepattern[j] == '*')
+ 201              		.loc 1 393 0
+ 202 0050 2A5D     		ldrb	r2, [r5, r4]	@ zero_extendqisi2
+ 203 0052 2A2A     		cmp	r2, #42
+ 204 0054 09D0     		beq	.L22
+ 394:../drivers/microsd.c **** 		break;	// wildcard - ignore the rest of the basename
+ 395:../drivers/microsd.c **** 
+ 396:../drivers/microsd.c **** 	    if (fileinfo.fname[i] != filepattern[j])
+ 205              		.loc 1 396 0
+ 206 0056 9342     		cmp	r3, r2
+ 207 0058 07D1     		bne	.L22
+ 208              	.LVL12:
+ 391:../drivers/microsd.c **** 			      &&  fileinfo.fname[i] != EOS;  i++, j++)
+ 209              		.loc 1 391 0
+ 210 005a 0134     		adds	r4, r4, #1
+ 211              	.LVL13:
+ 390:../drivers/microsd.c **** 	for (i=j=0;  (i < 8)  &&  fileinfo.fname[i] != '.'
+ 212              		.loc 1 390 0
+ 213 005c 082C     		cmp	r4, #8
+ 214 005e 04D0     		beq	.L22
+ 215              	.LVL14:
+ 216              	.L21:
+ 217 0060 01AB     		add	r3, sp, #4
+ 218 0062 2344     		add	r3, r3, r4
+ 390:../drivers/microsd.c **** 	for (i=j=0;  (i < 8)  &&  fileinfo.fname[i] != '.'
+ 219              		.loc 1 390 0 is_stmt 0 discriminator 2
+ 220 0064 5B7A     		ldrb	r3, [r3, #9]	@ zero_extendqisi2
+ 221 0066 2E2B     		cmp	r3, #46
+ 222 0068 F1D1     		bne	.L69
+ 223              	.LVL15:
+ 224              	.L22:
+ 397:../drivers/microsd.c **** 		break;	// not equal - file does not match
+ 398:../drivers/microsd.c **** 	}
+ 399:../drivers/microsd.c **** 
+ 400:../drivers/microsd.c **** 	/* check for wildcard */
+ 401:../drivers/microsd.c **** 	if (filepattern[j] == '*')		// "base*[.ext]"
+ 225              		.loc 1 401 0 is_stmt 1
+ 226 006a 2B5D     		ldrb	r3, [r5, r4]	@ zero_extendqisi2
+ 227 006c 2A2B     		cmp	r3, #42
+ 228 006e 0AD1     		bne	.L34
+ 402:../drivers/microsd.c **** 	{
+ARM GAS  /tmp/ccmooP1h.s 			page 12
+
+
+ 403:../drivers/microsd.c **** 	    j++;			// skip '*'
+ 229              		.loc 1 403 0
+ 230 0070 661C     		adds	r6, r4, #1
+ 231              	.LVL16:
+ 232              	.L25:
+ 404:../drivers/microsd.c **** 
+ 405:../drivers/microsd.c **** 	    /* skip the rest of the basename */
+ 406:../drivers/microsd.c **** 	    for ( ;  (i < 8)  &&  fileinfo.fname[i] != '.'
+ 233              		.loc 1 406 0 discriminator 1
+ 234 0072 082C     		cmp	r4, #8
+ 235 0074 08D0     		beq	.L24
+ 236 0076 01AB     		add	r3, sp, #4
+ 237 0078 2344     		add	r3, r3, r4
+ 238              		.loc 1 406 0 is_stmt 0 discriminator 2
+ 239 007a 5B7A     		ldrb	r3, [r3, #9]	@ zero_extendqisi2
+ 240 007c 2E2B     		cmp	r3, #46
+ 241 007e 03D0     		beq	.L24
+ 407:../drivers/microsd.c **** 			      &&  fileinfo.fname[i] != EOS;  i++)
+ 242              		.loc 1 407 0 is_stmt 1
+ 243 0080 13B1     		cbz	r3, .L24
+ 244              		.loc 1 407 0 is_stmt 0 discriminator 1
+ 245 0082 0134     		adds	r4, r4, #1
+ 246              	.LVL17:
+ 247 0084 F5E7     		b	.L25
+ 248              	.LVL18:
+ 249              	.L34:
+ 250 0086 2646     		mov	r6, r4
+ 251              	.LVL19:
+ 252              	.L24:
+ 408:../drivers/microsd.c **** 		;
+ 409:../drivers/microsd.c **** 	}
+ 410:../drivers/microsd.c **** 
+ 411:../drivers/microsd.c **** 	/*
+ 412:../drivers/microsd.c **** 	 * Basenames are equal:
+ 413:../drivers/microsd.c **** 	 * a) "basename"  == "basename"
+ 414:../drivers/microsd.c **** 	 * b) "basename"  == "base*"
+ 415:../drivers/microsd.c **** 	 * c) "basename." == "basename."
+ 416:../drivers/microsd.c **** 	 * d) "basename." == "base*."
+ 417:../drivers/microsd.c **** 	 */
+ 418:../drivers/microsd.c **** 	if (fileinfo.fname[i] != filepattern[j])
+ 253              		.loc 1 418 0 is_stmt 1
+ 254 0088 0EAB     		add	r3, sp, #56
+ 255 008a 2344     		add	r3, r3, r4
+ 256 008c 13F82B2C 		ldrb	r2, [r3, #-43]	@ zero_extendqisi2
+ 257 0090 AB5D     		ldrb	r3, [r5, r6]	@ zero_extendqisi2
+ 258 0092 AF19     		adds	r7, r5, r6
+ 259 0094 9342     		cmp	r3, r2
+ 260 0096 D3D1     		bne	.L18
+ 419:../drivers/microsd.c **** 	    continue;	// file does not match, try the next file
+ 420:../drivers/microsd.c **** 
+ 421:../drivers/microsd.c **** 	/* check for extension */
+ 422:../drivers/microsd.c **** 	if (fileinfo.fname[i] == EOS)
+ 261              		.loc 1 422 0
+ 262 0098 33B9     		cbnz	r3, .L27
+ 263              	.LVL20:
+ 264              	.L32:
+ 423:../drivers/microsd.c **** 	    break;	// no extension - filename does match
+ARM GAS  /tmp/ccmooP1h.s 			page 13
+
+
+ 424:../drivers/microsd.c **** 
+ 425:../drivers/microsd.c **** 	/* verify if a dot follows the basename */
+ 426:../drivers/microsd.c **** 	EFM_ASSERT (filepattern[j] == '.');	// dot must follow
+ 427:../drivers/microsd.c **** 	if (filepattern[j] != '.')
+ 428:../drivers/microsd.c **** 	    return NULL;			// abort on error
+ 429:../drivers/microsd.c **** 
+ 430:../drivers/microsd.c **** 	/* skip dot, compare extension */
+ 431:../drivers/microsd.c **** 	for (i++, j++;  fileinfo.fname[i] != EOS;  i++, j++)
+ 432:../drivers/microsd.c **** 	{
+ 433:../drivers/microsd.c **** 	    if (filepattern[j] == '*')
+ 434:../drivers/microsd.c **** 		break;	// wildcard - ignore the rest of the extension
+ 435:../drivers/microsd.c **** 
+ 436:../drivers/microsd.c **** 	    if (fileinfo.fname[i] != filepattern[j])
+ 437:../drivers/microsd.c **** 		break;	// not equal - file does not match
+ 438:../drivers/microsd.c **** 	}
+ 439:../drivers/microsd.c **** 
+ 440:../drivers/microsd.c **** 	/* check for wildcard */
+ 441:../drivers/microsd.c **** 	if (filepattern[j] == '*')
+ 442:../drivers/microsd.c **** 	    break;	// wildcard - filename does match
+ 443:../drivers/microsd.c **** 
+ 444:../drivers/microsd.c **** 	if (fileinfo.fname[i] != filepattern[j])
+ 445:../drivers/microsd.c **** 	    continue;	// file does not match, try the next file
+ 446:../drivers/microsd.c **** 
+ 447:../drivers/microsd.c **** 	EFM_ASSERT (filepattern[j] == EOS);	// EOS must follow
+ 448:../drivers/microsd.c **** 	if (filepattern[j] != EOS)
+ 449:../drivers/microsd.c **** 	    return NULL;			// abort on error
+ 450:../drivers/microsd.c **** 
+ 451:../drivers/microsd.c **** 	break;		// complete match - leave the loop
+ 452:../drivers/microsd.c ****     }
+ 453:../drivers/microsd.c **** 
+ 454:../drivers/microsd.c ****     /* file name does match */
+ 455:../drivers/microsd.c ****     strcpy (filefound, fileinfo.fname);
+ 265              		.loc 1 455 0
+ 266 009a 1948     		ldr	r0, .L70+4
+ 267 009c 0DF10D01 		add	r1, sp, #13
+ 268 00a0 FFF7FEFF 		bl	strcpy
+ 269              	.LVL21:
+ 456:../drivers/microsd.c ****     return filefound;
+ 270              		.loc 1 456 0
+ 271 00a4 1648     		ldr	r0, .L70+4
+ 272 00a6 27E0     		b	.L19
+ 273              	.LVL22:
+ 274              	.L27:
+ 426:../drivers/microsd.c **** 	EFM_ASSERT (filepattern[j] == '.');	// dot must follow
+ 275              		.loc 1 426 0
+ 276 00a8 2E2B     		cmp	r3, #46
+ 277 00aa 04D0     		beq	.L28
+ 426:../drivers/microsd.c **** 	EFM_ASSERT (filepattern[j] == '.');	// dot must follow
+ 278              		.loc 1 426 0 is_stmt 0 discriminator 1
+ 279 00ac 1348     		ldr	r0, .L70
+ 280 00ae 4FF4D571 		mov	r1, #426
+ 281 00b2 FFF7FEFF 		bl	assertEFM
+ 282              	.LVL23:
+ 283              	.L28:
+ 427:../drivers/microsd.c **** 	if (filepattern[j] != '.')
+ 284              		.loc 1 427 0 is_stmt 1
+ 285 00b6 3B78     		ldrb	r3, [r7]	@ zero_extendqisi2
+ARM GAS  /tmp/ccmooP1h.s 			page 14
+
+
+ 286 00b8 2E2B     		cmp	r3, #46
+ 287 00ba B6D1     		bne	.L17
+ 288              	.LVL24:
+ 431:../drivers/microsd.c **** 	for (i++, j++;  fileinfo.fname[i] != EOS;  i++, j++)
+ 289              		.loc 1 431 0
+ 290 00bc 731C     		adds	r3, r6, #1
+ 291              	.LVL25:
+ 292              	.L29:
+ 293 00be A21B     		subs	r2, r4, r6
+ 294 00c0 01A9     		add	r1, sp, #4
+ 295 00c2 0A44     		add	r2, r2, r1
+ 296 00c4 1A44     		add	r2, r2, r3
+ 431:../drivers/microsd.c **** 	for (i++, j++;  fileinfo.fname[i] != EOS;  i++, j++)
+ 297              		.loc 1 431 0 is_stmt 0 discriminator 1
+ 298 00c6 527A     		ldrb	r2, [r2, #9]	@ zero_extendqisi2
+ 299 00c8 32B1     		cbz	r2, .L30
+ 433:../drivers/microsd.c **** 	    if (filepattern[j] == '*')
+ 300              		.loc 1 433 0 is_stmt 1
+ 301 00ca E95C     		ldrb	r1, [r5, r3]	@ zero_extendqisi2
+ 302 00cc 2A29     		cmp	r1, #42
+ 303 00ce 03D0     		beq	.L30
+ 436:../drivers/microsd.c **** 	    if (fileinfo.fname[i] != filepattern[j])
+ 304              		.loc 1 436 0
+ 305 00d0 8A42     		cmp	r2, r1
+ 306 00d2 01D1     		bne	.L30
+ 307              	.LVL26:
+ 431:../drivers/microsd.c **** 	for (i++, j++;  fileinfo.fname[i] != EOS;  i++, j++)
+ 308              		.loc 1 431 0
+ 309 00d4 0133     		adds	r3, r3, #1
+ 310              	.LVL27:
+ 311 00d6 F2E7     		b	.L29
+ 312              	.LVL28:
+ 313              	.L30:
+ 441:../drivers/microsd.c **** 	if (filepattern[j] == '*')
+ 314              		.loc 1 441 0
+ 315 00d8 EC18     		adds	r4, r5, r3
+ 316              	.LVL29:
+ 317 00da EB5C     		ldrb	r3, [r5, r3]	@ zero_extendqisi2
+ 318              	.LVL30:
+ 319 00dc 2A2B     		cmp	r3, #42
+ 320 00de DCD0     		beq	.L32
+ 444:../drivers/microsd.c **** 	if (fileinfo.fname[i] != filepattern[j])
+ 321              		.loc 1 444 0
+ 322 00e0 9A42     		cmp	r2, r3
+ 323 00e2 ADD1     		bne	.L18
+ 447:../drivers/microsd.c **** 	EFM_ASSERT (filepattern[j] == EOS);	// EOS must follow
+ 324              		.loc 1 447 0
+ 325 00e4 22B1     		cbz	r2, .L33
+ 447:../drivers/microsd.c **** 	EFM_ASSERT (filepattern[j] == EOS);	// EOS must follow
+ 326              		.loc 1 447 0 is_stmt 0 discriminator 1
+ 327 00e6 0548     		ldr	r0, .L70
+ 328 00e8 40F2BF11 		movw	r1, #447
+ 329 00ec FFF7FEFF 		bl	assertEFM
+ 330              	.LVL31:
+ 331              	.L33:
+ 448:../drivers/microsd.c **** 	if (filepattern[j] != EOS)
+ 332              		.loc 1 448 0 is_stmt 1
+ARM GAS  /tmp/ccmooP1h.s 			page 15
+
+
+ 333 00f0 2378     		ldrb	r3, [r4]	@ zero_extendqisi2
+ 334 00f2 002B     		cmp	r3, #0
+ 335 00f4 D1D0     		beq	.L32
+ 336 00f6 98E7     		b	.L17
+ 337              	.L19:
+ 457:../drivers/microsd.c **** }
+ 338              		.loc 1 457 0
+ 339 00f8 0FB0     		add	sp, sp, #60
+ 340              		@ sp needed
+ 341 00fa F0BD     		pop	{r4, r5, r6, r7, pc}
+ 342              	.LVL32:
+ 343              	.L71:
+ 344              		.align	2
+ 345              	.L70:
+ 346 00fc 02000000 		.word	.LC2
+ 347 0100 00000000 		.word	.LANCHOR1
+ 348              		.cfi_endproc
+ 349              	.LFE106:
+ 351              		.section	.text.MICROSD_Init,"ax",%progbits
+ 352              		.align	1
+ 353              		.global	MICROSD_Init
+ 354              		.thumb
+ 355              		.thumb_func
+ 357              	MICROSD_Init:
+ 358              	.LFB107:
+ 458:../drivers/microsd.c **** 
+ 459:../drivers/microsd.c **** 
+ 460:../drivers/microsd.c **** //==============================================================================
+ 461:../drivers/microsd.c **** //
+ 462:../drivers/microsd.c **** //	H E R E   F O L L O W S   T H E   S I L A B S   C O D E
+ 463:../drivers/microsd.c **** //
+ 464:../drivers/microsd.c **** //==============================================================================
+ 465:../drivers/microsd.c **** 
+ 466:../drivers/microsd.c **** /***************************************************************************//**
+ 467:../drivers/microsd.c ****  *
+ 468:../drivers/microsd.c ****  * @brief	Initialize SD-Card Driver
+ 469:../drivers/microsd.c ****  *
+ 470:../drivers/microsd.c ****  * This routine initializes the board-specific hardware for the SD-Card
+ 471:../drivers/microsd.c ****  * interface, i.e. GPIOs for Power-Enable and the SPI interface.
+ 472:../drivers/microsd.c ****  *
+ 473:../drivers/microsd.c ****  ******************************************************************************/
+ 474:../drivers/microsd.c **** void MICROSD_Init(void)
+ 475:../drivers/microsd.c **** {
+ 359              		.loc 1 475 0
+ 360              		.cfi_startproc
+ 361              		@ args = 0, pretend = 0, frame = 24
+ 362              		@ frame_needed = 0, uses_anonymous_args = 0
+ 363 0000 30B5     		push	{r4, r5, lr}
+ 364              		.cfi_def_cfa_offset 12
+ 365              		.cfi_offset 4, -12
+ 366              		.cfi_offset 5, -8
+ 367              		.cfi_offset 14, -4
+ 476:../drivers/microsd.c **** USART_InitSync_TypeDef init = USART_INITSYNC_DEFAULT;
+ 368              		.loc 1 476 0
+ 369 0002 234D     		ldr	r5, .L73
+ 475:../drivers/microsd.c **** {
+ 370              		.loc 1 475 0
+ARM GAS  /tmp/ccmooP1h.s 			page 16
+
+
+ 371 0004 87B0     		sub	sp, sp, #28
+ 372              		.cfi_def_cfa_offset 40
+ 373              		.loc 1 476 0
+ 374 0006 01AC     		add	r4, sp, #4
+ 375 0008 0FCD     		ldmia	r5!, {r0, r1, r2, r3}
+ 376 000a 0FC4     		stmia	r4!, {r0, r1, r2, r3}
+ 377 000c 2B68     		ldr	r3, [r5]
+ 477:../drivers/microsd.c **** 
+ 478:../drivers/microsd.c ****     /* Enabling clock to USART and GPIO */
+ 479:../drivers/microsd.c ****     CMU_ClockEnable(MICROSD_CMUCLOCK, true);
+ 378              		.loc 1 479 0
+ 379 000e 2148     		ldr	r0, .L73+4
+ 380 0010 0121     		movs	r1, #1
+ 476:../drivers/microsd.c **** USART_InitSync_TypeDef init = USART_INITSYNC_DEFAULT;
+ 381              		.loc 1 476 0
+ 382 0012 2360     		str	r3, [r4]
+ 383              		.loc 1 479 0
+ 384 0014 FFF7FEFF 		bl	CMU_ClockEnable
+ 385              	.LVL33:
+ 480:../drivers/microsd.c ****     CMU_ClockEnable(cmuClock_GPIO, true);
+ 386              		.loc 1 480 0
+ 387 0018 1F48     		ldr	r0, .L73+8
+ 388 001a 0121     		movs	r1, #1
+ 389 001c FFF7FEFF 		bl	CMU_ClockEnable
+ 390              	.LVL34:
+ 481:../drivers/microsd.c **** 
+ 482:../drivers/microsd.c ****     /* Initialize USART in SPI master mode. */
+ 483:../drivers/microsd.c ****     xfersPrMsec   = MICROSD_LO_SPI_FREQ / 8000;
+ 391              		.loc 1 483 0
+ 392 0020 1E4B     		ldr	r3, .L73+12
+ 393 0022 0C22     		movs	r2, #12
+ 484:../drivers/microsd.c ****     init.baudrate = MICROSD_LO_SPI_FREQ;
+ 485:../drivers/microsd.c ****     init.msbf     = true;	// Most Significant Bit First
+ 486:../drivers/microsd.c ****     USART_InitSync(MICROSD_USART, &init);
+ 394              		.loc 1 486 0
+ 395 0024 1E4D     		ldr	r5, .L73+16
+ 483:../drivers/microsd.c ****     xfersPrMsec   = MICROSD_LO_SPI_FREQ / 8000;
+ 396              		.loc 1 483 0
+ 397 0026 1A60     		str	r2, [r3]
+ 484:../drivers/microsd.c ****     init.baudrate = MICROSD_LO_SPI_FREQ;
+ 398              		.loc 1 484 0
+ 399 0028 1E4B     		ldr	r3, .L73+20
+ 485:../drivers/microsd.c ****     init.msbf     = true;	// Most Significant Bit First
+ 400              		.loc 1 485 0
+ 401 002a 0124     		movs	r4, #1
+ 402              		.loc 1 486 0
+ 403 002c 2846     		mov	r0, r5
+ 404 002e 01A9     		add	r1, sp, #4
+ 484:../drivers/microsd.c ****     init.baudrate = MICROSD_LO_SPI_FREQ;
+ 405              		.loc 1 484 0
+ 406 0030 0393     		str	r3, [sp, #12]
+ 485:../drivers/microsd.c ****     init.msbf     = true;	// Most Significant Bit First
+ 407              		.loc 1 485 0
+ 408 0032 8DF81240 		strb	r4, [sp, #18]
+ 409              		.loc 1 486 0
+ 410 0036 FFF7FEFF 		bl	USART_InitSync
+ 411              	.LVL35:
+ARM GAS  /tmp/ccmooP1h.s 			page 17
+
+
+ 487:../drivers/microsd.c **** 
+ 488:../drivers/microsd.c ****     /* Enabling pins and setting location, SPI CS not enabled */
+ 489:../drivers/microsd.c ****     MICROSD_USART->ROUTE = USART_ROUTE_TXPEN | USART_ROUTE_RXPEN |
+ 412              		.loc 1 489 0
+ 413 003a 0B23     		movs	r3, #11
+ 414 003c 6B65     		str	r3, [r5, #84]
+ 490:../drivers/microsd.c **** 			   USART_ROUTE_CLKPEN | MICROSD_LOC;
+ 491:../drivers/microsd.c **** 
+ 492:../drivers/microsd.c **** #if defined( USART_CTRL_SMSDELAY )
+ 493:../drivers/microsd.c ****     /* This will allow us to use higher baudrate. */
+ 494:../drivers/microsd.c ****     MICROSD_USART->CTRL |= USART_CTRL_SMSDELAY;
+ 495:../drivers/microsd.c **** #endif
+ 496:../drivers/microsd.c **** 
+ 497:../drivers/microsd.c ****     /* Configure Power Enable Pin for SD-Card interface (still OFF) */
+ 498:../drivers/microsd.c ****     GPIO_PinModeSet (g_MicroSD_PwrPort, g_MicroSD_PwrPin,
+ 415              		.loc 1 498 0
+ 416 003e 1A4B     		ldr	r3, .L73+24
+ 417 0040 0422     		movs	r2, #4
+ 418 0042 1878     		ldrb	r0, [r3]	@ zero_extendqisi2
+ 419 0044 194B     		ldr	r3, .L73+28
+ 420 0046 1968     		ldr	r1, [r3]
+ 421 0048 0023     		movs	r3, #0
+ 422 004a FFF7FEFF 		bl	GPIO_PinModeSet
+ 423              	.LVL36:
+ 499:../drivers/microsd.c **** 		     gpioModePushPull, 0);
+ 500:../drivers/microsd.c **** 
+ 501:../drivers/microsd.c ****     /* IO configuration of the SPI */
+ 502:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_MOSI_PIN, gpioModePushPull, 0);
+ 424              		.loc 1 502 0
+ 425 004e 0220     		movs	r0, #2
+ 426 0050 0146     		mov	r1, r0
+ 427 0052 0422     		movs	r2, #4
+ 428 0054 0023     		movs	r3, #0
+ 429 0056 FFF7FEFF 		bl	GPIO_PinModeSet
+ 430              	.LVL37:
+ 503:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_MISO_PIN, gpioModeInputPull, 1);
+ 431              		.loc 1 503 0
+ 432 005a 0220     		movs	r0, #2
+ 433 005c 0246     		mov	r2, r0
+ 434 005e 2346     		mov	r3, r4
+ 435 0060 0321     		movs	r1, #3
+ 436 0062 FFF7FEFF 		bl	GPIO_PinModeSet
+ 437              	.LVL38:
+ 504:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_CS_PIN,   gpioModePushPull, 1);
+ 438              		.loc 1 504 0
+ 439 0066 2346     		mov	r3, r4
+ 440 0068 0220     		movs	r0, #2
+ 441 006a 0521     		movs	r1, #5
+ 442 006c 0422     		movs	r2, #4
+ 443 006e FFF7FEFF 		bl	GPIO_PinModeSet
+ 444              	.LVL39:
+ 505:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_CLK_PIN,  gpioModePushPull, 0);
+ 445              		.loc 1 505 0
+ 446 0072 0421     		movs	r1, #4
+ 447 0074 0A46     		mov	r2, r1
+ 448 0076 0220     		movs	r0, #2
+ 449 0078 0023     		movs	r3, #0
+ARM GAS  /tmp/ccmooP1h.s 			page 18
+
+
+ 450 007a FFF7FEFF 		bl	GPIO_PinModeSet
+ 451              	.LVL40:
+ 506:../drivers/microsd.c **** 
+ 507:../drivers/microsd.c ****    /*
+ 508:../drivers/microsd.c ****     * Configure the Card-Detect (CD) pin as pure input.  There is an external
+ 509:../drivers/microsd.c ****     * low impedance pull-up resistor which is switched on for 16us to check
+ 510:../drivers/microsd.c ****     * the current state of the SD-Card socket (card removed or inserted).
+ 511:../drivers/microsd.c ****     * This is done in polling mode by function DiskCheck().
+ 512:../drivers/microsd.c ****     */
+ 513:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_CD_PIN, gpioModeInput, 0);
+ 452              		.loc 1 513 0
+ 453 007e 0220     		movs	r0, #2
+ 454 0080 0621     		movs	r1, #6
+ 455 0082 2246     		mov	r2, r4
+ 456 0084 0023     		movs	r3, #0
+ 457 0086 FFF7FEFF 		bl	GPIO_PinModeSet
+ 458              	.LVL41:
+ 514:../drivers/microsd.c **** }
+ 459              		.loc 1 514 0
+ 460 008a 07B0     		add	sp, sp, #28
+ 461              		@ sp needed
+ 462 008c 30BD     		pop	{r4, r5, pc}
+ 463              	.L74:
+ 464 008e 00BF     		.align	2
+ 465              	.L73:
+ 466 0090 00000000 		.word	.LANCHOR2
+ 467 0094 00220200 		.word	139776
+ 468 0098 00C20200 		.word	180736
+ 469 009c 00000000 		.word	.LANCHOR3
+ 470 00a0 00C80040 		.word	1073793024
+ 471 00a4 A0860100 		.word	100000
+ 472 00a8 00000000 		.word	.LANCHOR4
+ 473 00ac 00000000 		.word	.LANCHOR5
+ 474              		.cfi_endproc
+ 475              	.LFE107:
+ 477              		.section	.text.DiskInit,"ax",%progbits
+ 478              		.align	1
+ 479              		.global	DiskInit
+ 480              		.thumb
+ 481              		.thumb_func
+ 483              	DiskInit:
+ 484              	.LFB101:
+ 114:../drivers/microsd.c **** {
+ 485              		.loc 1 114 0
+ 486              		.cfi_startproc
+ 487              		@ args = 0, pretend = 0, frame = 0
+ 488              		@ frame_needed = 0, uses_anonymous_args = 0
+ 489              		@ link register save eliminated.
+ 116:../drivers/microsd.c ****     MICROSD_Init();
+ 490              		.loc 1 116 0
+ 491 0000 FFF7FEBF 		b	MICROSD_Init
+ 492              	.LVL42:
+ 493              		.cfi_endproc
+ 494              	.LFE101:
+ 496              		.section	.text.MICROSD_XferSpi,"ax",%progbits
+ 497              		.align	1
+ 498              		.global	MICROSD_XferSpi
+ARM GAS  /tmp/ccmooP1h.s 			page 19
+
+
+ 499              		.thumb
+ 500              		.thumb_func
+ 502              	MICROSD_XferSpi:
+ 503              	.LFB110:
+ 515:../drivers/microsd.c **** 
+ 516:../drivers/microsd.c **** 
+ 517:../drivers/microsd.c **** /**************************************************************************//**
+ 518:../drivers/microsd.c ****  * @brief
+ 519:../drivers/microsd.c ****  *  Deinitialize SPI peripheral.
+ 520:../drivers/microsd.c ****  *  Turn off the SPI peripheral and disable SPI GPIO pins.
+ 521:../drivers/microsd.c ****  *****************************************************************************/
+ 522:../drivers/microsd.c **** void MICROSD_Deinit(void)
+ 523:../drivers/microsd.c **** {
+ 524:../drivers/microsd.c ****     MICROSD_PowerOff();
+ 525:../drivers/microsd.c **** 
+ 526:../drivers/microsd.c ****     USART_Reset(MICROSD_USART);
+ 527:../drivers/microsd.c **** }
+ 528:../drivers/microsd.c **** 
+ 529:../drivers/microsd.c **** 
+ 530:../drivers/microsd.c **** /**************************************************************************//**
+ 531:../drivers/microsd.c ****  * @brief Wait for micro SD card ready.
+ 532:../drivers/microsd.c ****  * @return 0xff: micro SD card ready, other value: micro SD card not ready.
+ 533:../drivers/microsd.c ****  *****************************************************************************/
+ 534:../drivers/microsd.c **** static uint8_t WaitReady(void)
+ 535:../drivers/microsd.c **** {
+ 536:../drivers/microsd.c **** uint8_t res;
+ 537:../drivers/microsd.c **** uint32_t retryCount;
+ 538:../drivers/microsd.c **** 
+ 539:../drivers/microsd.c ****     /* Wait for ready in timeout of 500ms */
+ 540:../drivers/microsd.c ****     retryCount = 500 * xfersPrMsec;
+ 541:../drivers/microsd.c ****     do
+ 542:../drivers/microsd.c **** 	res = MICROSD_XferSpi(0xff);
+ 543:../drivers/microsd.c ****     while ((res != 0xFF) && --retryCount);
+ 544:../drivers/microsd.c **** 
+ 545:../drivers/microsd.c ****     return res;
+ 546:../drivers/microsd.c **** }
+ 547:../drivers/microsd.c **** /** @endcond */
+ 548:../drivers/microsd.c **** 
+ 549:../drivers/microsd.c **** 
+ 550:../drivers/microsd.c **** /**************************************************************************//**
+ 551:../drivers/microsd.c ****  * @brief
+ 552:../drivers/microsd.c ****  *  Do one SPI transfer.
+ 553:../drivers/microsd.c ****  *
+ 554:../drivers/microsd.c ****  * @param data
+ 555:../drivers/microsd.c ****  *  Byte to transmit.
+ 556:../drivers/microsd.c ****  *
+ 557:../drivers/microsd.c ****  * @return
+ 558:../drivers/microsd.c ****  *  Byte received.
+ 559:../drivers/microsd.c ****  *****************************************************************************/
+ 560:../drivers/microsd.c **** uint8_t MICROSD_XferSpi(uint8_t data)
+ 561:../drivers/microsd.c **** {
+ 504              		.loc 1 561 0
+ 505              		.cfi_startproc
+ 506              		@ args = 0, pretend = 0, frame = 0
+ 507              		@ frame_needed = 0, uses_anonymous_args = 0
+ 508              		@ link register save eliminated.
+ 509              	.LVL43:
+ARM GAS  /tmp/ccmooP1h.s 			page 20
+
+
+ 562:../drivers/microsd.c ****     if ( timeOut )
+ 510              		.loc 1 562 0
+ 511 0000 044B     		ldr	r3, .L81
+ 561:../drivers/microsd.c **** {
+ 512              		.loc 1 561 0
+ 513 0002 0146     		mov	r1, r0
+ 514              		.loc 1 562 0
+ 515 0004 1A68     		ldr	r2, [r3]
+ 516 0006 0AB1     		cbz	r2, .L77
+ 563:../drivers/microsd.c ****     {
+ 564:../drivers/microsd.c **** 	timeOut--;
+ 517              		.loc 1 564 0
+ 518 0008 013A     		subs	r2, r2, #1
+ 519 000a 1A60     		str	r2, [r3]
+ 520              	.L77:
+ 565:../drivers/microsd.c ****     }
+ 566:../drivers/microsd.c **** 
+ 567:../drivers/microsd.c ****     return USART_SpiTransfer(MICROSD_USART, data);
+ 521              		.loc 1 567 0
+ 522 000c 0248     		ldr	r0, .L81+4
+ 523              	.LVL44:
+ 524 000e FFF7FEBF 		b	USART_SpiTransfer
+ 525              	.LVL45:
+ 526              	.L82:
+ 527 0012 00BF     		.align	2
+ 528              	.L81:
+ 529 0014 00000000 		.word	.LANCHOR6
+ 530 0018 00C80040 		.word	1073793024
+ 531              		.cfi_endproc
+ 532              	.LFE110:
+ 534              		.section	.text.WaitReady,"ax",%progbits
+ 535              		.align	1
+ 536              		.thumb
+ 537              		.thumb_func
+ 539              	WaitReady:
+ 540              	.LFB109:
+ 535:../drivers/microsd.c **** {
+ 541              		.loc 1 535 0
+ 542              		.cfi_startproc
+ 543              		@ args = 0, pretend = 0, frame = 0
+ 544              		@ frame_needed = 0, uses_anonymous_args = 0
+ 540:../drivers/microsd.c ****     retryCount = 500 * xfersPrMsec;
+ 545              		.loc 1 540 0
+ 546 0000 064B     		ldr	r3, .L92
+ 535:../drivers/microsd.c **** {
+ 547              		.loc 1 535 0
+ 548 0002 10B5     		push	{r4, lr}
+ 549              		.cfi_def_cfa_offset 8
+ 550              		.cfi_offset 4, -8
+ 551              		.cfi_offset 14, -4
+ 540:../drivers/microsd.c ****     retryCount = 500 * xfersPrMsec;
+ 552              		.loc 1 540 0
+ 553 0004 1B68     		ldr	r3, [r3]
+ 554 0006 4FF4FA74 		mov	r4, #500
+ 555 000a 5C43     		muls	r4, r3, r4
+ 556              	.LVL46:
+ 557              	.L85:
+ARM GAS  /tmp/ccmooP1h.s 			page 21
+
+
+ 542:../drivers/microsd.c **** 	res = MICROSD_XferSpi(0xff);
+ 558              		.loc 1 542 0 discriminator 1
+ 559 000c FF20     		movs	r0, #255
+ 560 000e FFF7FEFF 		bl	MICROSD_XferSpi
+ 561              	.LVL47:
+ 543:../drivers/microsd.c ****     while ((res != 0xFF) && --retryCount);
+ 562              		.loc 1 543 0 discriminator 1
+ 563 0012 FF28     		cmp	r0, #255
+ 564 0014 01D0     		beq	.L84
+ 565              	.LVL48:
+ 566 0016 013C     		subs	r4, r4, #1
+ 567              	.LVL49:
+ 568 0018 F8D1     		bne	.L85
+ 569              	.L84:
+ 546:../drivers/microsd.c **** }
+ 570              		.loc 1 546 0
+ 571 001a 10BD     		pop	{r4, pc}
+ 572              	.LVL50:
+ 573              	.L93:
+ 574              		.align	2
+ 575              	.L92:
+ 576 001c 00000000 		.word	.LANCHOR3
+ 577              		.cfi_endproc
+ 578              	.LFE109:
+ 580              		.section	.text.MICROSD_Deselect,"ax",%progbits
+ 581              		.align	1
+ 582              		.global	MICROSD_Deselect
+ 583              		.thumb
+ 584              		.thumb_func
+ 586              	MICROSD_Deselect:
+ 587              	.LFB111:
+ 568:../drivers/microsd.c **** }
+ 569:../drivers/microsd.c **** 
+ 570:../drivers/microsd.c **** 
+ 571:../drivers/microsd.c **** /**************************************************************************//**
+ 572:../drivers/microsd.c ****  * @brief Deselect the micro SD card and release the SPI bus.
+ 573:../drivers/microsd.c ****  *****************************************************************************/
+ 574:../drivers/microsd.c **** void MICROSD_Deselect(void)
+ 575:../drivers/microsd.c **** {
+ 588              		.loc 1 575 0
+ 589              		.cfi_startproc
+ 590              		@ args = 0, pretend = 0, frame = 0
+ 591              		@ frame_needed = 0, uses_anonymous_args = 0
+ 592              		@ link register save eliminated.
+ 576:../drivers/microsd.c ****     GPIO->P[ MICROSD_SPI_GPIO_PORT ].DOUTSET = 1 << MICROSD_SPI_CS_PIN; /* CS pin high. */
+ 593              		.loc 1 576 0
+ 594 0000 024B     		ldr	r3, .L95
+ 595 0002 2022     		movs	r2, #32
+ 596 0004 9A65     		str	r2, [r3, #88]
+ 577:../drivers/microsd.c ****     MICROSD_XferSpi(0xff);
+ 597              		.loc 1 577 0
+ 598 0006 FF20     		movs	r0, #255
+ 599 0008 FFF7FEBF 		b	MICROSD_XferSpi
+ 600              	.LVL51:
+ 601              	.L96:
+ 602              		.align	2
+ 603              	.L95:
+ARM GAS  /tmp/ccmooP1h.s 			page 22
+
+
+ 604 000c 00600040 		.word	1073766400
+ 605              		.cfi_endproc
+ 606              	.LFE111:
+ 608              		.section	.text.MICROSD_Select,"ax",%progbits
+ 609              		.align	1
+ 610              		.global	MICROSD_Select
+ 611              		.thumb
+ 612              		.thumb_func
+ 614              	MICROSD_Select:
+ 615              	.LFB112:
+ 578:../drivers/microsd.c **** }
+ 579:../drivers/microsd.c **** 
+ 580:../drivers/microsd.c **** 
+ 581:../drivers/microsd.c **** /**************************************************************************//**
+ 582:../drivers/microsd.c ****  * @brief Select the micro SD card and wait for the card to become ready.
+ 583:../drivers/microsd.c ****  * @return 1:Successful, 0:Timeout.
+ 584:../drivers/microsd.c ****  *****************************************************************************/
+ 585:../drivers/microsd.c **** int MICROSD_Select(void)
+ 586:../drivers/microsd.c **** {
+ 616              		.loc 1 586 0
+ 617              		.cfi_startproc
+ 618              		@ args = 0, pretend = 0, frame = 0
+ 619              		@ frame_needed = 0, uses_anonymous_args = 0
+ 620 0000 08B5     		push	{r3, lr}
+ 621              		.cfi_def_cfa_offset 8
+ 622              		.cfi_offset 3, -8
+ 623              		.cfi_offset 14, -4
+ 587:../drivers/microsd.c ****     GPIO->P[ MICROSD_SPI_GPIO_PORT ].DOUTCLR = 1 << MICROSD_SPI_CS_PIN; /* CS pin low. */
+ 624              		.loc 1 587 0
+ 625 0002 064B     		ldr	r3, .L100
+ 626 0004 2022     		movs	r2, #32
+ 627 0006 DA65     		str	r2, [r3, #92]
+ 588:../drivers/microsd.c ****     if (WaitReady() != 0xFF)
+ 628              		.loc 1 588 0
+ 629 0008 FFF7FEFF 		bl	WaitReady
+ 630              	.LVL52:
+ 631 000c FF28     		cmp	r0, #255
+ 632 000e 03D0     		beq	.L99
+ 589:../drivers/microsd.c ****     {
+ 590:../drivers/microsd.c **** 	MICROSD_Deselect();
+ 633              		.loc 1 590 0
+ 634 0010 FFF7FEFF 		bl	MICROSD_Deselect
+ 635              	.LVL53:
+ 591:../drivers/microsd.c **** 	return 0;
+ 636              		.loc 1 591 0
+ 637 0014 0020     		movs	r0, #0
+ 638 0016 08BD     		pop	{r3, pc}
+ 639              	.L99:
+ 592:../drivers/microsd.c ****     }
+ 593:../drivers/microsd.c ****     return 1;
+ 640              		.loc 1 593 0
+ 641 0018 0120     		movs	r0, #1
+ 594:../drivers/microsd.c **** }
+ 642              		.loc 1 594 0
+ 643 001a 08BD     		pop	{r3, pc}
+ 644              	.L101:
+ 645              		.align	2
+ARM GAS  /tmp/ccmooP1h.s 			page 23
+
+
+ 646              	.L100:
+ 647 001c 00600040 		.word	1073766400
+ 648              		.cfi_endproc
+ 649              	.LFE112:
+ 651              		.section	.text.MICROSD_PowerOn,"ax",%progbits
+ 652              		.align	1
+ 653              		.global	MICROSD_PowerOn
+ 654              		.thumb
+ 655              		.thumb_func
+ 657              	MICROSD_PowerOn:
+ 658              	.LFB113:
+ 595:../drivers/microsd.c **** 
+ 596:../drivers/microsd.c **** 
+ 597:../drivers/microsd.c **** /**************************************************************************//**
+ 598:../drivers/microsd.c ****  * @brief Turn on micro SD card power.
+ 599:../drivers/microsd.c ****  *****************************************************************************/
+ 600:../drivers/microsd.c **** void MICROSD_PowerOn(void)
+ 601:../drivers/microsd.c **** {
+ 659              		.loc 1 601 0
+ 660              		.cfi_startproc
+ 661              		@ args = 0, pretend = 0, frame = 0
+ 662              		@ frame_needed = 0, uses_anonymous_args = 0
+ 602:../drivers/microsd.c ****     /* Enable SD-Card power */
+ 603:../drivers/microsd.c ****     SET_MICROSD_PWR_PIN;
+ 663              		.loc 1 603 0
+ 664 0000 164A     		ldr	r2, .L103
+ 601:../drivers/microsd.c **** {
+ 665              		.loc 1 601 0
+ 666 0002 10B5     		push	{r4, lr}
+ 667              		.cfi_def_cfa_offset 8
+ 668              		.cfi_offset 4, -8
+ 669              		.cfi_offset 14, -4
+ 670              		.loc 1 603 0
+ 671 0004 1268     		ldr	r2, [r2]
+ 672 0006 0124     		movs	r4, #1
+ 673 0008 04FA02F2 		lsl	r2, r4, r2
+ 674 000c 144B     		ldr	r3, .L103+4
+ 675 000e 2421     		movs	r1, #36
+ 676 0010 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 604:../drivers/microsd.c **** 
+ 605:../drivers/microsd.c ****     /* Enable SPI clock */
+ 606:../drivers/microsd.c ****     CMU_ClockEnable(MICROSD_CMUCLOCK, true);
+ 677              		.loc 1 606 0
+ 678 0012 1448     		ldr	r0, .L103+8
+ 603:../drivers/microsd.c ****     SET_MICROSD_PWR_PIN;
+ 679              		.loc 1 603 0
+ 680 0014 4B43     		muls	r3, r1, r3
+ 681 0016 03F18043 		add	r3, r3, #1073741824
+ 682 001a 03F5C043 		add	r3, r3, #24576
+ 683 001e 1A61     		str	r2, [r3, #16]
+ 684              		.loc 1 606 0
+ 685 0020 2146     		mov	r1, r4
+ 686 0022 FFF7FEFF 		bl	CMU_ClockEnable
+ 687              	.LVL54:
+ 607:../drivers/microsd.c **** 
+ 608:../drivers/microsd.c ****     /* IO configuration of the SPI */
+ 609:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_MOSI_PIN, gpioModePushPull, 0);
+ARM GAS  /tmp/ccmooP1h.s 			page 24
+
+
+ 688              		.loc 1 609 0
+ 689 0026 0220     		movs	r0, #2
+ 690 0028 0146     		mov	r1, r0
+ 691 002a 0422     		movs	r2, #4
+ 692 002c 0023     		movs	r3, #0
+ 693 002e FFF7FEFF 		bl	GPIO_PinModeSet
+ 694              	.LVL55:
+ 610:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_MISO_PIN, gpioModeInputPull, 1);
+ 695              		.loc 1 610 0
+ 696 0032 0220     		movs	r0, #2
+ 697 0034 0246     		mov	r2, r0
+ 698 0036 2346     		mov	r3, r4
+ 699 0038 0321     		movs	r1, #3
+ 700 003a FFF7FEFF 		bl	GPIO_PinModeSet
+ 701              	.LVL56:
+ 611:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_CS_PIN,   gpioModePushPull, 1);
+ 702              		.loc 1 611 0
+ 703 003e 2346     		mov	r3, r4
+ 704 0040 0220     		movs	r0, #2
+ 705 0042 0521     		movs	r1, #5
+ 706 0044 0422     		movs	r2, #4
+ 707 0046 FFF7FEFF 		bl	GPIO_PinModeSet
+ 708              	.LVL57:
+ 612:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_CLK_PIN,  gpioModePushPull, 0);
+ 613:../drivers/microsd.c **** }
+ 709              		.loc 1 613 0
+ 710 004a BDE81040 		pop	{r4, lr}
+ 612:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_CLK_PIN,  gpioModePushPull, 0);
+ 711              		.loc 1 612 0
+ 712 004e 0421     		movs	r1, #4
+ 713 0050 0220     		movs	r0, #2
+ 714 0052 0A46     		mov	r2, r1
+ 715 0054 0023     		movs	r3, #0
+ 716 0056 FFF7FEBF 		b	GPIO_PinModeSet
+ 717              	.LVL58:
+ 718              	.L104:
+ 719 005a 00BF     		.align	2
+ 720              	.L103:
+ 721 005c 00000000 		.word	.LANCHOR5
+ 722 0060 00000000 		.word	.LANCHOR4
+ 723 0064 00220200 		.word	139776
+ 724              		.cfi_endproc
+ 725              	.LFE113:
+ 727              		.section	.text.MICROSD_PowerOff,"ax",%progbits
+ 728              		.align	1
+ 729              		.global	MICROSD_PowerOff
+ 730              		.thumb
+ 731              		.thumb_func
+ 733              	MICROSD_PowerOff:
+ 734              	.LFB114:
+ 614:../drivers/microsd.c **** 
+ 615:../drivers/microsd.c **** 
+ 616:../drivers/microsd.c **** /**************************************************************************//**
+ 617:../drivers/microsd.c ****  * @brief Turn off micro SD card power.
+ 618:../drivers/microsd.c ****  *****************************************************************************/
+ 619:../drivers/microsd.c **** void MICROSD_PowerOff(void)
+ 620:../drivers/microsd.c **** {
+ARM GAS  /tmp/ccmooP1h.s 			page 25
+
+
+ 735              		.loc 1 620 0
+ 736              		.cfi_startproc
+ 737              		@ args = 0, pretend = 0, frame = 0
+ 738              		@ frame_needed = 0, uses_anonymous_args = 0
+ 739 0000 08B5     		push	{r3, lr}
+ 740              		.cfi_def_cfa_offset 8
+ 741              		.cfi_offset 3, -8
+ 742              		.cfi_offset 14, -4
+ 621:../drivers/microsd.c ****     /* Wait for micro SD card ready */
+ 622:../drivers/microsd.c ****     MICROSD_Select();
+ 743              		.loc 1 622 0
+ 744 0002 FFF7FEFF 		bl	MICROSD_Select
+ 745              	.LVL59:
+ 623:../drivers/microsd.c ****     MICROSD_Deselect();    /* Wait for micro SD card ready */
+ 746              		.loc 1 623 0
+ 747 0006 FFF7FEFF 		bl	MICROSD_Deselect
+ 748              	.LVL60:
+ 624:../drivers/microsd.c ****     MICROSD_Select();
+ 749              		.loc 1 624 0
+ 750 000a FFF7FEFF 		bl	MICROSD_Select
+ 751              	.LVL61:
+ 625:../drivers/microsd.c ****     MICROSD_Deselect();
+ 752              		.loc 1 625 0
+ 753 000e FFF7FEFF 		bl	MICROSD_Deselect
+ 754              	.LVL62:
+ 626:../drivers/microsd.c **** 
+ 627:../drivers/microsd.c ****     /* Disable SPI clock */
+ 628:../drivers/microsd.c ****     CMU_ClockEnable(MICROSD_CMUCLOCK, false);
+ 755              		.loc 1 628 0
+ 756 0012 1448     		ldr	r0, .L106
+ 757 0014 0021     		movs	r1, #0
+ 758 0016 FFF7FEFF 		bl	CMU_ClockEnable
+ 759              	.LVL63:
+ 629:../drivers/microsd.c **** 
+ 630:../drivers/microsd.c ****     /* Reset IO configuration - except the CD pin*/
+ 631:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_MOSI_PIN, gpioModeDisabled, 0);
+ 760              		.loc 1 631 0
+ 761 001a 0220     		movs	r0, #2
+ 762 001c 0022     		movs	r2, #0
+ 763 001e 0146     		mov	r1, r0
+ 764 0020 1346     		mov	r3, r2
+ 765 0022 FFF7FEFF 		bl	GPIO_PinModeSet
+ 766              	.LVL64:
+ 632:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_MISO_PIN, gpioModeDisabled, 0);
+ 767              		.loc 1 632 0
+ 768 0026 0022     		movs	r2, #0
+ 769 0028 1346     		mov	r3, r2
+ 770 002a 0220     		movs	r0, #2
+ 771 002c 0321     		movs	r1, #3
+ 772 002e FFF7FEFF 		bl	GPIO_PinModeSet
+ 773              	.LVL65:
+ 633:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_CS_PIN,   gpioModeDisabled, 0);
+ 774              		.loc 1 633 0
+ 775 0032 0022     		movs	r2, #0
+ 776 0034 1346     		mov	r3, r2
+ 777 0036 0220     		movs	r0, #2
+ 778 0038 0521     		movs	r1, #5
+ARM GAS  /tmp/ccmooP1h.s 			page 26
+
+
+ 779 003a FFF7FEFF 		bl	GPIO_PinModeSet
+ 780              	.LVL66:
+ 634:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_SPI_CLK_PIN,  gpioModeDisabled, 0);
+ 781              		.loc 1 634 0
+ 782 003e 0022     		movs	r2, #0
+ 783 0040 1346     		mov	r3, r2
+ 784 0042 0421     		movs	r1, #4
+ 785 0044 0220     		movs	r0, #2
+ 786 0046 FFF7FEFF 		bl	GPIO_PinModeSet
+ 787              	.LVL67:
+ 635:../drivers/microsd.c **** 
+ 636:../drivers/microsd.c ****     /* Disable SD-Card power */
+ 637:../drivers/microsd.c ****     CLR_MICROSD_PWR_PIN;
+ 788              		.loc 1 637 0
+ 789 004a 074A     		ldr	r2, .L106+4
+ 790 004c 0121     		movs	r1, #1
+ 791 004e 1268     		ldr	r2, [r2]
+ 792 0050 064B     		ldr	r3, .L106+8
+ 793 0052 01FA02F2 		lsl	r2, r1, r2
+ 794 0056 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 795 0058 2421     		movs	r1, #36
+ 796 005a 5943     		muls	r1, r3, r1
+ 797 005c 044B     		ldr	r3, .L106+12
+ 798 005e 5A50     		str	r2, [r3, r1]
+ 799 0060 08BD     		pop	{r3, pc}
+ 800              	.L107:
+ 801 0062 00BF     		.align	2
+ 802              	.L106:
+ 803 0064 00220200 		.word	139776
+ 804 0068 00000000 		.word	.LANCHOR5
+ 805 006c 00000000 		.word	.LANCHOR4
+ 806 0070 14600040 		.word	1073766420
+ 807              		.cfi_endproc
+ 808              	.LFE114:
+ 810              		.section	.text.MICROSD_Deinit,"ax",%progbits
+ 811              		.align	1
+ 812              		.global	MICROSD_Deinit
+ 813              		.thumb
+ 814              		.thumb_func
+ 816              	MICROSD_Deinit:
+ 817              	.LFB108:
+ 523:../drivers/microsd.c **** {
+ 818              		.loc 1 523 0
+ 819              		.cfi_startproc
+ 820              		@ args = 0, pretend = 0, frame = 0
+ 821              		@ frame_needed = 0, uses_anonymous_args = 0
+ 822 0000 08B5     		push	{r3, lr}
+ 823              		.cfi_def_cfa_offset 8
+ 824              		.cfi_offset 3, -8
+ 825              		.cfi_offset 14, -4
+ 524:../drivers/microsd.c ****     MICROSD_PowerOff();
+ 826              		.loc 1 524 0
+ 827 0002 FFF7FEFF 		bl	MICROSD_PowerOff
+ 828              	.LVL68:
+ 527:../drivers/microsd.c **** }
+ 829              		.loc 1 527 0
+ 830 0006 BDE80840 		pop	{r3, lr}
+ARM GAS  /tmp/ccmooP1h.s 			page 27
+
+
+ 526:../drivers/microsd.c ****     USART_Reset(MICROSD_USART);
+ 831              		.loc 1 526 0
+ 832 000a 0148     		ldr	r0, .L109
+ 833 000c FFF7FEBF 		b	USART_Reset
+ 834              	.LVL69:
+ 835              	.L110:
+ 836              		.align	2
+ 837              	.L109:
+ 838 0010 00C80040 		.word	1073793024
+ 839              		.cfi_endproc
+ 840              	.LFE108:
+ 842              		.section	.text.DiskCheck,"ax",%progbits
+ 843              		.align	1
+ 844              		.global	DiskCheck
+ 845              		.thumb
+ 846              		.thumb_func
+ 848              	DiskCheck:
+ 849              	.LFB102:
+ 141:../drivers/microsd.c **** {
+ 850              		.loc 1 141 0
+ 851              		.cfi_startproc
+ 852              		@ args = 0, pretend = 0, frame = 0
+ 853              		@ frame_needed = 0, uses_anonymous_args = 0
+ 854              	.LVL70:
+ 855 0000 70B5     		push	{r4, r5, r6, lr}
+ 856              		.cfi_def_cfa_offset 16
+ 857              		.cfi_offset 4, -16
+ 858              		.cfi_offset 5, -12
+ 859              		.cfi_offset 6, -8
+ 860              		.cfi_offset 14, -4
+ 146:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_CD_PULLUP_PIN,
+ 861              		.loc 1 146 0
+ 862 0002 0C21     		movs	r1, #12
+ 863 0004 0422     		movs	r2, #4
+ 864 0006 0123     		movs	r3, #1
+ 865 0008 0220     		movs	r0, #2
+ 866 000a FFF7FEFF 		bl	GPIO_PinModeSet
+ 867              	.LVL71:
+ 150:../drivers/microsd.c ****     l_PrevDiskState = l_DiskState;
+ 868              		.loc 1 150 0
+ 869 000e 334C     		ldr	r4, .L134
+ 153:../drivers/microsd.c ****     if (! IS_DISK_PRESENT)
+ 870              		.loc 1 153 0
+ 871 0010 334A     		ldr	r2, .L134+4
+ 150:../drivers/microsd.c ****     l_PrevDiskState = l_DiskState;
+ 872              		.loc 1 150 0
+ 873 0012 2378     		ldrb	r3, [r4]	@ zero_extendqisi2
+ 874 0014 334E     		ldr	r6, .L134+8
+ 153:../drivers/microsd.c ****     if (! IS_DISK_PRESENT)
+ 875              		.loc 1 153 0
+ 876 0016 1168     		ldr	r1, [r2]
+ 150:../drivers/microsd.c ****     l_PrevDiskState = l_DiskState;
+ 877              		.loc 1 150 0
+ 878 0018 3370     		strb	r3, [r6]
+ 879 001a 1546     		mov	r5, r2
+ 153:../drivers/microsd.c ****     if (! IS_DISK_PRESENT)
+ 880              		.loc 1 153 0
+ARM GAS  /tmp/ccmooP1h.s 			page 28
+
+
+ 881 001c 09B1     		cbz	r1, .L112
+ 155:../drivers/microsd.c **** 	l_DiskState = DS_REMOVED;
+ 882              		.loc 1 155 0
+ 883 001e 0222     		movs	r2, #2
+ 884 0020 2270     		strb	r2, [r4]
+ 885              	.L112:
+ 161:../drivers/microsd.c ****     switch (l_DiskState)
+ 886              		.loc 1 161 0
+ 887 0022 2278     		ldrb	r2, [r4]	@ zero_extendqisi2
+ 888 0024 052A     		cmp	r2, #5
+ 889 0026 41D8     		bhi	.L113
+ 890 0028 DFE802F0 		tbb	[pc, r2]
+ 891              	.L115:
+ 892 002c 11       		.byte	(.L114-.L115)/2
+ 893 002d 15       		.byte	(.L116-.L115)/2
+ 894 002e 03       		.byte	(.L117-.L115)/2
+ 895 002f 27       		.byte	(.L118-.L115)/2
+ 896 0030 3E       		.byte	(.L133-.L115)/2
+ 897 0031 3E       		.byte	(.L133-.L115)/2
+ 898              		.p2align 1
+ 899              	.L117:
+ 165:../drivers/microsd.c **** 	    if (l_DiskState != l_PrevDiskState)
+ 900              		.loc 1 165 0
+ 901 0032 022B     		cmp	r3, #2
+ 902 0034 0BD0     		beq	.L114
+ 168:../drivers/microsd.c **** 		Log ("SD-Card Removed");
+ 903              		.loc 1 168 0
+ 904 0036 2C48     		ldr	r0, .L134+12
+ 905 0038 FFF7FEFF 		bl	Log
+ 906              	.LVL72:
+ 171:../drivers/microsd.c **** 		l_FatFS.fs_type = 0;
+ 907              		.loc 1 171 0
+ 908 003c 0020     		movs	r0, #0
+ 909 003e 2B4B     		ldr	r3, .L134+16
+ 172:../drivers/microsd.c **** 		disk_ioctl(0, CTRL_INVALIDATE, NULL);
+ 910              		.loc 1 172 0
+ 911 0040 0821     		movs	r1, #8
+ 912 0042 0246     		mov	r2, r0
+ 171:../drivers/microsd.c **** 		l_FatFS.fs_type = 0;
+ 913              		.loc 1 171 0
+ 914 0044 1870     		strb	r0, [r3]
+ 172:../drivers/microsd.c **** 		disk_ioctl(0, CTRL_INVALIDATE, NULL);
+ 915              		.loc 1 172 0
+ 916 0046 FFF7FEFF 		bl	disk_ioctl
+ 917              	.LVL73:
+ 175:../drivers/microsd.c **** 		MICROSD_Deinit();
+ 918              		.loc 1 175 0
+ 919 004a FFF7FEFF 		bl	MICROSD_Deinit
+ 920              	.LVL74:
+ 921              	.L114:
+ 181:../drivers/microsd.c **** 	    if (IS_DISK_PRESENT)
+ 922              		.loc 1 181 0
+ 923 004e 2B68     		ldr	r3, [r5]
+ 924 0050 53BB     		cbnz	r3, .L133
+ 183:../drivers/microsd.c **** 		l_DiskState = DS_INSERTED;
+ 925              		.loc 1 183 0
+ 926 0052 0123     		movs	r3, #1
+ARM GAS  /tmp/ccmooP1h.s 			page 29
+
+
+ 927 0054 2370     		strb	r3, [r4]
+ 928              	.L116:
+ 193:../drivers/microsd.c **** 	    if (l_DiskState != l_PrevDiskState)
+ 929              		.loc 1 193 0
+ 930 0056 2278     		ldrb	r2, [r4]	@ zero_extendqisi2
+ 931 0058 3378     		ldrb	r3, [r6]	@ zero_extendqisi2
+ 932 005a 9A42     		cmp	r2, r3
+ 933 005c 04D0     		beq	.L121
+ 196:../drivers/microsd.c **** 		Log ("SD-Card Inserted");
+ 934              		.loc 1 196 0
+ 935 005e 2448     		ldr	r0, .L134+20
+ 936 0060 FFF7FEFF 		bl	Log
+ 937              	.LVL75:
+ 197:../drivers/microsd.c **** 		MICROSD_Init();
+ 938              		.loc 1 197 0
+ 939 0064 FFF7FEFF 		bl	MICROSD_Init
+ 940              	.LVL76:
+ 941              	.L121:
+ 200:../drivers/microsd.c **** 	    if (disk_initialize(0) == 0)
+ 942              		.loc 1 200 0
+ 943 0068 0020     		movs	r0, #0
+ 944 006a FFF7FEFF 		bl	disk_initialize
+ 945              	.LVL77:
+ 946 006e D8B9     		cbnz	r0, .L133
+ 202:../drivers/microsd.c **** 		l_DiskState = DS_INITIALIZED;
+ 947              		.loc 1 202 0
+ 948 0070 0323     		movs	r3, #3
+ 203:../drivers/microsd.c **** 		Log ("SD-Card Initialized");
+ 949              		.loc 1 203 0
+ 950 0072 2048     		ldr	r0, .L134+24
+ 202:../drivers/microsd.c **** 		l_DiskState = DS_INITIALIZED;
+ 951              		.loc 1 202 0
+ 952 0074 2370     		strb	r3, [r4]
+ 203:../drivers/microsd.c **** 		Log ("SD-Card Initialized");
+ 953              		.loc 1 203 0
+ 954 0076 FFF7FEFF 		bl	Log
+ 955              	.LVL78:
+ 956              	.L118:
+ 213:../drivers/microsd.c **** 	    if (f_mount(0, &l_FatFS) == FR_OK)
+ 957              		.loc 1 213 0
+ 958 007a 0020     		movs	r0, #0
+ 959 007c 1B49     		ldr	r1, .L134+16
+ 960 007e FFF7FEFF 		bl	f_mount
+ 961              	.LVL79:
+ 962 0082 60B9     		cbnz	r0, .L123
+ 963              	.LBB2:
+ 217:../drivers/microsd.c **** 		l_DiskState = DS_MOUNTED;
+ 964              		.loc 1 217 0
+ 965 0084 0423     		movs	r3, #4
+ 218:../drivers/microsd.c **** 		Log ("SD-Card File System mounted");
+ 966              		.loc 1 218 0
+ 967 0086 1C48     		ldr	r0, .L134+28
+ 217:../drivers/microsd.c **** 		l_DiskState = DS_MOUNTED;
+ 968              		.loc 1 217 0
+ 969 0088 2370     		strb	r3, [r4]
+ 218:../drivers/microsd.c **** 		Log ("SD-Card File System mounted");
+ 970              		.loc 1 218 0
+ARM GAS  /tmp/ccmooP1h.s 			page 30
+
+
+ 971 008a FFF7FEFF 		bl	Log
+ 972              	.LVL80:
+ 222:../drivers/microsd.c **** 		sizeMB = DiskSize();
+ 973              		.loc 1 222 0
+ 974 008e FFF7FEFF 		bl	DiskSize
+ 975              	.LVL81:
+ 223:../drivers/microsd.c **** 		if (sizeMB > 0)
+ 976              		.loc 1 223 0
+ 977 0092 0146     		mov	r1, r0
+ 978 0094 88B1     		cbz	r0, .L126
+ 225:../drivers/microsd.c **** 		    Log ("SD-Card %ldMB free", sizeMB);
+ 979              		.loc 1 225 0
+ 980 0096 1948     		ldr	r0, .L134+32
+ 981              	.LVL82:
+ 982 0098 FFF7FEFF 		bl	Log
+ 983              	.LVL83:
+ 984 009c 0DE0     		b	.L126
+ 985              	.LVL84:
+ 986              	.L123:
+ 987              	.LBE2:
+ 230:../drivers/microsd.c **** 		l_DiskState = DS_MOUNT_FAILED;
+ 988              		.loc 1 230 0
+ 989 009e 0523     		movs	r3, #5
+ 231:../drivers/microsd.c **** 		LogError ("SD-Card Mount Failed");
+ 990              		.loc 1 231 0
+ 991 00a0 1748     		ldr	r0, .L134+36
+ 230:../drivers/microsd.c **** 		l_DiskState = DS_MOUNT_FAILED;
+ 992              		.loc 1 230 0
+ 993 00a2 2370     		strb	r3, [r4]
+ 231:../drivers/microsd.c **** 		LogError ("SD-Card Mount Failed");
+ 994              		.loc 1 231 0
+ 995 00a4 FFF7FEFF 		bl	LogError
+ 996              	.LVL85:
+ 997              	.L133:
+ 142:../drivers/microsd.c **** bool	 state = false;
+ 998              		.loc 1 142 0
+ 999 00a8 0025     		movs	r5, #0
+ 1000 00aa 07E0     		b	.L119
+ 1001              	.L113:
+ 244:../drivers/microsd.c **** 	    EFM_ASSERT(false);
+ 1002              		.loc 1 244 0
+ 1003 00ac 1548     		ldr	r0, .L134+40
+ 1004 00ae F421     		movs	r1, #244
+ 245:../drivers/microsd.c **** 	    l_DiskState = DS_UNKNOWN;	// try to recover
+ 1005              		.loc 1 245 0
+ 1006 00b0 0025     		movs	r5, #0
+ 244:../drivers/microsd.c **** 	    EFM_ASSERT(false);
+ 1007              		.loc 1 244 0
+ 1008 00b2 FFF7FEFF 		bl	assertEFM
+ 1009              	.LVL86:
+ 245:../drivers/microsd.c **** 	    l_DiskState = DS_UNKNOWN;	// try to recover
+ 1010              		.loc 1 245 0
+ 1011 00b6 2570     		strb	r5, [r4]
+ 1012 00b8 00E0     		b	.L119
+ 1013              	.LVL87:
+ 1014              	.L126:
+ 1015              	.LBB3:
+ARM GAS  /tmp/ccmooP1h.s 			page 31
+
+
+ 219:../drivers/microsd.c **** 		state = true;	// Inform caller about the new mount
+ 1016              		.loc 1 219 0
+ 1017 00ba 0125     		movs	r5, #1
+ 1018              	.LVL88:
+ 1019              	.L119:
+ 1020              	.LBE3:
+ 249:../drivers/microsd.c ****     if (l_DiskState != l_PrevDiskState)
+ 1021              		.loc 1 249 0
+ 1022 00bc 2278     		ldrb	r2, [r4]	@ zero_extendqisi2
+ 1023 00be 3378     		ldrb	r3, [r6]	@ zero_extendqisi2
+ 1024 00c0 9A42     		cmp	r2, r3
+ 1025 00c2 02D0     		beq	.L124
+ 250:../drivers/microsd.c **** 	g_flgIRQ = true;		// immediately process the new state
+ 1026              		.loc 1 250 0
+ 1027 00c4 104B     		ldr	r3, .L134+44
+ 1028 00c6 0122     		movs	r2, #1
+ 1029 00c8 1A70     		strb	r2, [r3]
+ 1030              	.L124:
+ 253:../drivers/microsd.c ****     GPIO_PinModeSet(MICROSD_SPI_GPIO_PORT, MICROSD_CD_PULLUP_PIN,
+ 1031              		.loc 1 253 0
+ 1032 00ca 0022     		movs	r2, #0
+ 1033 00cc 0220     		movs	r0, #2
+ 1034 00ce 0C21     		movs	r1, #12
+ 1035 00d0 1346     		mov	r3, r2
+ 1036 00d2 FFF7FEFF 		bl	GPIO_PinModeSet
+ 1037              	.LVL89:
+ 257:../drivers/microsd.c **** }
+ 1038              		.loc 1 257 0
+ 1039 00d6 2846     		mov	r0, r5
+ 1040 00d8 70BD     		pop	{r4, r5, r6, pc}
+ 1041              	.LVL90:
+ 1042              	.L135:
+ 1043 00da 00BF     		.align	2
+ 1044              	.L134:
+ 1045 00dc 00000000 		.word	.LANCHOR0
+ 1046 00e0 980C0C42 		.word	1108085912
+ 1047 00e4 00000000 		.word	.LANCHOR7
+ 1048 00e8 17000000 		.word	.LC3
+ 1049 00ec 00000000 		.word	.LANCHOR8
+ 1050 00f0 27000000 		.word	.LC4
+ 1051 00f4 38000000 		.word	.LC5
+ 1052 00f8 4C000000 		.word	.LC6
+ 1053 00fc 68000000 		.word	.LC7
+ 1054 0100 7B000000 		.word	.LC8
+ 1055 0104 02000000 		.word	.LC2
+ 1056 0108 00000000 		.word	g_flgIRQ
+ 1057              		.cfi_endproc
+ 1058              	.LFE102:
+ 1060              		.section	.text.MICROSD_BlockRx,"ax",%progbits
+ 1061              		.align	1
+ 1062              		.global	MICROSD_BlockRx
+ 1063              		.thumb
+ 1064              		.thumb_func
+ 1066              	MICROSD_BlockRx:
+ 1067              	.LFB115:
+ 638:../drivers/microsd.c **** }
+ 639:../drivers/microsd.c **** 
+ARM GAS  /tmp/ccmooP1h.s 			page 32
+
+
+ 640:../drivers/microsd.c **** 
+ 641:../drivers/microsd.c **** /**************************************************************************//**
+ 642:../drivers/microsd.c ****  * @brief Receive a data block from micro SD card.
+ 643:../drivers/microsd.c ****  * @param[out] buff
+ 644:../drivers/microsd.c ****  *  Data buffer to store received data.
+ 645:../drivers/microsd.c ****  * @param btr
+ 646:../drivers/microsd.c ****  *  Byte count (must be multiple of 4).
+ 647:../drivers/microsd.c ****  * @return
+ 648:../drivers/microsd.c ****  *  1:OK, 0:Failed.
+ 649:../drivers/microsd.c ****  *****************************************************************************/
+ 650:../drivers/microsd.c **** int MICROSD_BlockRx(uint8_t *buff, uint32_t btr)
+ 651:../drivers/microsd.c **** {
+ 1068              		.loc 1 651 0
+ 1069              		.cfi_startproc
+ 1070              		@ args = 0, pretend = 0, frame = 0
+ 1071              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1072              	.LVL91:
+ 1073 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 1074              		.cfi_def_cfa_offset 24
+ 1075              		.cfi_offset 3, -24
+ 1076              		.cfi_offset 4, -20
+ 1077              		.cfi_offset 5, -16
+ 1078              		.cfi_offset 6, -12
+ 1079              		.cfi_offset 7, -8
+ 1080              		.cfi_offset 14, -4
+ 652:../drivers/microsd.c **** uint8_t token;
+ 653:../drivers/microsd.c **** uint16_t val;
+ 654:../drivers/microsd.c **** uint32_t retryCount, framectrl, ctrl;
+ 655:../drivers/microsd.c **** 
+ 656:../drivers/microsd.c **** 
+ 657:../drivers/microsd.c ****     /* Wait for data packet in timeout of 100ms */
+ 658:../drivers/microsd.c ****     retryCount = 100 * xfersPrMsec;
+ 1081              		.loc 1 658 0
+ 1082 0002 254B     		ldr	r3, .L151
+ 1083 0004 6424     		movs	r4, #100
+ 1084 0006 1B68     		ldr	r3, [r3]
+ 651:../drivers/microsd.c **** {
+ 1085              		.loc 1 651 0
+ 1086 0008 0646     		mov	r6, r0
+ 1087              		.loc 1 658 0
+ 1088 000a 5C43     		muls	r4, r3, r4
+ 1089              	.LVL92:
+ 651:../drivers/microsd.c **** {
+ 1090              		.loc 1 651 0
+ 1091 000c 0D46     		mov	r5, r1
+ 1092              	.LVL93:
+ 1093              	.L139:
+ 659:../drivers/microsd.c ****     do
+ 660:../drivers/microsd.c ****     {
+ 661:../drivers/microsd.c **** 	token = MICROSD_XferSpi(0xff);
+ 1094              		.loc 1 661 0 discriminator 1
+ 1095 000e FF20     		movs	r0, #255
+ 1096 0010 FFF7FEFF 		bl	MICROSD_XferSpi
+ 1097              	.LVL94:
+ 662:../drivers/microsd.c ****     } while ((token == 0xFF) && --retryCount);
+ 1098              		.loc 1 662 0 discriminator 1
+ 1099 0014 FF28     		cmp	r0, #255
+ARM GAS  /tmp/ccmooP1h.s 			page 33
+
+
+ 1100 0016 02D1     		bne	.L137
+ 1101              	.LVL95:
+ 1102 0018 013C     		subs	r4, r4, #1
+ 1103              	.LVL96:
+ 1104 001a F8D1     		bne	.L139
+ 1105 001c 39E0     		b	.L149
+ 1106              	.L137:
+ 663:../drivers/microsd.c **** 
+ 664:../drivers/microsd.c ****     if (token != 0xFE)
+ 1107              		.loc 1 664 0
+ 1108 001e FE28     		cmp	r0, #254
+ 1109 0020 37D1     		bne	.L149
+ 665:../drivers/microsd.c ****     {
+ 666:../drivers/microsd.c **** 	/* Invalid data token */
+ 667:../drivers/microsd.c **** 	return 0;
+ 668:../drivers/microsd.c ****     }
+ 669:../drivers/microsd.c **** 
+ 670:../drivers/microsd.c ****     /* Save current configuration. */
+ 671:../drivers/microsd.c ****     framectrl = MICROSD_USART->FRAME;
+ 1110              		.loc 1 671 0
+ 1111 0022 1E4B     		ldr	r3, .L151+4
+ 672:../drivers/microsd.c ****     ctrl      = MICROSD_USART->CTRL;
+ 673:../drivers/microsd.c **** 
+ 674:../drivers/microsd.c ****     /* Set frame length to 16 bit. This will increase the effective data rate. */
+ 675:../drivers/microsd.c ****     MICROSD_USART->FRAME = (MICROSD_USART->FRAME & (~_USART_FRAME_DATABITS_MASK))
+ 676:../drivers/microsd.c **** 			 | USART_FRAME_DATABITS_SIXTEEN;
+ 677:../drivers/microsd.c ****     MICROSD_USART->CTRL |= USART_CTRL_BYTESWAP;
+ 678:../drivers/microsd.c **** 
+ 679:../drivers/microsd.c ****     /* Clear send and receive buffers. */
+ 680:../drivers/microsd.c ****     MICROSD_USART->CMD = USART_CMD_CLEARRX | USART_CMD_CLEARTX;
+ 681:../drivers/microsd.c **** 
+ 682:../drivers/microsd.c ****     if ( timeOut >= btr + 2 )
+ 1112              		.loc 1 682 0
+ 1113 0024 AF1C     		adds	r7, r5, #2
+ 671:../drivers/microsd.c ****     framectrl = MICROSD_USART->FRAME;
+ 1114              		.loc 1 671 0
+ 1115 0026 5C68     		ldr	r4, [r3, #4]
+ 1116              	.LVL97:
+ 672:../drivers/microsd.c ****     ctrl      = MICROSD_USART->CTRL;
+ 1117              		.loc 1 672 0
+ 1118 0028 1868     		ldr	r0, [r3]
+ 1119              	.LVL98:
+ 675:../drivers/microsd.c ****     MICROSD_USART->FRAME = (MICROSD_USART->FRAME & (~_USART_FRAME_DATABITS_MASK))
+ 1120              		.loc 1 675 0
+ 1121 002a 5A68     		ldr	r2, [r3, #4]
+ 1122 002c 22F00F02 		bic	r2, r2, #15
+ 676:../drivers/microsd.c **** 			 | USART_FRAME_DATABITS_SIXTEEN;
+ 1123              		.loc 1 676 0
+ 1124 0030 42F00D02 		orr	r2, r2, #13
+ 675:../drivers/microsd.c ****     MICROSD_USART->FRAME = (MICROSD_USART->FRAME & (~_USART_FRAME_DATABITS_MASK))
+ 1125              		.loc 1 675 0
+ 1126 0034 5A60     		str	r2, [r3, #4]
+ 677:../drivers/microsd.c ****     MICROSD_USART->CTRL |= USART_CTRL_BYTESWAP;
+ 1127              		.loc 1 677 0
+ 1128 0036 1A68     		ldr	r2, [r3]
+ 1129 0038 42F08052 		orr	r2, r2, #268435456
+ 1130 003c 1A60     		str	r2, [r3]
+ARM GAS  /tmp/ccmooP1h.s 			page 34
+
+
+ 680:../drivers/microsd.c ****     MICROSD_USART->CMD = USART_CMD_CLEARRX | USART_CMD_CLEARTX;
+ 1131              		.loc 1 680 0
+ 1132 003e 4FF44062 		mov	r2, #3072
+ 1133 0042 DA60     		str	r2, [r3, #12]
+ 1134              		.loc 1 682 0
+ 1135 0044 164A     		ldr	r2, .L151+8
+ 1136 0046 1168     		ldr	r1, [r2]
+ 1137 0048 B942     		cmp	r1, r7
+ 683:../drivers/microsd.c ****     {
+ 684:../drivers/microsd.c **** 	timeOut -= btr + 2;
+ 1138              		.loc 1 684 0
+ 1139 004a 26BF     		itte	cs
+ 1140 004c 0239     		subcs	r1, r1, #2
+ 1141 004e C5EB0101 		rsbcs	r1, r5, r1
+ 685:../drivers/microsd.c ****     }
+ 686:../drivers/microsd.c ****     else
+ 687:../drivers/microsd.c ****     {
+ 688:../drivers/microsd.c **** 	timeOut = 0;
+ 1142              		.loc 1 688 0
+ 1143 0052 0021     		movcc	r1, #0
+ 1144 0054 1160     		str	r1, [r2]
+ 689:../drivers/microsd.c ****     }
+ 690:../drivers/microsd.c **** 
+ 691:../drivers/microsd.c ****     /* Pipelining - The USART has two buffers of 16 bit in both
+ 692:../drivers/microsd.c ****     * directions. Make sure that at least one is in the pipe at all
+ 693:../drivers/microsd.c ****     * times to maximize throughput. */
+ 694:../drivers/microsd.c ****     MICROSD_USART->TXDOUBLE = 0xffff;
+ 1145              		.loc 1 694 0
+ 1146 0056 4FF6FF72 		movw	r2, #65535
+ 1147 005a DA63     		str	r2, [r3, #60]
+ 1148 005c 0023     		movs	r3, #0
+ 1149              	.LVL99:
+ 1150              	.L145:
+ 695:../drivers/microsd.c ****     do
+ 696:../drivers/microsd.c ****     {
+ 697:../drivers/microsd.c **** 	MICROSD_USART->TXDOUBLE = 0xffff;
+ 1151              		.loc 1 697 0
+ 1152 005e 0F4A     		ldr	r2, .L151+4
+ 1153 0060 4FF6FF71 		movw	r1, #65535
+ 1154 0064 D163     		str	r1, [r2, #60]
+ 1155              	.L143:
+ 698:../drivers/microsd.c **** 
+ 699:../drivers/microsd.c **** 	while (!(MICROSD_USART->STATUS & USART_STATUS_RXDATAV))
+ 1156              		.loc 1 699 0 discriminator 1
+ 1157 0066 1169     		ldr	r1, [r2, #16]
+ 1158 0068 0906     		lsls	r1, r1, #24
+ 1159 006a FCD5     		bpl	.L143
+ 700:../drivers/microsd.c **** 	    ;
+ 701:../drivers/microsd.c **** 
+ 702:../drivers/microsd.c **** 	val = MICROSD_USART->RXDOUBLE;
+ 1160              		.loc 1 702 0
+ 1161 006c 0B4A     		ldr	r2, .L151+4
+ 1162 006e F118     		adds	r1, r6, r3
+ 1163 0070 526A     		ldr	r2, [r2, #36]
+ 1164              	.LVL100:
+ 703:../drivers/microsd.c **** 	*buff++ = val;
+ 1165              		.loc 1 703 0
+ARM GAS  /tmp/ccmooP1h.s 			page 35
+
+
+ 1166 0072 F254     		strb	r2, [r6, r3]
+ 1167              	.LVL101:
+ 1168 0074 0233     		adds	r3, r3, #2
+ 1169              	.LVL102:
+ 704:../drivers/microsd.c **** 	*buff++ = val >> 8;
+ 1170              		.loc 1 704 0
+ 1171 0076 C2F30722 		ubfx	r2, r2, #8, #8
+ 1172              	.LVL103:
+ 705:../drivers/microsd.c **** 
+ 706:../drivers/microsd.c **** 	btr -= 2;
+ 707:../drivers/microsd.c ****     } while (btr);
+ 1173              		.loc 1 707 0
+ 1174 007a 9D42     		cmp	r5, r3
+ 704:../drivers/microsd.c **** 	*buff++ = val >> 8;
+ 1175              		.loc 1 704 0
+ 1176 007c 4A70     		strb	r2, [r1, #1]
+ 1177              		.loc 1 707 0
+ 1178 007e EED1     		bne	.L145
+ 1179              	.LVL104:
+ 1180              	.L147:
+ 708:../drivers/microsd.c **** 
+ 709:../drivers/microsd.c ****     /* Next two bytes is the CRC which we discard. */
+ 710:../drivers/microsd.c ****     while (!(MICROSD_USART->STATUS & USART_STATUS_RXDATAV));
+ 1181              		.loc 1 710 0
+ 1182 0080 064B     		ldr	r3, .L151+4
+ 1183 0082 1A69     		ldr	r2, [r3, #16]
+ 1184 0084 1206     		lsls	r2, r2, #24
+ 1185 0086 FBD5     		bpl	.L147
+ 711:../drivers/microsd.c ****     MICROSD_USART->RXDOUBLE;
+ 1186              		.loc 1 711 0
+ 1187 0088 5A6A     		ldr	r2, [r3, #36]
+ 712:../drivers/microsd.c **** 
+ 713:../drivers/microsd.c ****     /* Restore old settings. */
+ 714:../drivers/microsd.c ****     MICROSD_USART->FRAME = framectrl;
+ 1188              		.loc 1 714 0
+ 1189 008a 5C60     		str	r4, [r3, #4]
+ 715:../drivers/microsd.c ****     MICROSD_USART->CTRL  = ctrl;
+ 1190              		.loc 1 715 0
+ 1191 008c 1860     		str	r0, [r3]
+ 716:../drivers/microsd.c **** 
+ 717:../drivers/microsd.c ****     return 1;     /* Return with success */
+ 1192              		.loc 1 717 0
+ 1193 008e 0120     		movs	r0, #1
+ 1194              	.LVL105:
+ 1195 0090 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 1196              	.LVL106:
+ 1197              	.L149:
+ 667:../drivers/microsd.c **** 	return 0;
+ 1198              		.loc 1 667 0
+ 1199 0092 0020     		movs	r0, #0
+ 1200              	.LVL107:
+ 718:../drivers/microsd.c **** }
+ 1201              		.loc 1 718 0
+ 1202 0094 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 1203              	.LVL108:
+ 1204              	.L152:
+ 1205 0096 00BF     		.align	2
+ARM GAS  /tmp/ccmooP1h.s 			page 36
+
+
+ 1206              	.L151:
+ 1207 0098 00000000 		.word	.LANCHOR3
+ 1208 009c 00C80040 		.word	1073793024
+ 1209 00a0 00000000 		.word	.LANCHOR6
+ 1210              		.cfi_endproc
+ 1211              	.LFE115:
+ 1213              		.section	.text.MICROSD_BlockTx,"ax",%progbits
+ 1214              		.align	1
+ 1215              		.global	MICROSD_BlockTx
+ 1216              		.thumb
+ 1217              		.thumb_func
+ 1219              	MICROSD_BlockTx:
+ 1220              	.LFB116:
+ 719:../drivers/microsd.c **** 
+ 720:../drivers/microsd.c **** 
+ 721:../drivers/microsd.c **** /**************************************************************************//**
+ 722:../drivers/microsd.c ****  * @brief Send a data block to micro SD card.
+ 723:../drivers/microsd.c ****  * @param[in] buff 512 bytes data block to be transmitted.
+ 724:../drivers/microsd.c ****  * @param token Data token.
+ 725:../drivers/microsd.c ****  * @return 1:OK, 0:Failed.
+ 726:../drivers/microsd.c ****  *****************************************************************************/
+ 727:../drivers/microsd.c **** #if _READONLY == 0
+ 728:../drivers/microsd.c **** int MICROSD_BlockTx(const uint8_t *buff, uint8_t token)
+ 729:../drivers/microsd.c **** {
+ 1221              		.loc 1 729 0
+ 1222              		.cfi_startproc
+ 1223              		@ args = 0, pretend = 0, frame = 0
+ 1224              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1225              	.LVL109:
+ 1226 0000 70B5     		push	{r4, r5, r6, lr}
+ 1227              		.cfi_def_cfa_offset 16
+ 1228              		.cfi_offset 4, -16
+ 1229              		.cfi_offset 5, -12
+ 1230              		.cfi_offset 6, -8
+ 1231              		.cfi_offset 14, -4
+ 1232              		.loc 1 729 0
+ 1233 0002 0446     		mov	r4, r0
+ 1234 0004 0D46     		mov	r5, r1
+ 730:../drivers/microsd.c **** uint8_t resp;
+ 731:../drivers/microsd.c **** uint16_t val;
+ 732:../drivers/microsd.c **** uint32_t bc = 512;
+ 733:../drivers/microsd.c **** uint32_t framectrl, ctrl;
+ 734:../drivers/microsd.c **** 
+ 735:../drivers/microsd.c **** 
+ 736:../drivers/microsd.c ****     if (WaitReady() != 0xFF)
+ 1235              		.loc 1 736 0
+ 1236 0006 FFF7FEFF 		bl	WaitReady
+ 1237              	.LVL110:
+ 1238 000a FF28     		cmp	r0, #255
+ 1239 000c 46D1     		bne	.L165
+ 737:../drivers/microsd.c ****     {
+ 738:../drivers/microsd.c **** 	return 0;
+ 739:../drivers/microsd.c ****     }
+ 740:../drivers/microsd.c **** 
+ 741:../drivers/microsd.c ****     MICROSD_XferSpi(token);         /* Xmit a token */
+ 1240              		.loc 1 741 0
+ 1241 000e 2846     		mov	r0, r5
+ARM GAS  /tmp/ccmooP1h.s 			page 37
+
+
+ 1242 0010 FFF7FEFF 		bl	MICROSD_XferSpi
+ 1243              	.LVL111:
+ 742:../drivers/microsd.c **** 
+ 743:../drivers/microsd.c ****     if (token == 0xFD)
+ 1244              		.loc 1 743 0
+ 1245 0014 FD2D     		cmp	r5, #253
+ 1246 0016 43D0     		beq	.L166
+ 744:../drivers/microsd.c ****     {
+ 745:../drivers/microsd.c **** 	/* StopTran token */
+ 746:../drivers/microsd.c **** 	return 1;
+ 747:../drivers/microsd.c ****     }
+ 748:../drivers/microsd.c **** 
+ 749:../drivers/microsd.c ****     /* Save current configuration. */
+ 750:../drivers/microsd.c ****     framectrl = MICROSD_USART->FRAME;
+ 1247              		.loc 1 750 0
+ 1248 0018 224B     		ldr	r3, .L170
+ 751:../drivers/microsd.c ****     ctrl      = MICROSD_USART->CTRL;
+ 752:../drivers/microsd.c **** 
+ 753:../drivers/microsd.c ****     /* Set frame length to 16 bit. This will increase the effective data rate. */
+ 754:../drivers/microsd.c ****     MICROSD_USART->FRAME = (MICROSD_USART->FRAME & (~_USART_FRAME_DATABITS_MASK))
+ 755:../drivers/microsd.c **** 			 | USART_FRAME_DATABITS_SIXTEEN;
+ 756:../drivers/microsd.c ****     MICROSD_USART->CTRL |= USART_CTRL_BYTESWAP;
+ 757:../drivers/microsd.c **** 
+ 758:../drivers/microsd.c ****     /* Clear send and receive buffers. */
+ 759:../drivers/microsd.c ****     MICROSD_USART->CMD = USART_CMD_CLEARRX | USART_CMD_CLEARTX;
+ 760:../drivers/microsd.c **** 
+ 761:../drivers/microsd.c ****     if ( timeOut >= bc + 2 )
+ 1249              		.loc 1 761 0
+ 1250 001a 40F20125 		movw	r5, #513
+ 750:../drivers/microsd.c ****     framectrl = MICROSD_USART->FRAME;
+ 1251              		.loc 1 750 0
+ 1252 001e 5868     		ldr	r0, [r3, #4]
+ 1253              	.LVL112:
+ 751:../drivers/microsd.c ****     ctrl      = MICROSD_USART->CTRL;
+ 1254              		.loc 1 751 0
+ 1255 0020 1968     		ldr	r1, [r3]
+ 1256              	.LVL113:
+ 754:../drivers/microsd.c ****     MICROSD_USART->FRAME = (MICROSD_USART->FRAME & (~_USART_FRAME_DATABITS_MASK))
+ 1257              		.loc 1 754 0
+ 1258 0022 5A68     		ldr	r2, [r3, #4]
+ 1259 0024 22F00F02 		bic	r2, r2, #15
+ 755:../drivers/microsd.c **** 			 | USART_FRAME_DATABITS_SIXTEEN;
+ 1260              		.loc 1 755 0
+ 1261 0028 42F00D02 		orr	r2, r2, #13
+ 754:../drivers/microsd.c ****     MICROSD_USART->FRAME = (MICROSD_USART->FRAME & (~_USART_FRAME_DATABITS_MASK))
+ 1262              		.loc 1 754 0
+ 1263 002c 5A60     		str	r2, [r3, #4]
+ 756:../drivers/microsd.c ****     MICROSD_USART->CTRL |= USART_CTRL_BYTESWAP;
+ 1264              		.loc 1 756 0
+ 1265 002e 1A68     		ldr	r2, [r3]
+ 1266 0030 42F08052 		orr	r2, r2, #268435456
+ 1267 0034 1A60     		str	r2, [r3]
+ 759:../drivers/microsd.c ****     MICROSD_USART->CMD = USART_CMD_CLEARRX | USART_CMD_CLEARTX;
+ 1268              		.loc 1 759 0
+ 1269 0036 4FF44062 		mov	r2, #3072
+ 1270 003a DA60     		str	r2, [r3, #12]
+ 1271              		.loc 1 761 0
+ARM GAS  /tmp/ccmooP1h.s 			page 38
+
+
+ 1272 003c 1A4B     		ldr	r3, .L170+4
+ 1273 003e 1A68     		ldr	r2, [r3]
+ 1274 0040 AA42     		cmp	r2, r5
+ 762:../drivers/microsd.c ****     {
+ 763:../drivers/microsd.c **** 	timeOut -= bc + 2;
+ 1275              		.loc 1 763 0
+ 1276 0042 8CBF     		ite	hi
+ 1277 0044 A2F20222 		subwhi	r2, r2, #514
+ 764:../drivers/microsd.c ****     }
+ 765:../drivers/microsd.c ****     else
+ 766:../drivers/microsd.c ****     {
+ 767:../drivers/microsd.c **** 	timeOut = 0;
+ 1278              		.loc 1 767 0
+ 1279 0048 0022     		movls	r2, #0
+ 1280 004a 1A60     		str	r2, [r3]
+ 729:../drivers/microsd.c **** {
+ 1281              		.loc 1 729 0
+ 1282 004c 0023     		movs	r3, #0
+ 1283              	.LVL114:
+ 1284              	.L160:
+ 1285 004e E218     		adds	r2, r4, r3
+ 1286              	.LVL115:
+ 768:../drivers/microsd.c ****     }
+ 769:../drivers/microsd.c **** 
+ 770:../drivers/microsd.c ****     do
+ 771:../drivers/microsd.c ****     {
+ 772:../drivers/microsd.c **** 	/* Transmit a 512 byte data block to the SD-Card. */
+ 773:../drivers/microsd.c **** 	val  = *buff++;
+ 774:../drivers/microsd.c **** 	val |= *buff++ << 8;
+ 1287              		.loc 1 774 0
+ 1288 0050 5578     		ldrb	r5, [r2, #1]	@ zero_extendqisi2
+ 1289 0052 E25C     		ldrb	r2, [r4, r3]	@ zero_extendqisi2
+ 1290              	.LVL116:
+ 1291 0054 42EA0525 		orr	r5, r2, r5, lsl #8
+ 1292              	.LVL117:
+ 1293              	.L158:
+ 775:../drivers/microsd.c **** 	bc  -= 2;
+ 776:../drivers/microsd.c **** 
+ 777:../drivers/microsd.c **** 	while (!(MICROSD_USART->STATUS & USART_STATUS_TXBL))
+ 1294              		.loc 1 777 0 discriminator 1
+ 1295 0058 124A     		ldr	r2, .L170
+ 1296 005a 1669     		ldr	r6, [r2, #16]
+ 1297 005c 7606     		lsls	r6, r6, #25
+ 1298 005e FBD5     		bpl	.L158
+ 1299 0060 0233     		adds	r3, r3, #2
+ 1300              	.LVL118:
+ 778:../drivers/microsd.c **** 	    ;
+ 779:../drivers/microsd.c **** 
+ 780:../drivers/microsd.c **** 	MICROSD_USART->TXDOUBLE = val;
+ 781:../drivers/microsd.c ****     } while (bc);
+ 1301              		.loc 1 781 0
+ 1302 0062 B3F5007F 		cmp	r3, #512
+ 780:../drivers/microsd.c **** 	MICROSD_USART->TXDOUBLE = val;
+ 1303              		.loc 1 780 0
+ 1304 0066 D563     		str	r5, [r2, #60]
+ 1305              		.loc 1 781 0
+ 1306 0068 F1D1     		bne	.L160
+ARM GAS  /tmp/ccmooP1h.s 			page 39
+
+
+ 1307              	.LVL119:
+ 1308              	.L162:
+ 782:../drivers/microsd.c **** 
+ 783:../drivers/microsd.c ****     while (!(MICROSD_USART->STATUS & USART_STATUS_TXBL));
+ 1309              		.loc 1 783 0
+ 1310 006a 1369     		ldr	r3, [r2, #16]
+ 1311 006c 5C06     		lsls	r4, r3, #25
+ 1312 006e FCD5     		bpl	.L162
+ 784:../drivers/microsd.c **** 
+ 785:../drivers/microsd.c ****     /* Transmit two dummy CRC bytes. */
+ 786:../drivers/microsd.c ****     MICROSD_USART->TXDOUBLE = 0xFFFF;
+ 1313              		.loc 1 786 0
+ 1314 0070 0C4B     		ldr	r3, .L170
+ 1315 0072 4FF6FF72 		movw	r2, #65535
+ 1316 0076 DA63     		str	r2, [r3, #60]
+ 1317              	.L164:
+ 787:../drivers/microsd.c **** 
+ 788:../drivers/microsd.c ****     while (!(MICROSD_USART->STATUS & USART_STATUS_TXC));
+ 1318              		.loc 1 788 0 discriminator 1
+ 1319 0078 0A4B     		ldr	r3, .L170
+ 1320 007a 1A69     		ldr	r2, [r3, #16]
+ 1321 007c 9206     		lsls	r2, r2, #26
+ 1322 007e FBD5     		bpl	.L164
+ 789:../drivers/microsd.c **** 
+ 790:../drivers/microsd.c ****     /* Clear send and receive buffers. */
+ 791:../drivers/microsd.c ****     MICROSD_USART->CMD = USART_CMD_CLEARRX | USART_CMD_CLEARTX;
+ 1323              		.loc 1 791 0
+ 1324 0080 4FF44062 		mov	r2, #3072
+ 1325 0084 DA60     		str	r2, [r3, #12]
+ 792:../drivers/microsd.c **** 
+ 793:../drivers/microsd.c ****     /* Restore old settings. */
+ 794:../drivers/microsd.c ****     MICROSD_USART->FRAME = framectrl;
+ 1326              		.loc 1 794 0
+ 1327 0086 5860     		str	r0, [r3, #4]
+ 795:../drivers/microsd.c ****     MICROSD_USART->CTRL  = ctrl;
+ 1328              		.loc 1 795 0
+ 1329 0088 1960     		str	r1, [r3]
+ 796:../drivers/microsd.c **** 
+ 797:../drivers/microsd.c ****     resp = MICROSD_XferSpi(0xff); /* Receive a data response */
+ 1330              		.loc 1 797 0
+ 1331 008a FF20     		movs	r0, #255
+ 1332              	.LVL120:
+ 1333 008c FFF7FEFF 		bl	MICROSD_XferSpi
+ 1334              	.LVL121:
+ 798:../drivers/microsd.c **** 
+ 799:../drivers/microsd.c ****     if ((resp & 0x1F) != 0x05)    /* If not accepted, return with error */
+ 1335              		.loc 1 799 0
+ 1336 0090 00F01F00 		and	r0, r0, #31
+ 1337              	.LVL122:
+ 1338 0094 431F     		subs	r3, r0, #5
+ 1339 0096 5842     		rsbs	r0, r3, #0
+ 1340 0098 5841     		adcs	r0, r0, r3
+ 1341 009a 70BD     		pop	{r4, r5, r6, pc}
+ 1342              	.LVL123:
+ 1343              	.L165:
+ 738:../drivers/microsd.c **** 	return 0;
+ 1344              		.loc 1 738 0
+ARM GAS  /tmp/ccmooP1h.s 			page 40
+
+
+ 1345 009c 0020     		movs	r0, #0
+ 1346 009e 70BD     		pop	{r4, r5, r6, pc}
+ 1347              	.LVL124:
+ 1348              	.L166:
+ 746:../drivers/microsd.c **** 	return 1;
+ 1349              		.loc 1 746 0
+ 1350 00a0 0120     		movs	r0, #1
+ 800:../drivers/microsd.c ****     {
+ 801:../drivers/microsd.c **** 	return 0;
+ 802:../drivers/microsd.c ****     }
+ 803:../drivers/microsd.c **** 
+ 804:../drivers/microsd.c ****     return 1;
+ 805:../drivers/microsd.c **** }
+ 1351              		.loc 1 805 0
+ 1352 00a2 70BD     		pop	{r4, r5, r6, pc}
+ 1353              	.LVL125:
+ 1354              	.L171:
+ 1355              		.align	2
+ 1356              	.L170:
+ 1357 00a4 00C80040 		.word	1073793024
+ 1358 00a8 00000000 		.word	.LANCHOR6
+ 1359              		.cfi_endproc
+ 1360              	.LFE116:
+ 1362              		.section	.text.MICROSD_SendCmd,"ax",%progbits
+ 1363              		.align	1
+ 1364              		.global	MICROSD_SendCmd
+ 1365              		.thumb
+ 1366              		.thumb_func
+ 1368              	MICROSD_SendCmd:
+ 1369              	.LFB117:
+ 806:../drivers/microsd.c **** #endif  /* _READONLY */
+ 807:../drivers/microsd.c **** 
+ 808:../drivers/microsd.c **** 
+ 809:../drivers/microsd.c **** /**************************************************************************//**
+ 810:../drivers/microsd.c ****  * @brief
+ 811:../drivers/microsd.c ****  *  Send a command packet to micro SD card.
+ 812:../drivers/microsd.c ****  * @param[in] cmd
+ 813:../drivers/microsd.c ****  *  Command byte.
+ 814:../drivers/microsd.c ****  * @param[in] arg
+ 815:../drivers/microsd.c ****  *  Argument.
+ 816:../drivers/microsd.c ****  * @return
+ 817:../drivers/microsd.c ****  *  Response value.
+ 818:../drivers/microsd.c ****  *****************************************************************************/
+ 819:../drivers/microsd.c **** uint8_t MICROSD_SendCmd(uint8_t cmd, DWORD arg)
+ 820:../drivers/microsd.c **** {
+ 1370              		.loc 1 820 0
+ 1371              		.cfi_startproc
+ 1372              		@ args = 0, pretend = 0, frame = 0
+ 1373              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1374              	.LVL126:
+ 821:../drivers/microsd.c **** uint8_t  n, res;
+ 822:../drivers/microsd.c **** uint32_t retryCount;
+ 823:../drivers/microsd.c **** 
+ 824:../drivers/microsd.c **** 
+ 825:../drivers/microsd.c ****     if (cmd & 0x80)
+ 1375              		.loc 1 825 0
+ 1376 0000 0206     		lsls	r2, r0, #24
+ARM GAS  /tmp/ccmooP1h.s 			page 41
+
+
+ 820:../drivers/microsd.c **** {
+ 1377              		.loc 1 820 0
+ 1378 0002 38B5     		push	{r3, r4, r5, lr}
+ 1379              		.cfi_def_cfa_offset 16
+ 1380              		.cfi_offset 3, -16
+ 1381              		.cfi_offset 4, -12
+ 1382              		.cfi_offset 5, -8
+ 1383              		.cfi_offset 14, -4
+ 820:../drivers/microsd.c **** {
+ 1384              		.loc 1 820 0
+ 1385 0004 0446     		mov	r4, r0
+ 1386 0006 0D46     		mov	r5, r1
+ 1387              		.loc 1 825 0
+ 1388 0008 07D5     		bpl	.L173
+ 1389              	.LVL127:
+ 826:../drivers/microsd.c ****     {
+ 827:../drivers/microsd.c **** 	/* ACMD<n> is the command sequense of CMD55-CMD<n> */
+ 828:../drivers/microsd.c **** 	cmd &= 0x7F;
+ 829:../drivers/microsd.c **** 	res  = MICROSD_SendCmd(CMD55, 0);
+ 1390              		.loc 1 829 0
+ 1391 000a 3720     		movs	r0, #55
+ 1392              	.LVL128:
+ 1393 000c 0021     		movs	r1, #0
+ 1394              	.LVL129:
+ 1395 000e FFF7FEFF 		bl	MICROSD_SendCmd
+ 1396              	.LVL130:
+ 830:../drivers/microsd.c **** 	if (res > 1)
+ 1397              		.loc 1 830 0
+ 1398 0012 0128     		cmp	r0, #1
+ 1399 0014 30D8     		bhi	.L174
+ 828:../drivers/microsd.c **** 	cmd &= 0x7F;
+ 1400              		.loc 1 828 0
+ 1401 0016 04F07F04 		and	r4, r4, #127
+ 1402              	.LVL131:
+ 1403              	.L173:
+ 831:../drivers/microsd.c **** 	{
+ 832:../drivers/microsd.c **** 	    return res;
+ 833:../drivers/microsd.c **** 	}
+ 834:../drivers/microsd.c ****     }
+ 835:../drivers/microsd.c **** 
+ 836:../drivers/microsd.c ****     /* Select the card and wait for ready */
+ 837:../drivers/microsd.c ****     MICROSD_Deselect();
+ 1404              		.loc 1 837 0
+ 1405 001a FFF7FEFF 		bl	MICROSD_Deselect
+ 1406              	.LVL132:
+ 838:../drivers/microsd.c ****     if (!MICROSD_Select())
+ 1407              		.loc 1 838 0
+ 1408 001e FFF7FEFF 		bl	MICROSD_Select
+ 1409              	.LVL133:
+ 1410 0022 40B3     		cbz	r0, .L180
+ 839:../drivers/microsd.c ****     {
+ 840:../drivers/microsd.c **** 	return 0xFF;
+ 841:../drivers/microsd.c ****     }
+ 842:../drivers/microsd.c **** 
+ 843:../drivers/microsd.c ****     /* Send command packet */
+ 844:../drivers/microsd.c ****     MICROSD_XferSpi(0x40 | cmd);            /* Start + Command index */
+ 1411              		.loc 1 844 0
+ARM GAS  /tmp/ccmooP1h.s 			page 42
+
+
+ 1412 0024 44F04000 		orr	r0, r4, #64
+ 1413 0028 FFF7FEFF 		bl	MICROSD_XferSpi
+ 1414              	.LVL134:
+ 845:../drivers/microsd.c ****     MICROSD_XferSpi((uint8_t)(arg >> 24));  /* Argument[31..24] */
+ 1415              		.loc 1 845 0
+ 1416 002c 280E     		lsrs	r0, r5, #24
+ 1417 002e FFF7FEFF 		bl	MICROSD_XferSpi
+ 1418              	.LVL135:
+ 846:../drivers/microsd.c ****     MICROSD_XferSpi((uint8_t)(arg >> 16));  /* Argument[23..16] */
+ 1419              		.loc 1 846 0
+ 1420 0032 C5F30740 		ubfx	r0, r5, #16, #8
+ 1421 0036 FFF7FEFF 		bl	MICROSD_XferSpi
+ 1422              	.LVL136:
+ 847:../drivers/microsd.c ****     MICROSD_XferSpi((uint8_t)(arg >> 8));   /* Argument[15..8] */
+ 1423              		.loc 1 847 0
+ 1424 003a C5F30720 		ubfx	r0, r5, #8, #8
+ 1425 003e FFF7FEFF 		bl	MICROSD_XferSpi
+ 1426              	.LVL137:
+ 848:../drivers/microsd.c ****     MICROSD_XferSpi((uint8_t) arg);         /* Argument[7..0] */
+ 1427              		.loc 1 848 0
+ 1428 0042 E8B2     		uxtb	r0, r5
+ 1429 0044 FFF7FEFF 		bl	MICROSD_XferSpi
+ 1430              	.LVL138:
+ 849:../drivers/microsd.c ****     n = 0x01;                               /* Dummy CRC + Stop */
+ 850:../drivers/microsd.c ****     if (cmd == CMD0)
+ 1431              		.loc 1 850 0
+ 1432 0048 24B1     		cbz	r4, .L181
+ 849:../drivers/microsd.c ****     n = 0x01;                               /* Dummy CRC + Stop */
+ 1433              		.loc 1 849 0
+ 1434 004a 082C     		cmp	r4, #8
+ 1435 004c 0CBF     		ite	eq
+ 1436 004e 8720     		moveq	r0, #135
+ 1437 0050 0120     		movne	r0, #1
+ 1438 0052 00E0     		b	.L176
+ 1439              	.L181:
+ 851:../drivers/microsd.c ****     {
+ 852:../drivers/microsd.c **** 	n = 0x95;                             /* Valid CRC for CMD0(0) */
+ 1440              		.loc 1 852 0
+ 1441 0054 9520     		movs	r0, #149
+ 1442              	.LVL139:
+ 1443              	.L176:
+ 853:../drivers/microsd.c ****     }
+ 854:../drivers/microsd.c ****     if (cmd == CMD8)
+ 855:../drivers/microsd.c ****     {
+ 856:../drivers/microsd.c **** 	n = 0x87;                             /* Valid CRC for CMD8(0x1AA) */
+ 857:../drivers/microsd.c ****     }
+ 858:../drivers/microsd.c ****     MICROSD_XferSpi(n);
+ 1444              		.loc 1 858 0
+ 1445 0056 FFF7FEFF 		bl	MICROSD_XferSpi
+ 1446              	.LVL140:
+ 859:../drivers/microsd.c **** 
+ 860:../drivers/microsd.c ****     /* Receive command response */
+ 861:../drivers/microsd.c ****     if (cmd == CMD12)
+ 1447              		.loc 1 861 0
+ 1448 005a 0C2C     		cmp	r4, #12
+ 1449 005c 02D1     		bne	.L177
+ 862:../drivers/microsd.c ****     {
+ARM GAS  /tmp/ccmooP1h.s 			page 43
+
+
+ 863:../drivers/microsd.c **** 	MICROSD_XferSpi(0xff);                /* Skip a stuff byte when stop reading */
+ 1450              		.loc 1 863 0
+ 1451 005e FF20     		movs	r0, #255
+ 1452 0060 FFF7FEFF 		bl	MICROSD_XferSpi
+ 1453              	.LVL141:
+ 1454              	.L177:
+ 856:../drivers/microsd.c **** 	n = 0x87;                             /* Valid CRC for CMD8(0x1AA) */
+ 1455              		.loc 1 856 0 discriminator 1
+ 1456 0064 0A24     		movs	r4, #10
+ 1457              	.LVL142:
+ 1458              	.L178:
+ 864:../drivers/microsd.c ****     }
+ 865:../drivers/microsd.c ****     retryCount = 10;                        /* Wait for a valid response in timeout of 10 attempts 
+ 866:../drivers/microsd.c ****     do
+ 867:../drivers/microsd.c ****     {
+ 868:../drivers/microsd.c **** 	res = MICROSD_XferSpi(0xff);
+ 1459              		.loc 1 868 0 discriminator 1
+ 1460 0066 FF20     		movs	r0, #255
+ 1461 0068 FFF7FEFF 		bl	MICROSD_XferSpi
+ 1462              	.LVL143:
+ 869:../drivers/microsd.c ****     } while ((res & 0x80) && --retryCount);
+ 1463              		.loc 1 869 0 discriminator 1
+ 1464 006c 0306     		lsls	r3, r0, #24
+ 1465 006e 03D5     		bpl	.L174
+ 1466              	.LVL144:
+ 1467 0070 013C     		subs	r4, r4, #1
+ 1468              	.LVL145:
+ 1469 0072 F8D1     		bne	.L178
+ 1470 0074 38BD     		pop	{r3, r4, r5, pc}
+ 1471              	.LVL146:
+ 1472              	.L180:
+ 840:../drivers/microsd.c **** 	return 0xFF;
+ 1473              		.loc 1 840 0
+ 1474 0076 FF20     		movs	r0, #255
+ 1475              	.LVL147:
+ 1476              	.L174:
+ 870:../drivers/microsd.c **** 
+ 871:../drivers/microsd.c ****     return res;             /* Return with the response value */
+ 872:../drivers/microsd.c **** }
+ 1477              		.loc 1 872 0
+ 1478 0078 38BD     		pop	{r3, r4, r5, pc}
+ 1479              		.cfi_endproc
+ 1480              	.LFE117:
+ 1482              		.section	.text.MICROSD_SpiClkSlow,"ax",%progbits
+ 1483              		.align	1
+ 1484              		.global	MICROSD_SpiClkSlow
+ 1485              		.thumb
+ 1486              		.thumb_func
+ 1488              	MICROSD_SpiClkSlow:
+ 1489              	.LFB118:
+ 873:../drivers/microsd.c **** 
+ 874:../drivers/microsd.c **** /**************************************************************************//**
+ 875:../drivers/microsd.c ****  * @brief Set SPI clock to a low frequency suitable for initial
+ 876:../drivers/microsd.c ****  *        card initialization.
+ 877:../drivers/microsd.c ****  *****************************************************************************/
+ 878:../drivers/microsd.c **** void MICROSD_SpiClkSlow(void)
+ 879:../drivers/microsd.c **** {
+ARM GAS  /tmp/ccmooP1h.s 			page 44
+
+
+ 1490              		.loc 1 879 0
+ 1491              		.cfi_startproc
+ 1492              		@ args = 0, pretend = 0, frame = 0
+ 1493              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1494 0000 08B5     		push	{r3, lr}
+ 1495              		.cfi_def_cfa_offset 8
+ 1496              		.cfi_offset 3, -8
+ 1497              		.cfi_offset 14, -4
+ 880:../drivers/microsd.c ****     USART_BaudrateSyncSet(MICROSD_USART, 0, MICROSD_LO_SPI_FREQ);
+ 1498              		.loc 1 880 0
+ 1499 0002 044A     		ldr	r2, .L186
+ 1500 0004 0448     		ldr	r0, .L186+4
+ 1501 0006 0021     		movs	r1, #0
+ 1502 0008 FFF7FEFF 		bl	USART_BaudrateSyncSet
+ 1503              	.LVL148:
+ 881:../drivers/microsd.c ****     xfersPrMsec = MICROSD_LO_SPI_FREQ / 8000;
+ 1504              		.loc 1 881 0
+ 1505 000c 034B     		ldr	r3, .L186+8
+ 1506 000e 0C22     		movs	r2, #12
+ 1507 0010 1A60     		str	r2, [r3]
+ 1508 0012 08BD     		pop	{r3, pc}
+ 1509              	.L187:
+ 1510              		.align	2
+ 1511              	.L186:
+ 1512 0014 A0860100 		.word	100000
+ 1513 0018 00C80040 		.word	1073793024
+ 1514 001c 00000000 		.word	.LANCHOR3
+ 1515              		.cfi_endproc
+ 1516              	.LFE118:
+ 1518              		.section	.text.MICROSD_SpiClkFast,"ax",%progbits
+ 1519              		.align	1
+ 1520              		.global	MICROSD_SpiClkFast
+ 1521              		.thumb
+ 1522              		.thumb_func
+ 1524              	MICROSD_SpiClkFast:
+ 1525              	.LFB119:
+ 882:../drivers/microsd.c **** }
+ 883:../drivers/microsd.c **** 
+ 884:../drivers/microsd.c **** 
+ 885:../drivers/microsd.c **** /**************************************************************************//**
+ 886:../drivers/microsd.c ****  * @brief Set SPI clock to maximum frequency.
+ 887:../drivers/microsd.c ****  *****************************************************************************/
+ 888:../drivers/microsd.c **** void MICROSD_SpiClkFast(void)
+ 889:../drivers/microsd.c **** {
+ 1526              		.loc 1 889 0
+ 1527              		.cfi_startproc
+ 1528              		@ args = 0, pretend = 0, frame = 0
+ 1529              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1530 0000 08B5     		push	{r3, lr}
+ 1531              		.cfi_def_cfa_offset 8
+ 1532              		.cfi_offset 3, -8
+ 1533              		.cfi_offset 14, -4
+ 890:../drivers/microsd.c ****     USART_BaudrateSyncSet(MICROSD_USART, 0, MICROSD_HI_SPI_FREQ);
+ 1534              		.loc 1 890 0
+ 1535 0002 054A     		ldr	r2, .L189
+ 1536 0004 0548     		ldr	r0, .L189+4
+ 1537 0006 0021     		movs	r1, #0
+ARM GAS  /tmp/ccmooP1h.s 			page 45
+
+
+ 1538 0008 FFF7FEFF 		bl	USART_BaudrateSyncSet
+ 1539              	.LVL149:
+ 891:../drivers/microsd.c ****     xfersPrMsec = MICROSD_HI_SPI_FREQ / 8000;
+ 1540              		.loc 1 891 0
+ 1541 000c 044B     		ldr	r3, .L189+8
+ 1542 000e 4FF47A72 		mov	r2, #1000
+ 1543 0012 1A60     		str	r2, [r3]
+ 1544 0014 08BD     		pop	{r3, pc}
+ 1545              	.L190:
+ 1546 0016 00BF     		.align	2
+ 1547              	.L189:
+ 1548 0018 00127A00 		.word	8000000
+ 1549 001c 00C80040 		.word	1073793024
+ 1550 0020 00000000 		.word	.LANCHOR3
+ 1551              		.cfi_endproc
+ 1552              	.LFE119:
+ 1554              		.section	.text.MICROSD_TimeOutSet,"ax",%progbits
+ 1555              		.align	1
+ 1556              		.global	MICROSD_TimeOutSet
+ 1557              		.thumb
+ 1558              		.thumb_func
+ 1560              	MICROSD_TimeOutSet:
+ 1561              	.LFB120:
+ 892:../drivers/microsd.c **** }
+ 893:../drivers/microsd.c **** 
+ 894:../drivers/microsd.c **** 
+ 895:../drivers/microsd.c **** /**************************************************************************//**
+ 896:../drivers/microsd.c ****  * @brief
+ 897:../drivers/microsd.c ****  *  Set a timeout value. The timeout value will be decremented towards zero
+ 898:../drivers/microsd.c ****  *  when SPI traffic to/from the micro SD card takes place. Use @ref
+ 899:../drivers/microsd.c ****  *  MICROSD_TimeOutElapsed() to check if timeout has elapsed.
+ 900:../drivers/microsd.c ****  * @param[in] msec
+ 901:../drivers/microsd.c ****  *  Millisecond timeout value (very approximate).
+ 902:../drivers/microsd.c ****  *****************************************************************************/
+ 903:../drivers/microsd.c **** void MICROSD_TimeOutSet(uint32_t msec)
+ 904:../drivers/microsd.c **** {
+ 1562              		.loc 1 904 0
+ 1563              		.cfi_startproc
+ 1564              		@ args = 0, pretend = 0, frame = 0
+ 1565              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1566              		@ link register save eliminated.
+ 1567              	.LVL150:
+ 905:../drivers/microsd.c ****     timeOut = xfersPrMsec * msec;
+ 1568              		.loc 1 905 0
+ 1569 0000 024B     		ldr	r3, .L192
+ 1570 0002 034A     		ldr	r2, .L192+4
+ 1571 0004 1B68     		ldr	r3, [r3]
+ 1572 0006 5843     		muls	r0, r3, r0
+ 1573              	.LVL151:
+ 1574 0008 1060     		str	r0, [r2]
+ 1575 000a 7047     		bx	lr
+ 1576              	.L193:
+ 1577              		.align	2
+ 1578              	.L192:
+ 1579 000c 00000000 		.word	.LANCHOR3
+ 1580 0010 00000000 		.word	.LANCHOR6
+ 1581              		.cfi_endproc
+ARM GAS  /tmp/ccmooP1h.s 			page 46
+
+
+ 1582              	.LFE120:
+ 1584              		.section	.text.MICROSD_TimeOutElapsed,"ax",%progbits
+ 1585              		.align	1
+ 1586              		.global	MICROSD_TimeOutElapsed
+ 1587              		.thumb
+ 1588              		.thumb_func
+ 1590              	MICROSD_TimeOutElapsed:
+ 1591              	.LFB121:
+ 906:../drivers/microsd.c **** }
+ 907:../drivers/microsd.c **** 
+ 908:../drivers/microsd.c **** 
+ 909:../drivers/microsd.c **** /**************************************************************************//**
+ 910:../drivers/microsd.c ****  * @brief
+ 911:../drivers/microsd.c ****  *  Check if timeout value set with @ref MICROSD_TimeOutSet() has elapsed.
+ 912:../drivers/microsd.c ****  * @return
+ 913:../drivers/microsd.c ****  *  True if timeout has elapsed.
+ 914:../drivers/microsd.c ****  *****************************************************************************/
+ 915:../drivers/microsd.c **** bool MICROSD_TimeOutElapsed(void)
+ 916:../drivers/microsd.c **** {
+ 1592              		.loc 1 916 0
+ 1593              		.cfi_startproc
+ 1594              		@ args = 0, pretend = 0, frame = 0
+ 1595              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1596              		@ link register save eliminated.
+ 917:../drivers/microsd.c ****     return timeOut == 0;
+ 1597              		.loc 1 917 0
+ 1598 0000 034B     		ldr	r3, .L195
+ 1599 0002 1868     		ldr	r0, [r3]
+ 918:../drivers/microsd.c **** }
+ 1600              		.loc 1 918 0
+ 1601 0004 D0F10100 		rsbs	r0, r0, #1
+ 1602 0008 38BF     		it	cc
+ 1603 000a 0020     		movcc	r0, #0
+ 1604 000c 7047     		bx	lr
+ 1605              	.L196:
+ 1606 000e 00BF     		.align	2
+ 1607              	.L195:
+ 1608 0010 00000000 		.word	.LANCHOR6
+ 1609              		.cfi_endproc
+ 1610              	.LFE121:
+ 1612              		.section	.text.get_fattime,"ax",%progbits
+ 1613              		.align	1
+ 1614              		.global	get_fattime
+ 1615              		.thumb
+ 1616              		.thumb_func
+ 1618              	get_fattime:
+ 1619              	.LFB122:
+ 919:../drivers/microsd.c **** 
+ 920:../drivers/microsd.c **** 
+ 921:../drivers/microsd.c **** /***************************************************************************//**
+ 922:../drivers/microsd.c ****  * @brief
+ 923:../drivers/microsd.c ****  *   This function is required by the FAT file system in order to provide
+ 924:../drivers/microsd.c ****  *   timestamps for created files. Since this example does not include a
+ 925:../drivers/microsd.c ****  *   reliable clock we hardcode a value here.
+ 926:../drivers/microsd.c ****  *
+ 927:../drivers/microsd.c ****  *   Refer to drivers/fatfs/doc/en/fattime.html for the format of this DWORD.
+ 928:../drivers/microsd.c ****  * @return
+ARM GAS  /tmp/ccmooP1h.s 			page 47
+
+
+ 929:../drivers/microsd.c ****  *    A DWORD containing the current time and date as a packed data structure.
+ 930:../drivers/microsd.c ****  ******************************************************************************/
+ 931:../drivers/microsd.c **** DWORD get_fattime(void)
+ 932:../drivers/microsd.c **** {
+ 1620              		.loc 1 932 0
+ 1621              		.cfi_startproc
+ 1622              		@ args = 0, pretend = 0, frame = 0
+ 1623              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1624              		@ link register save eliminated.
+ 933:../drivers/microsd.c ****     return 0;
+ 934:../drivers/microsd.c **** }
+ 1625              		.loc 1 934 0
+ 1626 0000 0020     		movs	r0, #0
+ 1627 0002 7047     		bx	lr
+ 1628              		.cfi_endproc
+ 1629              	.LFE122:
+ 1631              		.global	g_MicroSD_PwrPin
+ 1632              		.global	g_MicroSD_PwrPort
+ 1633              		.section	.rodata
+ 1634              		.align	2
+ 1635              		.set	.LANCHOR2,. + 0
+ 1636              	.LC0:
+ 1637 0000 05       		.byte	5
+ 1638 0001 000000   		.space	3
+ 1639 0004 00000000 		.word	0
+ 1640 0008 40420F00 		.word	1000000
+ 1641 000c 05       		.byte	5
+ 1642 000d 01       		.byte	1
+ 1643 000e 00       		.byte	0
+ 1644 000f 00       		.space	1
+ 1645 0010 0000     		.short	0
+ 1646 0012 0000     		.space	2
+ 1647              		.section	.bss.g_MicroSD_PwrPin,"aw",%nobits
+ 1648              		.align	2
+ 1649              		.set	.LANCHOR5,. + 0
+ 1652              	g_MicroSD_PwrPin:
+ 1653 0000 00000000 		.space	4
+ 1654              		.section	.bss.xfersPrMsec,"aw",%nobits
+ 1655              		.align	2
+ 1656              		.set	.LANCHOR3,. + 0
+ 1659              	xfersPrMsec:
+ 1660 0000 00000000 		.space	4
+ 1661              		.section	.bss.l_DiskState,"aw",%nobits
+ 1662              		.set	.LANCHOR0,. + 0
+ 1665              	l_DiskState:
+ 1666 0000 00       		.space	1
+ 1667              		.section	.bss.timeOut,"aw",%nobits
+ 1668              		.align	2
+ 1669              		.set	.LANCHOR6,. + 0
+ 1672              	timeOut:
+ 1673 0000 00000000 		.space	4
+ 1674              		.section	.rodata.str1.1,"aMS",%progbits,1
+ 1675              	.LC1:
+ 1676 0000 2F00     		.ascii	"/\000"
+ 1677              	.LC2:
+ 1678 0002 2E2E2F64 		.ascii	"../drivers/microsd.c\000"
+ 1678      72697665 
+ARM GAS  /tmp/ccmooP1h.s 			page 48
+
+
+ 1678      72732F6D 
+ 1678      6963726F 
+ 1678      73642E63 
+ 1679              	.LC3:
+ 1680 0017 53442D43 		.ascii	"SD-Card Removed\000"
+ 1680      61726420 
+ 1680      52656D6F 
+ 1680      76656400 
+ 1681              	.LC4:
+ 1682 0027 53442D43 		.ascii	"SD-Card Inserted\000"
+ 1682      61726420 
+ 1682      496E7365 
+ 1682      72746564 
+ 1682      00
+ 1683              	.LC5:
+ 1684 0038 53442D43 		.ascii	"SD-Card Initialized\000"
+ 1684      61726420 
+ 1684      496E6974 
+ 1684      69616C69 
+ 1684      7A656400 
+ 1685              	.LC6:
+ 1686 004c 53442D43 		.ascii	"SD-Card File System mounted\000"
+ 1686      61726420 
+ 1686      46696C65 
+ 1686      20537973 
+ 1686      74656D20 
+ 1687              	.LC7:
+ 1688 0068 53442D43 		.ascii	"SD-Card %ldMB free\000"
+ 1688      61726420 
+ 1688      256C644D 
+ 1688      42206672 
+ 1688      656500
+ 1689              	.LC8:
+ 1690 007b 53442D43 		.ascii	"SD-Card Mount Failed\000"
+ 1690      61726420 
+ 1690      4D6F756E 
+ 1690      74204661 
+ 1690      696C6564 
+ 1691              		.section	.bss.l_FatFS,"aw",%nobits
+ 1692              		.align	2
+ 1693              		.set	.LANCHOR8,. + 0
+ 1696              	l_FatFS:
+ 1697 0000 00000000 		.space	564
+ 1697      00000000 
+ 1697      00000000 
+ 1697      00000000 
+ 1697      00000000 
+ 1698              		.section	.bss.l_PrevDiskState,"aw",%nobits
+ 1699              		.set	.LANCHOR7,. + 0
+ 1702              	l_PrevDiskState:
+ 1703 0000 00       		.space	1
+ 1704              		.section	.bss.filefound.6907,"aw",%nobits
+ 1705              		.set	.LANCHOR1,. + 0
+ 1708              	filefound.6907:
+ 1709 0000 00000000 		.space	13
+ 1709      00000000 
+ 1709      00000000 
+ARM GAS  /tmp/ccmooP1h.s 			page 49
+
+
+ 1709      00
+ 1710              		.section	.data.g_MicroSD_PwrPort,"aw",%progbits
+ 1711              		.set	.LANCHOR4,. + 0
+ 1714              	g_MicroSD_PwrPort:
+ 1715 0000 03       		.byte	3
+ 1716              		.text
+ 1717              	.Letext0:
+ 1718              		.file 2 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/machine/_default_types.h"
+ 1719              		.file 3 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdint.h"
+ 1720              		.file 4 "../Device/EnergyMicro/EFM32G/Include/efm32g_usart.h"
+ 1721              		.file 5 "../Device/EnergyMicro/EFM32G/Include/efm32g_gpio_p.h"
+ 1722              		.file 6 "../Device/EnergyMicro/EFM32G/Include/efm32g_gpio.h"
+ 1723              		.file 7 "../emlib/inc/em_cmu.h"
+ 1724              		.file 8 "../emlib/inc/em_usart.h"
+ 1725              		.file 9 "../emlib/inc/em_gpio.h"
+ 1726              		.file 10 "../fatfs/inc/integer.h"
+ 1727              		.file 11 "../fatfs/inc/diskio.h"
+ 1728              		.file 12 "../fatfs/inc/ff.h"
+ 1729              		.file 13 "../CMSIS/Include/core_cm3.h"
+ 1730              		.file 14 "../config.h"
+ 1731              		.file 15 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/string.h"
+ 1732              		.file 16 "../emlib/inc/em_assert.h"
+ 1733              		.file 17 "../drivers/Logging.h"

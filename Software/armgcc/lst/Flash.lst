@@ -1,0 +1,1111 @@
+ARM GAS  /tmp/cc2d1KwX.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"Flash.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.INT_Disable,"ax",%progbits
+  19              		.align	1
+  20              		.thumb
+  21              		.thumb_func
+  23              	INT_Disable:
+  24              	.LFB57:
+  25              		.file 1 "../emlib/inc/em_int.h"
+   1:../emlib/inc/em_int.h **** /***************************************************************************//**
+   2:../emlib/inc/em_int.h ****  * @file
+   3:../emlib/inc/em_int.h ****  * @brief Interrupt enable/disable unit API
+   4:../emlib/inc/em_int.h ****  * @author Energy Micro AS
+   5:../emlib/inc/em_int.h ****  * @version 3.20.2
+   6:../emlib/inc/em_int.h ****  *******************************************************************************
+   7:../emlib/inc/em_int.h ****  * @section License
+   8:../emlib/inc/em_int.h ****  * <b>(C) Copyright 2012 Energy Micro AS, http://www.energymicro.com</b>
+   9:../emlib/inc/em_int.h ****  *******************************************************************************
+  10:../emlib/inc/em_int.h ****  *
+  11:../emlib/inc/em_int.h ****  * Permission is granted to anyone to use this software for any purpose,
+  12:../emlib/inc/em_int.h ****  * including commercial applications, and to alter it and redistribute it
+  13:../emlib/inc/em_int.h ****  * freely, subject to the following restrictions:
+  14:../emlib/inc/em_int.h ****  *
+  15:../emlib/inc/em_int.h ****  * 1. The origin of this software must not be misrepresented; you must not
+  16:../emlib/inc/em_int.h ****  *    claim that you wrote the original software.
+  17:../emlib/inc/em_int.h ****  * 2. Altered source versions must be plainly marked as such, and must not be
+  18:../emlib/inc/em_int.h ****  *    misrepresented as being the original software.
+  19:../emlib/inc/em_int.h ****  * 3. This notice may not be removed or altered from any source distribution.
+  20:../emlib/inc/em_int.h ****  *
+  21:../emlib/inc/em_int.h ****  * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Energy Micro AS has no
+  22:../emlib/inc/em_int.h ****  * obligation to support this Software. Energy Micro AS is providing the
+  23:../emlib/inc/em_int.h ****  * Software "AS IS", with no express or implied warranties of any kind,
+  24:../emlib/inc/em_int.h ****  * including, but not limited to, any implied warranties of merchantability
+  25:../emlib/inc/em_int.h ****  * or fitness for any particular purpose or warranties against infringement
+  26:../emlib/inc/em_int.h ****  * of any proprietary rights of a third party.
+  27:../emlib/inc/em_int.h ****  *
+  28:../emlib/inc/em_int.h ****  * Energy Micro AS will not be liable for any consequential, incidental, or
+  29:../emlib/inc/em_int.h ****  * special damages, or any other relief, or for any claim by any third party,
+  30:../emlib/inc/em_int.h ****  * arising from your use of this Software.
+  31:../emlib/inc/em_int.h ****  *
+  32:../emlib/inc/em_int.h ****  ******************************************************************************/
+  33:../emlib/inc/em_int.h **** #ifndef __EM_INT_H
+ARM GAS  /tmp/cc2d1KwX.s 			page 2
+
+
+  34:../emlib/inc/em_int.h **** #define __EM_INT_H
+  35:../emlib/inc/em_int.h **** 
+  36:../emlib/inc/em_int.h **** #include "em_device.h"
+  37:../emlib/inc/em_int.h **** 
+  38:../emlib/inc/em_int.h **** extern uint32_t INT_LockCnt;
+  39:../emlib/inc/em_int.h **** 
+  40:../emlib/inc/em_int.h **** #ifdef __cplusplus
+  41:../emlib/inc/em_int.h **** extern "C" {
+  42:../emlib/inc/em_int.h **** #endif
+  43:../emlib/inc/em_int.h **** 
+  44:../emlib/inc/em_int.h **** /***************************************************************************//**
+  45:../emlib/inc/em_int.h ****  * @addtogroup EM_Library
+  46:../emlib/inc/em_int.h ****  * @{
+  47:../emlib/inc/em_int.h ****  ******************************************************************************/
+  48:../emlib/inc/em_int.h **** 
+  49:../emlib/inc/em_int.h **** /***************************************************************************//**
+  50:../emlib/inc/em_int.h ****  * @addtogroup INT
+  51:../emlib/inc/em_int.h ****  * @{
+  52:../emlib/inc/em_int.h ****  ******************************************************************************/
+  53:../emlib/inc/em_int.h **** 
+  54:../emlib/inc/em_int.h **** /***************************************************************************//**
+  55:../emlib/inc/em_int.h ****  * @brief
+  56:../emlib/inc/em_int.h ****  *   Disable interrupts.
+  57:../emlib/inc/em_int.h ****  *
+  58:../emlib/inc/em_int.h ****  * @return
+  59:../emlib/inc/em_int.h ****  *   The resulting interrupt nesting level.
+  60:../emlib/inc/em_int.h ****  *
+  61:../emlib/inc/em_int.h ****  * @details
+  62:../emlib/inc/em_int.h ****  *   Disable interrupts and increment lock level counter.
+  63:../emlib/inc/em_int.h ****  *
+  64:../emlib/inc/em_int.h ****  ******************************************************************************/
+  65:../emlib/inc/em_int.h **** __STATIC_INLINE uint32_t INT_Disable(void)
+  66:../emlib/inc/em_int.h **** {
+  26              		.loc 1 66 0
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 0
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30              		@ link register save eliminated.
+  31              	.LBB6:
+  32              	.LBB7:
+  33              		.file 2 "../CMSIS/Include/core_cmFunc.h"
+   1:../CMSIS/Include/core_cmFunc.h **** /**************************************************************************//**
+   2:../CMSIS/Include/core_cmFunc.h ****  * @file     core_cmFunc.h
+   3:../CMSIS/Include/core_cmFunc.h ****  * @brief    CMSIS Cortex-M Core Function Access Header File
+   4:../CMSIS/Include/core_cmFunc.h ****  * @version  V3.20
+   5:../CMSIS/Include/core_cmFunc.h ****  * @date     25. February 2013
+   6:../CMSIS/Include/core_cmFunc.h ****  *
+   7:../CMSIS/Include/core_cmFunc.h ****  * @note
+   8:../CMSIS/Include/core_cmFunc.h ****  *
+   9:../CMSIS/Include/core_cmFunc.h ****  ******************************************************************************/
+  10:../CMSIS/Include/core_cmFunc.h **** /* Copyright (c) 2009 - 2013 ARM LIMITED
+  11:../CMSIS/Include/core_cmFunc.h **** 
+  12:../CMSIS/Include/core_cmFunc.h ****    All rights reserved.
+  13:../CMSIS/Include/core_cmFunc.h ****    Redistribution and use in source and binary forms, with or without
+  14:../CMSIS/Include/core_cmFunc.h ****    modification, are permitted provided that the following conditions are met:
+  15:../CMSIS/Include/core_cmFunc.h ****    - Redistributions of source code must retain the above copyright
+  16:../CMSIS/Include/core_cmFunc.h ****      notice, this list of conditions and the following disclaimer.
+ARM GAS  /tmp/cc2d1KwX.s 			page 3
+
+
+  17:../CMSIS/Include/core_cmFunc.h ****    - Redistributions in binary form must reproduce the above copyright
+  18:../CMSIS/Include/core_cmFunc.h ****      notice, this list of conditions and the following disclaimer in the
+  19:../CMSIS/Include/core_cmFunc.h ****      documentation and/or other materials provided with the distribution.
+  20:../CMSIS/Include/core_cmFunc.h ****    - Neither the name of ARM nor the names of its contributors may be used
+  21:../CMSIS/Include/core_cmFunc.h ****      to endorse or promote products derived from this software without
+  22:../CMSIS/Include/core_cmFunc.h ****      specific prior written permission.
+  23:../CMSIS/Include/core_cmFunc.h ****    *
+  24:../CMSIS/Include/core_cmFunc.h ****    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  25:../CMSIS/Include/core_cmFunc.h ****    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  26:../CMSIS/Include/core_cmFunc.h ****    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  27:../CMSIS/Include/core_cmFunc.h ****    ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS AND CONTRIBUTORS BE
+  28:../CMSIS/Include/core_cmFunc.h ****    LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  29:../CMSIS/Include/core_cmFunc.h ****    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  30:../CMSIS/Include/core_cmFunc.h ****    SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  31:../CMSIS/Include/core_cmFunc.h ****    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  32:../CMSIS/Include/core_cmFunc.h ****    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  33:../CMSIS/Include/core_cmFunc.h ****    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  34:../CMSIS/Include/core_cmFunc.h ****    POSSIBILITY OF SUCH DAMAGE.
+  35:../CMSIS/Include/core_cmFunc.h ****    ---------------------------------------------------------------------------*/
+  36:../CMSIS/Include/core_cmFunc.h **** 
+  37:../CMSIS/Include/core_cmFunc.h **** 
+  38:../CMSIS/Include/core_cmFunc.h **** #ifndef __CORE_CMFUNC_H
+  39:../CMSIS/Include/core_cmFunc.h **** #define __CORE_CMFUNC_H
+  40:../CMSIS/Include/core_cmFunc.h **** 
+  41:../CMSIS/Include/core_cmFunc.h **** 
+  42:../CMSIS/Include/core_cmFunc.h **** /* ###########################  Core Function Access  ########################### */
+  43:../CMSIS/Include/core_cmFunc.h **** /** \ingroup  CMSIS_Core_FunctionInterface
+  44:../CMSIS/Include/core_cmFunc.h ****     \defgroup CMSIS_Core_RegAccFunctions CMSIS Core Register Access Functions
+  45:../CMSIS/Include/core_cmFunc.h ****   @{
+  46:../CMSIS/Include/core_cmFunc.h ****  */
+  47:../CMSIS/Include/core_cmFunc.h **** 
+  48:../CMSIS/Include/core_cmFunc.h **** #if   defined ( __CC_ARM ) /*------------------RealView Compiler -----------------*/
+  49:../CMSIS/Include/core_cmFunc.h **** /* ARM armcc specific functions */
+  50:../CMSIS/Include/core_cmFunc.h **** 
+  51:../CMSIS/Include/core_cmFunc.h **** #if (__ARMCC_VERSION < 400677)
+  52:../CMSIS/Include/core_cmFunc.h ****   #error "Please use ARM Compiler Toolchain V4.0.677 or later!"
+  53:../CMSIS/Include/core_cmFunc.h **** #endif
+  54:../CMSIS/Include/core_cmFunc.h **** 
+  55:../CMSIS/Include/core_cmFunc.h **** /* intrinsic void __enable_irq();     */
+  56:../CMSIS/Include/core_cmFunc.h **** /* intrinsic void __disable_irq();    */
+  57:../CMSIS/Include/core_cmFunc.h **** 
+  58:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Control Register
+  59:../CMSIS/Include/core_cmFunc.h **** 
+  60:../CMSIS/Include/core_cmFunc.h ****     This function returns the content of the Control Register.
+  61:../CMSIS/Include/core_cmFunc.h **** 
+  62:../CMSIS/Include/core_cmFunc.h ****     \return               Control Register value
+  63:../CMSIS/Include/core_cmFunc.h ****  */
+  64:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_CONTROL(void)
+  65:../CMSIS/Include/core_cmFunc.h **** {
+  66:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regControl         __ASM("control");
+  67:../CMSIS/Include/core_cmFunc.h ****   return(__regControl);
+  68:../CMSIS/Include/core_cmFunc.h **** }
+  69:../CMSIS/Include/core_cmFunc.h **** 
+  70:../CMSIS/Include/core_cmFunc.h **** 
+  71:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Control Register
+  72:../CMSIS/Include/core_cmFunc.h **** 
+  73:../CMSIS/Include/core_cmFunc.h ****     This function writes the given value to the Control Register.
+ARM GAS  /tmp/cc2d1KwX.s 			page 4
+
+
+  74:../CMSIS/Include/core_cmFunc.h **** 
+  75:../CMSIS/Include/core_cmFunc.h ****     \param [in]    control  Control Register value to set
+  76:../CMSIS/Include/core_cmFunc.h ****  */
+  77:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_CONTROL(uint32_t control)
+  78:../CMSIS/Include/core_cmFunc.h **** {
+  79:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regControl         __ASM("control");
+  80:../CMSIS/Include/core_cmFunc.h ****   __regControl = control;
+  81:../CMSIS/Include/core_cmFunc.h **** }
+  82:../CMSIS/Include/core_cmFunc.h **** 
+  83:../CMSIS/Include/core_cmFunc.h **** 
+  84:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get IPSR Register
+  85:../CMSIS/Include/core_cmFunc.h **** 
+  86:../CMSIS/Include/core_cmFunc.h ****     This function returns the content of the IPSR Register.
+  87:../CMSIS/Include/core_cmFunc.h **** 
+  88:../CMSIS/Include/core_cmFunc.h ****     \return               IPSR Register value
+  89:../CMSIS/Include/core_cmFunc.h ****  */
+  90:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_IPSR(void)
+  91:../CMSIS/Include/core_cmFunc.h **** {
+  92:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regIPSR          __ASM("ipsr");
+  93:../CMSIS/Include/core_cmFunc.h ****   return(__regIPSR);
+  94:../CMSIS/Include/core_cmFunc.h **** }
+  95:../CMSIS/Include/core_cmFunc.h **** 
+  96:../CMSIS/Include/core_cmFunc.h **** 
+  97:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get APSR Register
+  98:../CMSIS/Include/core_cmFunc.h **** 
+  99:../CMSIS/Include/core_cmFunc.h ****     This function returns the content of the APSR Register.
+ 100:../CMSIS/Include/core_cmFunc.h **** 
+ 101:../CMSIS/Include/core_cmFunc.h ****     \return               APSR Register value
+ 102:../CMSIS/Include/core_cmFunc.h ****  */
+ 103:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_APSR(void)
+ 104:../CMSIS/Include/core_cmFunc.h **** {
+ 105:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regAPSR          __ASM("apsr");
+ 106:../CMSIS/Include/core_cmFunc.h ****   return(__regAPSR);
+ 107:../CMSIS/Include/core_cmFunc.h **** }
+ 108:../CMSIS/Include/core_cmFunc.h **** 
+ 109:../CMSIS/Include/core_cmFunc.h **** 
+ 110:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get xPSR Register
+ 111:../CMSIS/Include/core_cmFunc.h **** 
+ 112:../CMSIS/Include/core_cmFunc.h ****     This function returns the content of the xPSR Register.
+ 113:../CMSIS/Include/core_cmFunc.h **** 
+ 114:../CMSIS/Include/core_cmFunc.h ****     \return               xPSR Register value
+ 115:../CMSIS/Include/core_cmFunc.h ****  */
+ 116:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_xPSR(void)
+ 117:../CMSIS/Include/core_cmFunc.h **** {
+ 118:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regXPSR          __ASM("xpsr");
+ 119:../CMSIS/Include/core_cmFunc.h ****   return(__regXPSR);
+ 120:../CMSIS/Include/core_cmFunc.h **** }
+ 121:../CMSIS/Include/core_cmFunc.h **** 
+ 122:../CMSIS/Include/core_cmFunc.h **** 
+ 123:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Process Stack Pointer
+ 124:../CMSIS/Include/core_cmFunc.h **** 
+ 125:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Process Stack Pointer (PSP).
+ 126:../CMSIS/Include/core_cmFunc.h **** 
+ 127:../CMSIS/Include/core_cmFunc.h ****     \return               PSP Register value
+ 128:../CMSIS/Include/core_cmFunc.h ****  */
+ 129:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_PSP(void)
+ 130:../CMSIS/Include/core_cmFunc.h **** {
+ARM GAS  /tmp/cc2d1KwX.s 			page 5
+
+
+ 131:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regProcessStackPointer  __ASM("psp");
+ 132:../CMSIS/Include/core_cmFunc.h ****   return(__regProcessStackPointer);
+ 133:../CMSIS/Include/core_cmFunc.h **** }
+ 134:../CMSIS/Include/core_cmFunc.h **** 
+ 135:../CMSIS/Include/core_cmFunc.h **** 
+ 136:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Process Stack Pointer
+ 137:../CMSIS/Include/core_cmFunc.h **** 
+ 138:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Process Stack Pointer (PSP).
+ 139:../CMSIS/Include/core_cmFunc.h **** 
+ 140:../CMSIS/Include/core_cmFunc.h ****     \param [in]    topOfProcStack  Process Stack Pointer value to set
+ 141:../CMSIS/Include/core_cmFunc.h ****  */
+ 142:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_PSP(uint32_t topOfProcStack)
+ 143:../CMSIS/Include/core_cmFunc.h **** {
+ 144:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regProcessStackPointer  __ASM("psp");
+ 145:../CMSIS/Include/core_cmFunc.h ****   __regProcessStackPointer = topOfProcStack;
+ 146:../CMSIS/Include/core_cmFunc.h **** }
+ 147:../CMSIS/Include/core_cmFunc.h **** 
+ 148:../CMSIS/Include/core_cmFunc.h **** 
+ 149:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Main Stack Pointer
+ 150:../CMSIS/Include/core_cmFunc.h **** 
+ 151:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Main Stack Pointer (MSP).
+ 152:../CMSIS/Include/core_cmFunc.h **** 
+ 153:../CMSIS/Include/core_cmFunc.h ****     \return               MSP Register value
+ 154:../CMSIS/Include/core_cmFunc.h ****  */
+ 155:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_MSP(void)
+ 156:../CMSIS/Include/core_cmFunc.h **** {
+ 157:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regMainStackPointer     __ASM("msp");
+ 158:../CMSIS/Include/core_cmFunc.h ****   return(__regMainStackPointer);
+ 159:../CMSIS/Include/core_cmFunc.h **** }
+ 160:../CMSIS/Include/core_cmFunc.h **** 
+ 161:../CMSIS/Include/core_cmFunc.h **** 
+ 162:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Main Stack Pointer
+ 163:../CMSIS/Include/core_cmFunc.h **** 
+ 164:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Main Stack Pointer (MSP).
+ 165:../CMSIS/Include/core_cmFunc.h **** 
+ 166:../CMSIS/Include/core_cmFunc.h ****     \param [in]    topOfMainStack  Main Stack Pointer value to set
+ 167:../CMSIS/Include/core_cmFunc.h ****  */
+ 168:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_MSP(uint32_t topOfMainStack)
+ 169:../CMSIS/Include/core_cmFunc.h **** {
+ 170:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regMainStackPointer     __ASM("msp");
+ 171:../CMSIS/Include/core_cmFunc.h ****   __regMainStackPointer = topOfMainStack;
+ 172:../CMSIS/Include/core_cmFunc.h **** }
+ 173:../CMSIS/Include/core_cmFunc.h **** 
+ 174:../CMSIS/Include/core_cmFunc.h **** 
+ 175:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Priority Mask
+ 176:../CMSIS/Include/core_cmFunc.h **** 
+ 177:../CMSIS/Include/core_cmFunc.h ****     This function returns the current state of the priority mask bit from the Priority Mask Registe
+ 178:../CMSIS/Include/core_cmFunc.h **** 
+ 179:../CMSIS/Include/core_cmFunc.h ****     \return               Priority Mask value
+ 180:../CMSIS/Include/core_cmFunc.h ****  */
+ 181:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_PRIMASK(void)
+ 182:../CMSIS/Include/core_cmFunc.h **** {
+ 183:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regPriMask         __ASM("primask");
+ 184:../CMSIS/Include/core_cmFunc.h ****   return(__regPriMask);
+ 185:../CMSIS/Include/core_cmFunc.h **** }
+ 186:../CMSIS/Include/core_cmFunc.h **** 
+ 187:../CMSIS/Include/core_cmFunc.h **** 
+ARM GAS  /tmp/cc2d1KwX.s 			page 6
+
+
+ 188:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Priority Mask
+ 189:../CMSIS/Include/core_cmFunc.h **** 
+ 190:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Priority Mask Register.
+ 191:../CMSIS/Include/core_cmFunc.h **** 
+ 192:../CMSIS/Include/core_cmFunc.h ****     \param [in]    priMask  Priority Mask
+ 193:../CMSIS/Include/core_cmFunc.h ****  */
+ 194:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_PRIMASK(uint32_t priMask)
+ 195:../CMSIS/Include/core_cmFunc.h **** {
+ 196:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regPriMask         __ASM("primask");
+ 197:../CMSIS/Include/core_cmFunc.h ****   __regPriMask = (priMask);
+ 198:../CMSIS/Include/core_cmFunc.h **** }
+ 199:../CMSIS/Include/core_cmFunc.h **** 
+ 200:../CMSIS/Include/core_cmFunc.h **** 
+ 201:../CMSIS/Include/core_cmFunc.h **** #if       (__CORTEX_M >= 0x03)
+ 202:../CMSIS/Include/core_cmFunc.h **** 
+ 203:../CMSIS/Include/core_cmFunc.h **** /** \brief  Enable FIQ
+ 204:../CMSIS/Include/core_cmFunc.h **** 
+ 205:../CMSIS/Include/core_cmFunc.h ****     This function enables FIQ interrupts by clearing the F-bit in the CPSR.
+ 206:../CMSIS/Include/core_cmFunc.h ****     Can only be executed in Privileged modes.
+ 207:../CMSIS/Include/core_cmFunc.h ****  */
+ 208:../CMSIS/Include/core_cmFunc.h **** #define __enable_fault_irq                __enable_fiq
+ 209:../CMSIS/Include/core_cmFunc.h **** 
+ 210:../CMSIS/Include/core_cmFunc.h **** 
+ 211:../CMSIS/Include/core_cmFunc.h **** /** \brief  Disable FIQ
+ 212:../CMSIS/Include/core_cmFunc.h **** 
+ 213:../CMSIS/Include/core_cmFunc.h ****     This function disables FIQ interrupts by setting the F-bit in the CPSR.
+ 214:../CMSIS/Include/core_cmFunc.h ****     Can only be executed in Privileged modes.
+ 215:../CMSIS/Include/core_cmFunc.h ****  */
+ 216:../CMSIS/Include/core_cmFunc.h **** #define __disable_fault_irq               __disable_fiq
+ 217:../CMSIS/Include/core_cmFunc.h **** 
+ 218:../CMSIS/Include/core_cmFunc.h **** 
+ 219:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Base Priority
+ 220:../CMSIS/Include/core_cmFunc.h **** 
+ 221:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Base Priority register.
+ 222:../CMSIS/Include/core_cmFunc.h **** 
+ 223:../CMSIS/Include/core_cmFunc.h ****     \return               Base Priority register value
+ 224:../CMSIS/Include/core_cmFunc.h ****  */
+ 225:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t  __get_BASEPRI(void)
+ 226:../CMSIS/Include/core_cmFunc.h **** {
+ 227:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regBasePri         __ASM("basepri");
+ 228:../CMSIS/Include/core_cmFunc.h ****   return(__regBasePri);
+ 229:../CMSIS/Include/core_cmFunc.h **** }
+ 230:../CMSIS/Include/core_cmFunc.h **** 
+ 231:../CMSIS/Include/core_cmFunc.h **** 
+ 232:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Base Priority
+ 233:../CMSIS/Include/core_cmFunc.h **** 
+ 234:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Base Priority register.
+ 235:../CMSIS/Include/core_cmFunc.h **** 
+ 236:../CMSIS/Include/core_cmFunc.h ****     \param [in]    basePri  Base Priority value to set
+ 237:../CMSIS/Include/core_cmFunc.h ****  */
+ 238:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_BASEPRI(uint32_t basePri)
+ 239:../CMSIS/Include/core_cmFunc.h **** {
+ 240:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regBasePri         __ASM("basepri");
+ 241:../CMSIS/Include/core_cmFunc.h ****   __regBasePri = (basePri & 0xff);
+ 242:../CMSIS/Include/core_cmFunc.h **** }
+ 243:../CMSIS/Include/core_cmFunc.h **** 
+ 244:../CMSIS/Include/core_cmFunc.h **** 
+ARM GAS  /tmp/cc2d1KwX.s 			page 7
+
+
+ 245:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get Fault Mask
+ 246:../CMSIS/Include/core_cmFunc.h **** 
+ 247:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Fault Mask register.
+ 248:../CMSIS/Include/core_cmFunc.h **** 
+ 249:../CMSIS/Include/core_cmFunc.h ****     \return               Fault Mask register value
+ 250:../CMSIS/Include/core_cmFunc.h ****  */
+ 251:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_FAULTMASK(void)
+ 252:../CMSIS/Include/core_cmFunc.h **** {
+ 253:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regFaultMask       __ASM("faultmask");
+ 254:../CMSIS/Include/core_cmFunc.h ****   return(__regFaultMask);
+ 255:../CMSIS/Include/core_cmFunc.h **** }
+ 256:../CMSIS/Include/core_cmFunc.h **** 
+ 257:../CMSIS/Include/core_cmFunc.h **** 
+ 258:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set Fault Mask
+ 259:../CMSIS/Include/core_cmFunc.h **** 
+ 260:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Fault Mask register.
+ 261:../CMSIS/Include/core_cmFunc.h **** 
+ 262:../CMSIS/Include/core_cmFunc.h ****     \param [in]    faultMask  Fault Mask value to set
+ 263:../CMSIS/Include/core_cmFunc.h ****  */
+ 264:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_FAULTMASK(uint32_t faultMask)
+ 265:../CMSIS/Include/core_cmFunc.h **** {
+ 266:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regFaultMask       __ASM("faultmask");
+ 267:../CMSIS/Include/core_cmFunc.h ****   __regFaultMask = (faultMask & (uint32_t)1);
+ 268:../CMSIS/Include/core_cmFunc.h **** }
+ 269:../CMSIS/Include/core_cmFunc.h **** 
+ 270:../CMSIS/Include/core_cmFunc.h **** #endif /* (__CORTEX_M >= 0x03) */
+ 271:../CMSIS/Include/core_cmFunc.h **** 
+ 272:../CMSIS/Include/core_cmFunc.h **** 
+ 273:../CMSIS/Include/core_cmFunc.h **** #if       (__CORTEX_M == 0x04)
+ 274:../CMSIS/Include/core_cmFunc.h **** 
+ 275:../CMSIS/Include/core_cmFunc.h **** /** \brief  Get FPSCR
+ 276:../CMSIS/Include/core_cmFunc.h **** 
+ 277:../CMSIS/Include/core_cmFunc.h ****     This function returns the current value of the Floating Point Status/Control register.
+ 278:../CMSIS/Include/core_cmFunc.h **** 
+ 279:../CMSIS/Include/core_cmFunc.h ****     \return               Floating Point Status/Control register value
+ 280:../CMSIS/Include/core_cmFunc.h ****  */
+ 281:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE uint32_t __get_FPSCR(void)
+ 282:../CMSIS/Include/core_cmFunc.h **** {
+ 283:../CMSIS/Include/core_cmFunc.h **** #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
+ 284:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regfpscr         __ASM("fpscr");
+ 285:../CMSIS/Include/core_cmFunc.h ****   return(__regfpscr);
+ 286:../CMSIS/Include/core_cmFunc.h **** #else
+ 287:../CMSIS/Include/core_cmFunc.h ****    return(0);
+ 288:../CMSIS/Include/core_cmFunc.h **** #endif
+ 289:../CMSIS/Include/core_cmFunc.h **** }
+ 290:../CMSIS/Include/core_cmFunc.h **** 
+ 291:../CMSIS/Include/core_cmFunc.h **** 
+ 292:../CMSIS/Include/core_cmFunc.h **** /** \brief  Set FPSCR
+ 293:../CMSIS/Include/core_cmFunc.h **** 
+ 294:../CMSIS/Include/core_cmFunc.h ****     This function assigns the given value to the Floating Point Status/Control register.
+ 295:../CMSIS/Include/core_cmFunc.h **** 
+ 296:../CMSIS/Include/core_cmFunc.h ****     \param [in]    fpscr  Floating Point Status/Control value to set
+ 297:../CMSIS/Include/core_cmFunc.h ****  */
+ 298:../CMSIS/Include/core_cmFunc.h **** __STATIC_INLINE void __set_FPSCR(uint32_t fpscr)
+ 299:../CMSIS/Include/core_cmFunc.h **** {
+ 300:../CMSIS/Include/core_cmFunc.h **** #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
+ 301:../CMSIS/Include/core_cmFunc.h ****   register uint32_t __regfpscr         __ASM("fpscr");
+ARM GAS  /tmp/cc2d1KwX.s 			page 8
+
+
+ 302:../CMSIS/Include/core_cmFunc.h ****   __regfpscr = (fpscr);
+ 303:../CMSIS/Include/core_cmFunc.h **** #else
+ 304:../CMSIS/Include/core_cmFunc.h ****   (void)fpscr;
+ 305:../CMSIS/Include/core_cmFunc.h **** #endif
+ 306:../CMSIS/Include/core_cmFunc.h **** }
+ 307:../CMSIS/Include/core_cmFunc.h **** 
+ 308:../CMSIS/Include/core_cmFunc.h **** #endif /* (__CORTEX_M == 0x04) */
+ 309:../CMSIS/Include/core_cmFunc.h **** 
+ 310:../CMSIS/Include/core_cmFunc.h **** 
+ 311:../CMSIS/Include/core_cmFunc.h **** #elif defined ( __ICCARM__ ) /*------------------ ICC Compiler -------------------*/
+ 312:../CMSIS/Include/core_cmFunc.h **** /* IAR iccarm specific functions */
+ 313:../CMSIS/Include/core_cmFunc.h **** 
+ 314:../CMSIS/Include/core_cmFunc.h **** #include <cmsis_iar.h>
+ 315:../CMSIS/Include/core_cmFunc.h **** 
+ 316:../CMSIS/Include/core_cmFunc.h **** 
+ 317:../CMSIS/Include/core_cmFunc.h **** #elif defined ( __TMS470__ ) /*---------------- TI CCS Compiler ------------------*/
+ 318:../CMSIS/Include/core_cmFunc.h **** /* TI CCS specific functions */
+ 319:../CMSIS/Include/core_cmFunc.h **** 
+ 320:../CMSIS/Include/core_cmFunc.h **** #include <cmsis_ccs.h>
+ 321:../CMSIS/Include/core_cmFunc.h **** 
+ 322:../CMSIS/Include/core_cmFunc.h **** 
+ 323:../CMSIS/Include/core_cmFunc.h **** #elif defined ( __GNUC__ ) /*------------------ GNU Compiler ---------------------*/
+ 324:../CMSIS/Include/core_cmFunc.h **** /* GNU gcc specific functions */
+ 325:../CMSIS/Include/core_cmFunc.h **** 
+ 326:../CMSIS/Include/core_cmFunc.h **** /** \brief  Enable IRQ Interrupts
+ 327:../CMSIS/Include/core_cmFunc.h **** 
+ 328:../CMSIS/Include/core_cmFunc.h ****   This function enables IRQ interrupts by clearing the I-bit in the CPSR.
+ 329:../CMSIS/Include/core_cmFunc.h ****   Can only be executed in Privileged modes.
+ 330:../CMSIS/Include/core_cmFunc.h ****  */
+ 331:../CMSIS/Include/core_cmFunc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __enable_irq(void)
+ 332:../CMSIS/Include/core_cmFunc.h **** {
+ 333:../CMSIS/Include/core_cmFunc.h ****   __ASM volatile ("cpsie i" : : : "memory");
+ 334:../CMSIS/Include/core_cmFunc.h **** }
+ 335:../CMSIS/Include/core_cmFunc.h **** 
+ 336:../CMSIS/Include/core_cmFunc.h **** 
+ 337:../CMSIS/Include/core_cmFunc.h **** /** \brief  Disable IRQ Interrupts
+ 338:../CMSIS/Include/core_cmFunc.h **** 
+ 339:../CMSIS/Include/core_cmFunc.h ****   This function disables IRQ interrupts by setting the I-bit in the CPSR.
+ 340:../CMSIS/Include/core_cmFunc.h ****   Can only be executed in Privileged modes.
+ 341:../CMSIS/Include/core_cmFunc.h ****  */
+ 342:../CMSIS/Include/core_cmFunc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __disable_irq(void)
+ 343:../CMSIS/Include/core_cmFunc.h **** {
+ 344:../CMSIS/Include/core_cmFunc.h ****   __ASM volatile ("cpsid i" : : : "memory");
+  34              		.loc 2 344 0
+  35              	@ 344 "../CMSIS/Include/core_cmFunc.h" 1
+  36 0000 72B6     		cpsid i
+  37              	@ 0 "" 2
+  38              		.thumb
+  39              	.LBE7:
+  40              	.LBE6:
+  67:../emlib/inc/em_int.h ****   __disable_irq();
+  68:../emlib/inc/em_int.h ****   if (INT_LockCnt < UINT32_MAX)
+  41              		.loc 1 68 0
+  42 0002 044B     		ldr	r3, .L6
+  43 0004 1A68     		ldr	r2, [r3]
+  44 0006 511C     		adds	r1, r2, #1
+  69:../emlib/inc/em_int.h ****   {
+ARM GAS  /tmp/cc2d1KwX.s 			page 9
+
+
+  70:../emlib/inc/em_int.h ****     INT_LockCnt++;
+  45              		.loc 1 70 0
+  46 0008 1CBF     		itt	ne
+  47 000a 0132     		addne	r2, r2, #1
+  48 000c 1A60     		strne	r2, [r3]
+  71:../emlib/inc/em_int.h ****   }
+  72:../emlib/inc/em_int.h **** 
+  73:../emlib/inc/em_int.h ****   return INT_LockCnt;
+  74:../emlib/inc/em_int.h **** }
+  49              		.loc 1 74 0
+  50 000e 1868     		ldr	r0, [r3]
+  51 0010 7047     		bx	lr
+  52              	.L7:
+  53 0012 00BF     		.align	2
+  54              	.L6:
+  55 0014 00000000 		.word	INT_LockCnt
+  56              		.cfi_endproc
+  57              	.LFE57:
+  59              		.section	.text.INT_Enable,"ax",%progbits
+  60              		.align	1
+  61              		.thumb
+  62              		.thumb_func
+  64              	INT_Enable:
+  65              	.LFB58:
+  75:../emlib/inc/em_int.h **** 
+  76:../emlib/inc/em_int.h **** /***************************************************************************//**
+  77:../emlib/inc/em_int.h ****  * @brief
+  78:../emlib/inc/em_int.h ****  *   Enable interrupts.
+  79:../emlib/inc/em_int.h ****  *
+  80:../emlib/inc/em_int.h ****  * @return
+  81:../emlib/inc/em_int.h ****  *   The resulting interrupt nesting level.
+  82:../emlib/inc/em_int.h ****  *
+  83:../emlib/inc/em_int.h ****  * @details
+  84:../emlib/inc/em_int.h ****  *   Decrement interrupt lock level counter and enable interrupts if counter
+  85:../emlib/inc/em_int.h ****  *   reached zero.
+  86:../emlib/inc/em_int.h ****  *
+  87:../emlib/inc/em_int.h ****  ******************************************************************************/
+  88:../emlib/inc/em_int.h **** __STATIC_INLINE uint32_t INT_Enable(void)
+  89:../emlib/inc/em_int.h **** {
+  66              		.loc 1 89 0
+  67              		.cfi_startproc
+  68              		@ args = 0, pretend = 0, frame = 0
+  69              		@ frame_needed = 0, uses_anonymous_args = 0
+  70              		@ link register save eliminated.
+  90:../emlib/inc/em_int.h ****   uint32_t retVal;
+  91:../emlib/inc/em_int.h **** 
+  92:../emlib/inc/em_int.h ****   if (INT_LockCnt > 0)
+  71              		.loc 1 92 0
+  72 0000 034B     		ldr	r3, .L13
+  73 0002 1868     		ldr	r0, [r3]
+  74 0004 18B1     		cbz	r0, .L9
+  93:../emlib/inc/em_int.h ****   {
+  94:../emlib/inc/em_int.h ****     INT_LockCnt--;
+  75              		.loc 1 94 0
+  76 0006 0138     		subs	r0, r0, #1
+  77 0008 1860     		str	r0, [r3]
+  78              	.LVL0:
+ARM GAS  /tmp/cc2d1KwX.s 			page 10
+
+
+  95:../emlib/inc/em_int.h ****     retVal = INT_LockCnt;
+  96:../emlib/inc/em_int.h ****     if (retVal == 0)
+  79              		.loc 1 96 0
+  80 000a 00B9     		cbnz	r0, .L9
+  81              	.LBB8:
+  82              	.LBB9:
+ 333:../CMSIS/Include/core_cmFunc.h ****   __ASM volatile ("cpsie i" : : : "memory");
+  83              		.loc 2 333 0
+  84              	@ 333 "../CMSIS/Include/core_cmFunc.h" 1
+  85 000c 62B6     		cpsie i
+  86              	@ 0 "" 2
+  87              	.LVL1:
+  88              		.thumb
+  89              	.L9:
+  90              	.LBE9:
+  91              	.LBE8:
+  97:../emlib/inc/em_int.h ****     {
+  98:../emlib/inc/em_int.h ****       __enable_irq();
+  99:../emlib/inc/em_int.h ****     }
+ 100:../emlib/inc/em_int.h ****     return retVal;
+ 101:../emlib/inc/em_int.h ****   }
+ 102:../emlib/inc/em_int.h ****   else
+ 103:../emlib/inc/em_int.h ****   {
+ 104:../emlib/inc/em_int.h ****     return 0;
+ 105:../emlib/inc/em_int.h ****   }
+ 106:../emlib/inc/em_int.h **** }
+  92              		.loc 1 106 0
+  93 000e 7047     		bx	lr
+  94              	.L14:
+  95              		.align	2
+  96              	.L13:
+  97 0010 00000000 		.word	INT_LockCnt
+  98              		.cfi_endproc
+  99              	.LFE58:
+ 101              		.section	.text.FindPrjInfo,"ax",%progbits
+ 102              		.align	1
+ 103              		.global	FindPrjInfo
+ 104              		.thumb
+ 105              		.thumb_func
+ 107              	FindPrjInfo:
+ 108              	.LFB91:
+ 109              		.file 3 "../drivers/Flash.c"
+   1:../drivers/Flash.c **** /***************************************************************************//**
+   2:../drivers/Flash.c ****  * @file
+   3:../drivers/Flash.c ****  * @brief	Flash
+   4:../drivers/Flash.c ****  * @author	Ralf Gerhauser
+   5:../drivers/Flash.c ****  * @version	2018-02-19
+   6:../drivers/Flash.c ****  *
+   7:../drivers/Flash.c ****  * This module contains all routines to program a firmware image into FLASH.
+   8:../drivers/Flash.c ****  *
+   9:../drivers/Flash.c ****  ****************************************************************************//*
+  10:../drivers/Flash.c **** Revision History:
+  11:../drivers/Flash.c **** 2018-02-19,rage	Use INT_En/Disable() instead of __en/disable_irq().
+  12:../drivers/Flash.c **** 2016-02-24,rage	Initial version.
+  13:../drivers/Flash.c **** */
+  14:../drivers/Flash.c **** 
+  15:../drivers/Flash.c **** /*=============================== Header Files ===============================*/
+ARM GAS  /tmp/cc2d1KwX.s 			page 11
+
+
+  16:../drivers/Flash.c **** 
+  17:../drivers/Flash.c **** #include <stdio.h>
+  18:../drivers/Flash.c **** #include <stdarg.h>
+  19:../drivers/Flash.c **** #include <string.h>
+  20:../drivers/Flash.c **** #include "em_device.h"
+  21:../drivers/Flash.c **** #include "em_assert.h"
+  22:../drivers/Flash.c **** #include "em_int.h"
+  23:../drivers/Flash.c **** #include "Flash.h"
+  24:../drivers/Flash.c **** #include "Logging.h"
+  25:../drivers/Flash.c **** #include "ff.h"		// FS_FAT12/16/32
+  26:../drivers/Flash.c **** #include "diskio.h"	// DSTATUS
+  27:../drivers/Flash.c **** #include "microsd.h"
+  28:../drivers/Flash.c **** 
+  29:../drivers/Flash.c **** /*================================ Local Data ================================*/
+  30:../drivers/Flash.c **** 
+  31:../drivers/Flash.c ****     /* Buffer to hold one FLASH sector to program */
+  32:../drivers/Flash.c **** static uint8_t	l_SectorBuf[FLASH_PAGE_SIZE];
+  33:../drivers/Flash.c **** 
+  34:../drivers/Flash.c ****     /* File handle for log file */
+  35:../drivers/Flash.c **** static FIL	l_fh;
+  36:../drivers/Flash.c **** 
+  37:../drivers/Flash.c **** 
+  38:../drivers/Flash.c **** /***************************************************************************//**
+  39:../drivers/Flash.c ****  *
+  40:../drivers/Flash.c ****  * @brief	Find Application Project Info
+  41:../drivers/Flash.c ****  *
+  42:../drivers/Flash.c ****  * This routine searches the project information of the application stored
+  43:../drivers/Flash.c ****  * in FLASH.
+  44:../drivers/Flash.c ****  *
+  45:../drivers/Flash.c ****  * @return
+  46:../drivers/Flash.c ****  *	Address of the application's @ref PRJ_INFO, or NULL if not found.
+  47:../drivers/Flash.c ****  *
+  48:../drivers/Flash.c ****  ******************************************************************************/
+  49:../drivers/Flash.c **** PRJ_INFO *FindPrjInfo(void)
+  50:../drivers/Flash.c **** {
+ 110              		.loc 3 50 0
+ 111              		.cfi_startproc
+ 112              		@ args = 0, pretend = 0, frame = 0
+ 113              		@ frame_needed = 0, uses_anonymous_args = 0
+ 114              	.LVL2:
+ 115 0000 10B5     		push	{r4, lr}
+ 116              		.cfi_def_cfa_offset 8
+ 117              		.cfi_offset 4, -8
+ 118              		.cfi_offset 14, -4
+  51:../drivers/Flash.c **** char *pFlash;
+  52:../drivers/Flash.c **** 
+  53:../drivers/Flash.c ****     /*
+  54:../drivers/Flash.c ****      * IAR libraries do not provide function memmem() like GNU does, so we
+  55:../drivers/Flash.c ****      * have to implement our own version here.
+  56:../drivers/Flash.c ****      */
+  57:../drivers/Flash.c ****     for (pFlash = (char *)FIRMWARE_ADDRESS;
+ 119              		.loc 3 57 0
+ 120 0002 4FF40044 		mov	r4, #32768
+ 121              	.LVL3:
+ 122              	.L17:
+  58:../drivers/Flash.c **** 	 pFlash < (char *)FIRMWARE_ADDRESS + FLASH_SIZE - 16;  pFlash++)
+  59:../drivers/Flash.c ****     {
+ARM GAS  /tmp/cc2d1KwX.s 			page 12
+
+
+  60:../drivers/Flash.c **** 	if (strcmp (pFlash, "$PRJ_INFO$") == 0)
+ 123              		.loc 3 60 0
+ 124 0006 2046     		mov	r0, r4
+ 125 0008 0549     		ldr	r1, .L20
+ 126 000a FFF7FEFF 		bl	strcmp
+ 127              	.LVL4:
+ 128 000e 28B1     		cbz	r0, .L18
+  57:../drivers/Flash.c ****     for (pFlash = (char *)FIRMWARE_ADDRESS;
+ 129              		.loc 3 57 0
+ 130 0010 044B     		ldr	r3, .L20+4
+  58:../drivers/Flash.c **** 	 pFlash < (char *)FIRMWARE_ADDRESS + FLASH_SIZE - 16;  pFlash++)
+ 131              		.loc 3 58 0
+ 132 0012 0134     		adds	r4, r4, #1
+ 133              	.LVL5:
+  57:../drivers/Flash.c ****     for (pFlash = (char *)FIRMWARE_ADDRESS;
+ 134              		.loc 3 57 0
+ 135 0014 9C42     		cmp	r4, r3
+ 136 0016 F6D1     		bne	.L17
+  61:../drivers/Flash.c **** 	    return (PRJ_INFO *)pFlash;
+  62:../drivers/Flash.c ****     }
+  63:../drivers/Flash.c **** 
+  64:../drivers/Flash.c ****     return NULL;
+ 137              		.loc 3 64 0
+ 138 0018 0020     		movs	r0, #0
+  65:../drivers/Flash.c **** }
+ 139              		.loc 3 65 0
+ 140 001a 10BD     		pop	{r4, pc}
+ 141              	.LVL6:
+ 142              	.L18:
+ 143 001c 2046     		mov	r0, r4
+ 144 001e 10BD     		pop	{r4, pc}
+ 145              	.LVL7:
+ 146              	.L21:
+ 147              		.align	2
+ 148              	.L20:
+ 149 0020 00000000 		.word	.LC0
+ 150 0024 F07F0200 		.word	163824
+ 151              		.cfi_endproc
+ 152              	.LFE91:
+ 154              		.section	.text.FirmwareUpdate,"ax",%progbits
+ 155              		.align	1
+ 156              		.global	FirmwareUpdate
+ 157              		.thumb
+ 158              		.thumb_func
+ 160              	FirmwareUpdate:
+ 161              	.LFB92:
+  66:../drivers/Flash.c **** 
+  67:../drivers/Flash.c **** 
+  68:../drivers/Flash.c **** /***************************************************************************//**
+  69:../drivers/Flash.c ****  *
+  70:../drivers/Flash.c ****  * @brief	Update Application Firmware in FLASH
+  71:../drivers/Flash.c ****  *
+  72:../drivers/Flash.c ****  * This routine reads the file specified by @p filename and stores its firmware
+  73:../drivers/Flash.c ****  * image into FLASH.
+  74:../drivers/Flash.c ****  *
+  75:../drivers/Flash.c ****  * @param[in] filename
+  76:../drivers/Flash.c ****  *	Name of the firmware update file to load.
+ARM GAS  /tmp/cc2d1KwX.s 			page 13
+
+
+  77:../drivers/Flash.c ****  *
+  78:../drivers/Flash.c ****  * @return
+  79:../drivers/Flash.c ****  * 	Error code: 0 if no error occurred, 4 in case of a file read error,
+  80:../drivers/Flash.c ****  * 	5 for a FLASH erase error, and 6 for a FLASH write error.
+  81:../drivers/Flash.c ****  *
+  82:../drivers/Flash.c ****  ******************************************************************************/
+  83:../drivers/Flash.c **** int	 FirmwareUpdate(char *filename)
+  84:../drivers/Flash.c **** {
+ 162              		.loc 3 84 0
+ 163              		.cfi_startproc
+ 164              		@ args = 0, pretend = 0, frame = 8
+ 165              		@ frame_needed = 0, uses_anonymous_args = 0
+ 166              	.LVL8:
+ 167 0000 2DE9F743 		push	{r0, r1, r2, r4, r5, r6, r7, r8, r9, lr}
+ 168              		.cfi_def_cfa_offset 40
+ 169              		.cfi_offset 0, -40
+ 170              		.cfi_offset 1, -36
+ 171              		.cfi_offset 2, -32
+ 172              		.cfi_offset 4, -28
+ 173              		.cfi_offset 5, -24
+ 174              		.cfi_offset 6, -20
+ 175              		.cfi_offset 7, -16
+ 176              		.cfi_offset 8, -12
+ 177              		.cfi_offset 9, -8
+ 178              		.cfi_offset 14, -4
+  85:../drivers/Flash.c **** FRESULT		 res;		// FatFs function common result code
+  86:../drivers/Flash.c **** msc_Return_TypeDef ret;		// FLASH library return code
+  87:../drivers/Flash.c **** int		 status = 0;	// return status is OK for default
+  88:../drivers/Flash.c **** uint32_t	 fileSize;	// number of bytes to read
+  89:../drivers/Flash.c **** uint32_t	 offs;		// byte offset within file and FLASH
+  90:../drivers/Flash.c **** uint16_t	 bytesRead;	// number of bytes really read from the file
+  91:../drivers/Flash.c **** 
+  92:../drivers/Flash.c ****     /* Check filename */
+  93:../drivers/Flash.c ****     EFM_ASSERT(filename != NULL);
+ 179              		.loc 3 93 0
+ 180 0004 0546     		mov	r5, r0
+ 181 0006 18B9     		cbnz	r0, .L23
+ 182              		.loc 3 93 0 is_stmt 0 discriminator 1
+ 183 0008 3648     		ldr	r0, .L33
+ 184              	.LVL9:
+ 185 000a 5D21     		movs	r1, #93
+ 186 000c FFF7FEFF 		bl	assertEFM
+ 187              	.LVL10:
+ 188              	.L23:
+  94:../drivers/Flash.c **** 
+  95:../drivers/Flash.c ****     /* Open update file */
+  96:../drivers/Flash.c ****     res = f_open (&l_fh, filename,  FA_READ);
+ 189              		.loc 3 96 0 is_stmt 1
+ 190 0010 354C     		ldr	r4, .L33+4
+ 191 0012 2946     		mov	r1, r5
+ 192 0014 2046     		mov	r0, r4
+ 193 0016 0122     		movs	r2, #1
+ 194 0018 FFF7FEFF 		bl	f_open
+ 195              	.LVL11:
+  97:../drivers/Flash.c ****     if (res != FR_OK)
+ 196              		.loc 3 97 0
+ 197 001c 0146     		mov	r1, r0
+ARM GAS  /tmp/cc2d1KwX.s 			page 14
+
+
+ 198 001e 30B1     		cbz	r0, .L24
+  98:../drivers/Flash.c ****     {
+  99:../drivers/Flash.c **** 	LogError ("FirmwareUpdate: Open File - Error Code %d", res);
+ 199              		.loc 3 99 0
+ 200 0020 3248     		ldr	r0, .L33+8
+ 201              	.LVL12:
+ 202 0022 FFF7FEFF 		bl	LogError
+ 203              	.LVL13:
+ 100:../drivers/Flash.c **** 	l_fh.fs = NULL;		// invalidate file handle
+ 204              		.loc 3 100 0
+ 205 0026 0023     		movs	r3, #0
+ 206 0028 2360     		str	r3, [r4]
+ 101:../drivers/Flash.c **** 	return 4;
+ 207              		.loc 3 101 0
+ 208 002a 0420     		movs	r0, #4
+ 209 002c 56E0     		b	.L25
+ 210              	.LVL14:
+ 211              	.L24:
+ 102:../drivers/Flash.c ****     }
+ 103:../drivers/Flash.c **** 
+ 104:../drivers/Flash.c ****     /* Enable the flash controller for writing */
+ 105:../drivers/Flash.c ****     MSC_Init();
+ 212              		.loc 3 105 0
+ 213 002e FFF7FEFF 		bl	MSC_Init
+ 214              	.LVL15:
+ 106:../drivers/Flash.c **** 
+ 107:../drivers/Flash.c ****     /*
+ 108:../drivers/Flash.c ****      * Read update file - the FLASH sector size determines the portion that
+ 109:../drivers/Flash.c ****      * is read from file, and erased and programmed in FLASH.
+ 110:../drivers/Flash.c ****      */
+ 111:../drivers/Flash.c ****     fileSize = f_size(&l_fh);
+ 215              		.loc 3 111 0
+ 216 0032 D4F80C90 		ldr	r9, [r4, #12]
+ 217              	.LVL16:
+ 112:../drivers/Flash.c **** 
+ 113:../drivers/Flash.c ****     for (offs = 0;  offs < fileSize;  offs += FLASH_PAGE_SIZE)
+ 218              		.loc 3 113 0
+ 219 0036 4FF40044 		mov	r4, #32768
+ 220              	.LVL17:
+ 221              	.L26:
+ 222 003a A4F50043 		sub	r3, r4, #32768
+ 223              	.LVL18:
+ 224              		.loc 3 113 0 is_stmt 0 discriminator 1
+ 225 003e 4B45     		cmp	r3, r9
+ 226 0040 45D2     		bcs	.L32
+ 114:../drivers/Flash.c ****     {
+ 115:../drivers/Flash.c **** 	/* Read one sector from the update file */
+ 116:../drivers/Flash.c **** 	res = f_read (&l_fh, l_SectorBuf, FLASH_PAGE_SIZE, &bytesRead);
+ 227              		.loc 3 116 0 is_stmt 1
+ 228 0042 294D     		ldr	r5, .L33+4
+ 229 0044 2A49     		ldr	r1, .L33+12
+ 230 0046 2846     		mov	r0, r5
+ 231 0048 4FF40072 		mov	r2, #512
+ 232 004c 0DF10603 		add	r3, sp, #6
+ 233              	.LVL19:
+ 234 0050 FFF7FEFF 		bl	f_read
+ 235              	.LVL20:
+ARM GAS  /tmp/cc2d1KwX.s 			page 15
+
+
+ 117:../drivers/Flash.c **** 	if (res != FR_OK)
+ 236              		.loc 3 117 0
+ 237 0054 0746     		mov	r7, r0
+ 238 0056 38B1     		cbz	r0, .L27
+ 118:../drivers/Flash.c **** 	{
+ 119:../drivers/Flash.c **** 	    LogError ("FirmwareUpdate: Read File - Error Code %d", res);
+ 239              		.loc 3 119 0
+ 240 0058 2648     		ldr	r0, .L33+16
+ 241              	.LVL21:
+ 242 005a 3946     		mov	r1, r7
+ 243 005c FFF7FEFF 		bl	LogError
+ 244              	.LVL22:
+ 120:../drivers/Flash.c **** 	    l_fh.fs = NULL;		// invalidate file handle
+ 245              		.loc 3 120 0
+ 246 0060 0023     		movs	r3, #0
+ 247 0062 2B60     		str	r3, [r5]
+ 248              	.LVL23:
+ 121:../drivers/Flash.c **** 	    status = 4;
+ 249              		.loc 3 121 0
+ 250 0064 0424     		movs	r4, #4
+ 251              	.LVL24:
+ 122:../drivers/Flash.c **** 	    break;
+ 252              		.loc 3 122 0
+ 253 0066 33E0     		b	.L28
+ 254              	.LVL25:
+ 255              	.L27:
+ 123:../drivers/Flash.c **** 	}
+ 124:../drivers/Flash.c **** 
+ 125:../drivers/Flash.c **** 	/* Erase the respective sector in FLASH */
+ 126:../drivers/Flash.c **** 	INT_Disable();			// disable interrupts
+ 256              		.loc 3 126 0
+ 257 0068 FFF7FEFF 		bl	INT_Disable
+ 258              	.LVL26:
+ 127:../drivers/Flash.c **** 	ret = MSC_ErasePage ((uint32_t *)(FIRMWARE_ADDRESS + offs));
+ 259              		.loc 3 127 0
+ 260 006c 2046     		mov	r0, r4
+ 261 006e FFF7FEFF 		bl	MSC_ErasePage
+ 262              	.LVL27:
+ 263 0072 0646     		mov	r6, r0
+ 264              	.LVL28:
+ 128:../drivers/Flash.c **** 	INT_Enable();			// enable interrupts
+ 265              		.loc 3 128 0
+ 266 0074 FFF7FEFF 		bl	INT_Enable
+ 267              	.LVL29:
+ 129:../drivers/Flash.c **** 
+ 130:../drivers/Flash.c **** 	if (ret != mscReturnOk)
+ 268              		.loc 3 130 0
+ 269 0078 3EB1     		cbz	r6, .L29
+ 131:../drivers/Flash.c **** 	{
+ 132:../drivers/Flash.c **** 	    LogError ("FirmwareUpdate: Erase Sector @ 0x%X - Error Code %d",
+ 270              		.loc 3 132 0
+ 271 007a 2146     		mov	r1, r4
+ 272 007c 1E48     		ldr	r0, .L33+20
+ 273 007e 72B2     		sxtb	r2, r6
+ 274 0080 FFF7FEFF 		bl	LogError
+ 275              	.LVL30:
+ 133:../drivers/Flash.c **** 		      FIRMWARE_ADDRESS + offs, ret);
+ARM GAS  /tmp/cc2d1KwX.s 			page 16
+
+
+ 134:../drivers/Flash.c **** 	    l_fh.fs = NULL;		// invalidate file handle
+ 135:../drivers/Flash.c **** 	    status = 5;
+ 276              		.loc 3 135 0
+ 277 0084 0524     		movs	r4, #5
+ 278              	.LVL31:
+ 134:../drivers/Flash.c **** 	    l_fh.fs = NULL;		// invalidate file handle
+ 279              		.loc 3 134 0
+ 280 0086 2F60     		str	r7, [r5]
+ 281              	.LVL32:
+ 136:../drivers/Flash.c **** 	    break;
+ 282              		.loc 3 136 0
+ 283 0088 22E0     		b	.L28
+ 284              	.LVL33:
+ 285              	.L29:
+ 137:../drivers/Flash.c **** 	}
+ 138:../drivers/Flash.c **** 
+ 139:../drivers/Flash.c **** 	POWER_LED = 1;			// LED ON
+ 286              		.loc 3 139 0
+ 287 008a DFF87480 		ldr	r8, .L33+28
+ 288 008e 0123     		movs	r3, #1
+ 289 0090 C8F80030 		str	r3, [r8]
+ 140:../drivers/Flash.c **** 
+ 141:../drivers/Flash.c **** 	/* Write data to FLASH */
+ 142:../drivers/Flash.c **** 	INT_Disable();			// disable interrupts
+ 290              		.loc 3 142 0
+ 291 0094 FFF7FEFF 		bl	INT_Disable
+ 292              	.LVL34:
+ 143:../drivers/Flash.c **** 	ret = MSC_WriteWord ((uint32_t *)(FIRMWARE_ADDRESS + offs),
+ 144:../drivers/Flash.c **** 			     l_SectorBuf, (bytesRead + 3) & ~3);
+ 293              		.loc 3 144 0
+ 294 0098 BDF80620 		ldrh	r2, [sp, #6]
+ 143:../drivers/Flash.c **** 	ret = MSC_WriteWord ((uint32_t *)(FIRMWARE_ADDRESS + offs),
+ 295              		.loc 3 143 0
+ 296 009c 1449     		ldr	r1, .L33+12
+ 297              		.loc 3 144 0
+ 298 009e 0332     		adds	r2, r2, #3
+ 143:../drivers/Flash.c **** 	ret = MSC_WriteWord ((uint32_t *)(FIRMWARE_ADDRESS + offs),
+ 299              		.loc 3 143 0
+ 300 00a0 22F00302 		bic	r2, r2, #3
+ 301 00a4 2046     		mov	r0, r4
+ 302 00a6 FFF7FEFF 		bl	MSC_WriteWord
+ 303              	.LVL35:
+ 304 00aa 0746     		mov	r7, r0
+ 305              	.LVL36:
+ 145:../drivers/Flash.c **** 	INT_Enable();			// enable interrupts
+ 306              		.loc 3 145 0
+ 307 00ac FFF7FEFF 		bl	INT_Enable
+ 308              	.LVL37:
+ 309 00b0 04F50073 		add	r3, r4, #512
+ 146:../drivers/Flash.c **** 
+ 147:../drivers/Flash.c **** 	if (ret != mscReturnOk)
+ 310              		.loc 3 147 0
+ 311 00b4 3FB1     		cbz	r7, .L30
+ 148:../drivers/Flash.c **** 	{
+ 149:../drivers/Flash.c **** 	    LogError ("FirmwareUpdate: Write Sector @ 0x%X - Error Code %d",
+ 312              		.loc 3 149 0
+ 313 00b6 2146     		mov	r1, r4
+ARM GAS  /tmp/cc2d1KwX.s 			page 17
+
+
+ 314 00b8 1048     		ldr	r0, .L33+24
+ 315 00ba 7AB2     		sxtb	r2, r7
+ 316 00bc FFF7FEFF 		bl	LogError
+ 317              	.LVL38:
+ 150:../drivers/Flash.c **** 		      FIRMWARE_ADDRESS + offs, ret);
+ 151:../drivers/Flash.c **** 	    l_fh.fs = NULL;		// invalidate file handle
+ 152:../drivers/Flash.c **** 	    status = 6;
+ 318              		.loc 3 152 0
+ 319 00c0 0624     		movs	r4, #6
+ 320              	.LVL39:
+ 151:../drivers/Flash.c **** 	    l_fh.fs = NULL;		// invalidate file handle
+ 321              		.loc 3 151 0
+ 322 00c2 2E60     		str	r6, [r5]
+ 323              	.LVL40:
+ 153:../drivers/Flash.c **** 	    break;
+ 324              		.loc 3 153 0
+ 325 00c4 04E0     		b	.L28
+ 326              	.LVL41:
+ 327              	.L30:
+ 154:../drivers/Flash.c **** 	}
+ 155:../drivers/Flash.c **** 
+ 156:../drivers/Flash.c **** 	POWER_LED = 0;			// LED OFF
+ 328              		.loc 3 156 0
+ 329 00c6 C8F80070 		str	r7, [r8]
+ 330              	.LVL42:
+ 331 00ca 1C46     		mov	r4, r3
+ 332 00cc B5E7     		b	.L26
+ 333              	.LVL43:
+ 334              	.L32:
+  87:../drivers/Flash.c **** int		 status = 0;	// return status is OK for default
+ 335              		.loc 3 87 0
+ 336 00ce 0024     		movs	r4, #0
+ 337              	.LVL44:
+ 338              	.L28:
+ 157:../drivers/Flash.c ****     }
+ 158:../drivers/Flash.c **** 
+ 159:../drivers/Flash.c **** 
+ 160:../drivers/Flash.c ****     /* Disable flash write access again */
+ 161:../drivers/Flash.c ****     MSC_Deinit();
+ 339              		.loc 3 161 0
+ 340 00d0 FFF7FEFF 		bl	MSC_Deinit
+ 341              	.LVL45:
+ 162:../drivers/Flash.c **** 
+ 163:../drivers/Flash.c ****     /* Close file */
+ 164:../drivers/Flash.c ****     f_close (&l_fh);
+ 342              		.loc 3 164 0
+ 343 00d4 0448     		ldr	r0, .L33+4
+ 344 00d6 FFF7FEFF 		bl	f_close
+ 345              	.LVL46:
+ 165:../drivers/Flash.c **** 
+ 166:../drivers/Flash.c ****     return status;	// return error code (0 = OK)
+ 346              		.loc 3 166 0
+ 347 00da 2046     		mov	r0, r4
+ 348              	.LVL47:
+ 349              	.L25:
+ 167:../drivers/Flash.c **** }
+ 350              		.loc 3 167 0
+ARM GAS  /tmp/cc2d1KwX.s 			page 18
+
+
+ 351 00dc 03B0     		add	sp, sp, #12
+ 352              		@ sp needed
+ 353 00de BDE8F083 		pop	{r4, r5, r6, r7, r8, r9, pc}
+ 354              	.L34:
+ 355 00e2 00BF     		.align	2
+ 356              	.L33:
+ 357 00e4 0B000000 		.word	.LC1
+ 358 00e8 00000000 		.word	.LANCHOR0
+ 359 00ec 1E000000 		.word	.LC2
+ 360 00f0 00000000 		.word	.LANCHOR1
+ 361 00f4 48000000 		.word	.LC3
+ 362 00f8 72000000 		.word	.LC4
+ 363 00fc A6000000 		.word	.LC5
+ 364 0100 88010C42 		.word	1108083080
+ 365              		.cfi_endproc
+ 366              	.LFE92:
+ 368              		.section	.bss.l_fh,"aw",%nobits
+ 369              		.align	2
+ 370              		.set	.LANCHOR0,. + 0
+ 373              	l_fh:
+ 374 0000 00000000 		.space	548
+ 374      00000000 
+ 374      00000000 
+ 374      00000000 
+ 374      00000000 
+ 375              		.section	.bss.l_SectorBuf,"aw",%nobits
+ 376              		.set	.LANCHOR1,. + 0
+ 379              	l_SectorBuf:
+ 380 0000 00000000 		.space	512
+ 380      00000000 
+ 380      00000000 
+ 380      00000000 
+ 380      00000000 
+ 381              		.section	.rodata.str1.1,"aMS",%progbits,1
+ 382              	.LC0:
+ 383 0000 2450524A 		.ascii	"$PRJ_INFO$\000"
+ 383      5F494E46 
+ 383      4F2400
+ 384              	.LC1:
+ 385 000b 2E2E2F64 		.ascii	"../drivers/Flash.c\000"
+ 385      72697665 
+ 385      72732F46 
+ 385      6C617368 
+ 385      2E6300
+ 386              	.LC2:
+ 387 001e 4669726D 		.ascii	"FirmwareUpdate: Open File - Error Code %d\000"
+ 387      77617265 
+ 387      55706461 
+ 387      74653A20 
+ 387      4F70656E 
+ 388              	.LC3:
+ 389 0048 4669726D 		.ascii	"FirmwareUpdate: Read File - Error Code %d\000"
+ 389      77617265 
+ 389      55706461 
+ 389      74653A20 
+ 389      52656164 
+ 390              	.LC4:
+ARM GAS  /tmp/cc2d1KwX.s 			page 19
+
+
+ 391 0072 4669726D 		.ascii	"FirmwareUpdate: Erase Sector @ 0x%X - Error Code %d"
+ 391      77617265 
+ 391      55706461 
+ 391      74653A20 
+ 391      45726173 
+ 392 00a5 00       		.ascii	"\000"
+ 393              	.LC5:
+ 394 00a6 4669726D 		.ascii	"FirmwareUpdate: Write Sector @ 0x%X - Error Code %d"
+ 394      77617265 
+ 394      55706461 
+ 394      74653A20 
+ 394      57726974 
+ 395 00d9 00       		.ascii	"\000"
+ 396              		.text
+ 397              	.Letext0:
+ 398              		.file 4 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/machine/_default_types.h"
+ 399              		.file 5 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdint.h"
+ 400              		.file 6 "../Device/EnergyMicro/EFM32G/Include/efm32g_gpio_p.h"
+ 401              		.file 7 "../Device/EnergyMicro/EFM32G/Include/efm32g_gpio.h"
+ 402              		.file 8 "../config.h"
+ 403              		.file 9 "../emlib/inc/em_msc.h"
+ 404              		.file 10 "../fatfs/inc/integer.h"
+ 405              		.file 11 "../fatfs/inc/ff.h"
+ 406              		.file 12 "../emlib/inc/em_gpio.h"
+ 407              		.file 13 "../CMSIS/Include/core_cm3.h"
+ 408              		.file 14 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/string.h"
+ 409              		.file 15 "../emlib/inc/em_assert.h"
+ 410              		.file 16 "../drivers/Logging.h"

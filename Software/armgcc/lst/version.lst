@@ -1,0 +1,46 @@
+ARM GAS  /tmp/ccPNLkon.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"version.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.global	prj
+  19              		.section	.rodata.prj,"a",%progbits
+  22              	prj:
+  23 0000 2450524A 		.ascii	"$PRJ_INFO$\000"
+  23      5F494E46 
+  23      4F2400
+  24 000b 00       		.space	1
+  25 000c 53657020 		.ascii	"Sep 19 2019\000"
+  25      31392032 
+  25      30313900 
+  26 0018 00000000 		.space	4
+  27 001c 31313A31 		.ascii	"11:12:51\000"
+  27      323A3531 
+  27      00
+  28 0025 00       		.space	1
+  29 0026 312E3400 		.ascii	"1.4\000"
+  30 002a 00000000 		.space	12
+  30      00000000 
+  30      00000000 
+  31              		.text
+  32              	.Letext0:
+  33              		.file 1 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/machine/_default_types.h"
+  34              		.file 2 "/opt/cross/gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/include/stdint.h"
+  35              		.file 3 "../config.h"
+  36              		.file 4 "../CMSIS/Include/core_cm3.h"
+  37              		.file 5 "../version.c"
