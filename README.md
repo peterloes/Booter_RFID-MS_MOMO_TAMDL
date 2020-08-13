@@ -25,6 +25,13 @@ To distinguish between MAPRDL and TAMDL, pin PC15 will be probed.
 On platform MAPRDL, this is signal PC15_LA_MOSFET which is connected to
 pull-down resistor R66.  TAMDL has a pull-up resistor connected to PC15.
 
+Mainboard:
+
+https://github.com/peterloes/RFID-MS
+
+https://github.com/peterloes/MOMO
+
+
 The Booter features EFM32 ...the world´s most energy friendly microcontrollers
 
 ARM Cortex-M3 EFM32G230F128
