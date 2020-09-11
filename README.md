@@ -9,6 +9,7 @@ application software in FLASH will be updated.
 - RFID-MS, the name of the update file is APRDL.UPD
 - MOMO, the name of the update file is MOMO.UPD
 - TAMDL, the name of the update file is TAMDL.UPD
+- Scales with MOMO, the name of the update file is MAPRDL.UPD. 
 - Individual platforms, based on MOMO. 
   The name must be specified to the Makefile as variable PLATFORM,
   e.g. "make PLATFORM=MOMO" will generate a booter that expects
