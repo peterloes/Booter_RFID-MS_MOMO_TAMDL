@@ -7,7 +7,7 @@ the booter checks whether an update file exists on the SD-Card. If so, the
 application software in FLASH will be updated.
 
 - RFID-MS, the name of the update file is APRDL.UPD
-- MOMO, the name of the update file is MOMO.UPD
+- MOMO, the name of the update file is MAPRDL.UPD
 - TAMDL, the name of the update file is TAMDL.UPD
 - Scales with MOMO, the name of the update file is MAPRDL.UPD. 
 - Individual platforms, based on MOMO. 
