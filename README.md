@@ -13,7 +13,7 @@ application software in FLASH will be updated.
 - Individual platforms, based on MOMO. 
   The name must be specified to the Makefile as variable PLATFORM,
   e.g. "make PLATFORM=MOMO" will generate a booter that expects
-  an update file MOMO.UPD.
+  an update file MAPRDL.UPD.
   
 ![My image](https://github.com/peterloes/Booter_RFID-MS_MOMO_TAMDL/blob/master/Getting_Started_Tutorial/1_Starting_Application.jpg)
 
